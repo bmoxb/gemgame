@@ -1,0 +1,9 @@
+[package]
+name = "witch"
+version = "0.1.0"
+authors = ["WiredSound <maxoblack@yahoo.com>"]
+edition = "2018"
+
+[dependencies]
+raylib = "3.0"
+noise = "0.6.0"
