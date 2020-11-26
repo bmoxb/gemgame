@@ -1,4 +1,4 @@
-struct Map {}
+pub struct Map {}
 
 trait Generator {
     fn generate(&self) -> Map { Map {} }
