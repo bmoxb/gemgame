@@ -24,7 +24,10 @@ impl State for MainMenu {
         //println!("{:.5}", delta);
 
         match handle.get_key_pressed() {
-            Some(_) => Some(Box::new(Game::new())),
+            Some(_) => {
+                crate::world::World::load("test".to_string());
+                None
+            }
             _ => None
         }
     }

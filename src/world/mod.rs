@@ -4,13 +4,16 @@ mod maps;
 use std::{
     time::SystemTime,
     path::{ Path, PathBuf },
-    io::Read, fs
+    fs
 };
-use yaml_rust::YamlLoader;
 
-struct World {
+const SAVES_DIRECTORY: &'static str = "saves/";
+const WORLD_JSON_FILE: &'static str = "world.json";
+
+pub struct World {
     title: String,
 
+    // Directory containing world data.
     directory: PathBuf,
 
     // Seed for random number generation.
@@ -21,7 +24,7 @@ struct World {
 }
 
 impl World {
-    fn new(title: String) -> Self {
+    pub fn new(title: String) -> Self {
         let now = time_since_epoch();
 
         World {
@@ -32,22 +35,51 @@ impl World {
         }
     }
 
-    fn load(title: String) -> Option<Self> {
+    pub fn load(title: String) -> Option<Self> {
         let directory = world_save_directory_path(&title);
-        let world_file_path = directory.join("world.yml");
+        let world_file_path = directory.join(WORLD_JSON_FILE);
+
 
         match fs::File::open(&world_file_path) {
-            Ok(mut file) => {
-                let mut text = String::new();
-                file.read_to_string(&mut text);
+            Ok(file) => {
+                log::info!("Opened world JSON file: {}", world_file_path.display());
 
-                YamlLoader::load_from_str(&text); // TODO
+                match serde_json::from_reader::<fs::File, serde_json::Value>(file) {
+                    Ok(json) => {
+                        log::debug!("World JSON file data: {:?}", json);
 
-                None
+                        if let Some(version) = json["version"].as_str() {
+                            if version != crate::VERSION {
+                                log::warn!("World '{}' is version '{}' which differs from game version '{}'",
+                                           title, version, crate::VERSION);
+                            }
+                        }
+                        else {
+                            log::warn!("World '{}' does not have a version specified",
+                                       title);
+                        }
+
+                        let now = time_since_epoch();
+
+                        let seed = json["seed"].as_u64().unwrap_or(now) as u32;
+                        let created_epoch = json["created"].as_u64().unwrap_or(now);
+
+                        log::info!("Loaded world: {}", title);
+
+                        Some(World { title, directory, seed, created_epoch })
+                    }
+
+                    Err(e) => {
+                        log::warn!("Failed to parse world JSON file '{}' due to JSON error: {:?}",
+                                   world_file_path.display(), e);
+                        None
+                    }
+                }
             }
 
             Err(e) => {
-                log::warn!("Failed to load world YAML file '{}' due to error: {:?}", world_file_path.display(), e);
+                log::warn!("Failed to load world JSON file '{}' due to IO error: {:?}",
+                           world_file_path.display(), e);
                 None // TODO: Should use Result to return nature of error.
             }
         }
@@ -67,6 +99,6 @@ fn time_since_epoch() -> u64 {
 }
 
 fn world_save_directory_path(title: &str) -> PathBuf {
-    let relative = Path::new("saves/").join(title);
+    let relative = Path::new(SAVES_DIRECTORY).join(title);
     relative.canonicalize().unwrap_or(relative)
 }
