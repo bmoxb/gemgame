@@ -102,3 +102,8 @@ fn world_save_directory_path(title: &str) -> PathBuf {
     let relative = Path::new(SAVES_DIRECTORY).join(title);
     relative.canonicalize().unwrap_or(relative)
 }
+
+#[cfg(test)]
+mod test {
+    // TODO: ...
+}
