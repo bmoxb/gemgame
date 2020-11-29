@@ -157,67 +157,21 @@ struct OverworldGenerator {}
 mod test {
     #[test]
     fn tile_coords_to_chunk_coords() {
-        assert_eq!(
-            super::tile_coords_to_chunk_coords(0, 0),
-            (0, 0)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_coords(8, 6),
-            (0, 0)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_coords(12, -14),
-            (0, -1)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_coords(-13, 14),
-            (-1, 0)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_coords(-3, -2),
-            (-1, -1)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_coords(-34, -19),
-            (-3, -2)
-        );
+        assert_eq!(super::tile_coords_to_chunk_coords(0, 0), (0, 0));
+        assert_eq!(super::tile_coords_to_chunk_coords(8, 6), (0, 0));
+        assert_eq!(super::tile_coords_to_chunk_coords(12, -14), (0, -1));
+        assert_eq!(super::tile_coords_to_chunk_coords(-13, 14), (-1, 0));
+        assert_eq!(super::tile_coords_to_chunk_coords(-3, -2), (-1, -1));
+        assert_eq!(super::tile_coords_to_chunk_coords(-34, -19), (-3, -2));
     }
 
     #[test]
     fn tile_coords_to_chunk_offset_coords() {
-        assert_eq!(
-            super::tile_coords_to_chunk_offset_coords(0, 0),
-            (0, 0)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_offset_coords(8, 6),
-            (8, 6)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_offset_coords(12, -14),
-            (12, 2)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_offset_coords(-13, 14),
-            (3, 14)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_offset_coords(-3, -2),
-            (13, 14)
-        );
-
-        assert_eq!(
-            super::tile_coords_to_chunk_offset_coords(-34, -19),
-            (14, 13)
-        );
+        assert_eq!(super::tile_coords_to_chunk_offset_coords(0, 0), (0, 0));
+        assert_eq!(super::tile_coords_to_chunk_offset_coords(8, 6), (8, 6));
+        assert_eq!(super::tile_coords_to_chunk_offset_coords(12, -14), (12, 2));
+        assert_eq!(super::tile_coords_to_chunk_offset_coords(-13, 14), (3, 14));
+        assert_eq!(super::tile_coords_to_chunk_offset_coords(-3, -2), (13, 14));
+        assert_eq!(super::tile_coords_to_chunk_offset_coords(-34, -19), (14, 13));
     }
 }
