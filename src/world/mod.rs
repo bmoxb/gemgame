@@ -7,12 +7,13 @@ use std::{
     fs, io::Write, fmt
 };
 
+use maps::Map;
+
 pub type Coord = i32;
 
 const SAVES_DIRECTORY: &'static str = "saves/";
 const WORLD_JSON_FILE: &'static str = "world.json";
 
-#[derive(Debug)]
 pub struct World {
     /// The name/title of this world.
     title: String,
@@ -27,7 +28,10 @@ pub struct World {
     created_timestamp: u64,
 
     /// When this world was last played (time since Unix epoch).
-    last_played_timestamp: u64
+    last_played_timestamp: u64,
+
+    // The current loaded map.
+    //current_map: Map
 }
 
 impl World {
@@ -40,7 +44,8 @@ impl World {
             title,
             seed: now as u32,
             created_timestamp: now,
-            last_played_timestamp: now
+            last_played_timestamp: now,
+            //current_map: Map::new()
         }
     }
 
