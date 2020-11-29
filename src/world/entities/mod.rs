@@ -9,9 +9,9 @@ pub struct Entity {
     /// Controller for this entity.
     controller: Rc<dyn Controller>,
     /// Horizontal position in tiles on current map.
-    x: usize,
+    x: isize,
     /// Vertical position in tiles on current map.
-    y: usize
+    y: isize
     // optional abilities, etc.
 }
 
