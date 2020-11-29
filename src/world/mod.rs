@@ -30,22 +30,25 @@ pub struct World {
     /// When this world was last played (time since Unix epoch).
     last_played_timestamp: u64,
 
-    // The current loaded map.
-    //current_map: Map
+    /// The current loaded map.
+    current_map: Map
 }
 
 impl World {
     /// Create a new world with the given title.
     pub fn new(title: String) -> Self {
+        let directory = world_save_directory_path(&title);
         let now = time_since_epoch();
+        let seed = now as u32;
 
         World {
-            directory: world_save_directory_path(&title),
-            title,
-            seed: now as u32,
+            current_map: Map::new(
+                directory.join("overworld/"),
+                Box::new(maps::generators::OverworldGenerator::new(seed))
+            ),
+            title, directory, seed,
             created_timestamp: now,
-            last_played_timestamp: now,
-            //current_map: Map::new()
+            last_played_timestamp: now
         }
     }
 
@@ -84,7 +87,14 @@ impl World {
                         let created_timestamp = json["created"].as_u64().unwrap_or(now);
                         let last_played_timestamp = json["last played"].as_u64().unwrap_or(now);
 
-                        let world = World { title, directory, seed, created_timestamp, last_played_timestamp };
+                        let map_name = json["current map"].as_str().unwrap_or("overworld/");
+                        let current_map = Map::load(directory.join(map_name), seed);
+
+                        let world = World {
+                            title, directory, seed,
+                            created_timestamp, last_played_timestamp,
+                            current_map
+                        };
 
                         log::info!("Loaded world: {}", world);
 
