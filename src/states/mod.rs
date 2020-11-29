@@ -25,7 +25,9 @@ impl State for MainMenu {
 
         match handle.get_key_pressed() {
             Some(_) => {
-                crate::world::World::load("test".to_string());
+                if let Some(w) = crate::world::World::load("test".to_string()) {
+                    w.save();
+                }
                 None
             }
             _ => None
