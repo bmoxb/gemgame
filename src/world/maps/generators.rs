@@ -28,7 +28,7 @@ impl SurfaceGenerator {
 }
 
 impl Generator for SurfaceGenerator {
-    fn name(&self) -> &'static str { "overworld" }
+    fn name(&self) -> &'static str { "surface" }
 
     fn generate(&self, chunk_x: Coord, chunk_y: Coord) -> Chunk {
         unimplemented!()
