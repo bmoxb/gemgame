@@ -12,14 +12,14 @@ const CHUNK_HEIGHT: Coord = 16;
 const MAP_JSON_FILE: &'static str = "map.json";
 
 pub struct Map {
-    // Path to the directory containing map data.
+    /// Path to the directory containing map data.
     directory: PathBuf,
 
     /// The generator to be used when new chunks must be made.
     generator: Box<dyn Generator>,
 
-    /// The currently loaded chunks that this map is comprised of mapped to
-    /// chunk coordinates.
+    /// The currently loaded chunks that this map is comprised of (mapped to by
+    /// chunk coordinates).
     loaded_chunks: HashMap<(Coord, Coord), Chunk>,
 
     /// Entities currently on this map.
@@ -155,8 +155,8 @@ impl Map {
 
     /// Will generate a new chunk at the given chunk coordinates using this map's
     /// generator. The newly generated chunk will be inserted into the
-    /// `self.loaded_chunks` but will not be saved to file until it is unloaded
-    /// (see [`Self::unload_chunk`]).
+    /// [`Self::loaded_chunks`] but will not be saved to file until it is
+    /// unloaded (see [`Self::unload_chunk`]).
     fn generate_and_load_chunk(&mut self, chunk_x: Coord, chunk_y: Coord) {
         let chunk = self.generator.generate(chunk_x, chunk_y);
         self.loaded_chunks.insert((chunk_x, chunk_y), chunk);
@@ -174,6 +174,8 @@ impl fmt::Display for Map {
     }
 }
 
+/// 16x16 area of tiles on a map. As maps are infinite, chunks are generated,
+/// loaded, and unloaded dynamically as necessary.
 pub struct Chunk {
     /// The tiles that this chunk is comprised of.
     tiles: [Tile; (CHUNK_WIDTH * CHUNK_HEIGHT) as usize]
