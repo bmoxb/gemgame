@@ -7,12 +7,15 @@ use raylib::prelude::*;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
+const WINDOW_WIDTH: i32 = 1280;
+const WINDOW_HEIGHT: i32 = 720;
+
 fn main() {
     pretty_env_logger::init();
 
     let (mut handle, thread) = raylib::init()
         .title("Potion/Alchemy Roguelike")
-        .size(1280, 720)
+        .size(WINDOW_WIDTH, WINDOW_HEIGHT)
         .build();
 
     log::info!("Initialised RayLib and created window");

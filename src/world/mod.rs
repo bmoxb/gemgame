@@ -4,7 +4,7 @@ mod maps;
 use std::{
     time::SystemTime,
     path::{ Path, PathBuf },
-    fs, io::Write, fmt
+    fs, fmt
 };
 
 use maps::Map;
