@@ -1,5 +1,6 @@
 mod entities;
 mod maps;
+mod rendering;
 
 use std::{
     time::SystemTime,
