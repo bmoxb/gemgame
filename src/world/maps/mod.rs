@@ -147,7 +147,7 @@ impl Map {
 
     /// Load the chunk at the given chunk coordinates by reading chunk data from
     /// the appropriate file. Will return `false` if the file containing the
-    /// chunk data could not be found (likely implies chunk has not yet been
+    /// chunk data could not be found (suggests that that chunk has not yet been
     /// generated).
     fn load_chunk(&mut self, chunk_x: Coord, chunk_y: Coord) -> bool {
         if let Some(chunk) = Chunk::load(&self.directory, chunk_x, chunk_y) {
@@ -156,6 +156,9 @@ impl Map {
         } else { false }
     }
 
+    /// Save to disk and remove from memory the chunk at the given chunk
+    /// coordinates. If the specified chunk is not loaded then nothing will
+    /// happen on call of this method.
     fn unload_chunk(&mut self, chunk_x: Coord, chunk_y: Coord) {
         if let Some(old_chunk) = self.loaded_chunks.remove(&(chunk_x, chunk_y)) {
             old_chunk.save(chunk_x, chunk_y);
