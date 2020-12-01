@@ -2,7 +2,7 @@ pub mod generators;
 
 use std::{ path::PathBuf, collections::HashMap, fs, fmt };
 
-use super::{ Coord, entities::Entity };
+use super::{ Coord, entities::Entity, load_json };
 
 use generators::Generator;
 
@@ -37,64 +37,39 @@ impl Map {
         }
     }
 
-    /// Attempt to load an existing map from the directory specified.
+    /// Attempt to load an existing map from the directory specified. This method
+    /// relies on the [`load_json`] helper function.
     pub fn load(directory: PathBuf, seed: u32) -> Option<Self> {
-        // TODO: Refactor - this method and `World::load` are so similar!
-
-        let map_file_path = directory.join(MAP_JSON_FILE);
-
-        match fs::File::open(&map_file_path) {
-            Ok(file) => {
-                log::debug!("Opened map JSON file: {}", map_file_path.display());
-
-                match serde_json::from_reader::<fs::File, serde_json::Value>(file) {
-                    Ok(json) => {
-                        log::debug!("Map JSON file data: {}", json);
-
-                        let generator_name = match json["generator"].as_str() {
-                            Some(value) => {
-                                log::debug!("Generator name specified in JSON: {}", value);
-                                value
-                            }
-                            None => {
-                                log::warn!("Map '{}' does not have a generator specified - assuming 'surface' generator",
-                                           directory.display());
-                                "surface"
-                            }
-                        };
-
-                        let generator = match generators::by_name(generator_name, seed) {
-                            Some(gen) => {
-                                log::debug!("Generator specified: {}", gen.name());
-                                gen
-                            }
-                            None => {
-                                log::warn!("Map generator with name '{}' does not exist", generator_name);
-                                Box::new(generators::SurfaceGenerator::new(seed))
-                            }
-                        };
-
-                        let map = Map {
-                            directory, generator,
-                            loaded_chunks: HashMap::new(),
-                            entities: Vec::new()
-                        };
-
-                        log::info!("Loaded map: {}", map);
-
-                        return Some(map);
-                    }
-
-                    Err(e) => log::warn!("Failed to parse map JSON file '{}' due to JSON error: {}",
-                                         map_file_path.display(), e)
+        load_json("map", directory, MAP_JSON_FILE, |json, directory| {
+            let generator_name = match json["generator"].as_str() {
+                Some(value) => {
+                    log::debug!("Generator name specified in JSON: {}", value);
+                    value
                 }
+                None => {
+                    log::warn!("Map '{}' does not have a generator specified - assuming 'surface' generator",
+                                directory.display());
+                    "surface"
+                }
+            };
+
+            let generator = match generators::by_name(generator_name, seed) {
+                Some(gen) => {
+                    log::debug!("Generator specified: {}", gen.name());
+                    gen
+                }
+                None => {
+                    log::warn!("Map generator with name '{}' does not exist", generator_name);
+                    Box::new(generators::SurfaceGenerator::new(seed))
+                }
+            };
+
+            Map {
+                directory, generator,
+                loaded_chunks: HashMap::new(),
+                entities: Vec::new()
             }
-
-            Err(e) => log::warn!("Failed to read map JSON file '{}' due to IO error: {}",
-                                 map_file_path.display(), e)
-        }
-
-        None
+        })
     }
 
     /// Save this map to the filesystem. Will return `true` if able to save map
