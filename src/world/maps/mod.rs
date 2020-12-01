@@ -298,7 +298,7 @@ fn tile_coords_to_chunk_offset_coords(x: Coord, y: Coord) -> (Coord, Coord) {
 }
 
 fn chunk_file_name(chunk_x: Coord, chunk_y: Coord) -> String {
-    format!("{}-{}.chunk", chunk_x, chunk_y)
+    format!("{}_{}.chunk", chunk_x, chunk_y)
 }
 
 #[cfg(test)]
@@ -321,5 +321,11 @@ mod test {
         assert_eq!(super::tile_coords_to_chunk_offset_coords(-13, 14), (3, 14));
         assert_eq!(super::tile_coords_to_chunk_offset_coords(-3, -2), (13, 14));
         assert_eq!(super::tile_coords_to_chunk_offset_coords(-34, -19), (14, 13));
+    }
+
+    #[test]
+    fn chunk_file_name() {
+        assert_eq!(&super::chunk_file_name(0, 0), "0_0.chunk");
+        assert_eq!(&super::chunk_file_name(2, -11), "2_-11.chunk");
     }
 }
