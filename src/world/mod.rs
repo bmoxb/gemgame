@@ -43,8 +43,8 @@ impl World {
 
         World {
             current_map: Map::new(
-                directory.join("overworld/"),
-                Box::new(maps::generators::OverworldGenerator::new(seed))
+                directory.join("surface/"),
+                Box::new(maps::generators::SurfaceGenerator::new(seed))
             ),
             title, directory, seed,
             created_timestamp: now,
@@ -87,8 +87,18 @@ impl World {
                         let created_timestamp = json["created"].as_u64().unwrap_or(now);
                         let last_played_timestamp = json["last played"].as_u64().unwrap_or(now);
 
-                        let map_name = json["current map"].as_str().unwrap_or("overworld/");
-                        let current_map = Map::load(directory.join(map_name), seed);
+                        let map_name = json["current map"].as_str().unwrap_or("surface/");
+                        let map_directory = directory.join(map_name);
+
+                        let current_map = match Map::load(map_directory.clone(), seed) {
+                            Some(map) => map,
+                            None => {
+                                log::warn!("Specified current map '{}' could not be found so it will now be newly generated",
+                                           map_name);
+
+                                Map::new(map_directory, Box::new(maps::generators::SurfaceGenerator::new(seed)))
+                            }
+                        };
 
                         let world = World {
                             title, directory, seed,
@@ -113,7 +123,8 @@ impl World {
         None
     }
 
-    /// Save this world to the filesystem.
+    /// Save this world and its current map to the filesystem. Will return `true`
+    /// if able to save the data successfully.
     pub fn save(&self) -> bool {
         let world_file_path = self.directory.join(WORLD_JSON_FILE);
 
@@ -129,7 +140,8 @@ impl World {
         match fs::write(&world_file_path, data) {
             Ok(_) => {
                 log::info!("Saved world: {}", self);
-                true
+
+                self.current_map.save()
             }
 
             Err(e) => {

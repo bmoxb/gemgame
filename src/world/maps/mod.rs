@@ -1,6 +1,6 @@
 pub mod generators;
 
-use std::{ path::PathBuf, collections::HashMap };
+use std::{ path::PathBuf, collections::HashMap, fs, fmt };
 
 use super::{ Coord, entities::Entity };
 
@@ -8,6 +8,8 @@ use generators::Generator;
 
 const CHUNK_WIDTH: Coord = 16;
 const CHUNK_HEIGHT: Coord = 16;
+
+const MAP_JSON_FILE: &'static str = "map.json";
 
 pub struct Map {
     // Path to the directory containing map data.
@@ -35,8 +37,87 @@ impl Map {
         }
     }
 
-    pub fn load(directory: PathBuf, seed: u32) -> Self {
-        unimplemented!() // TODO
+    /// Attempt to load an existing map from the directory specified.
+    pub fn load(directory: PathBuf, seed: u32) -> Option<Self> {
+        // TODO: Refactor - this method and `World::load` are so similar!
+
+        let map_file_path = directory.join(MAP_JSON_FILE);
+
+        match fs::File::open(&map_file_path) {
+            Ok(file) => {
+                log::debug!("Opened map JSON file: {}", map_file_path.display());
+
+                match serde_json::from_reader::<fs::File, serde_json::Value>(file) {
+                    Ok(json) => {
+                        log::debug!("Map JSON file data: {}", json);
+
+                        let generator_name = match json["generator"].as_str() {
+                            Some(value) => {
+                                log::debug!("Generator name specified in JSON: {}", value);
+                                value
+                            }
+                            None => {
+                                log::warn!("Map '{}' does not have a generator specified - assuming 'surface' generator",
+                                           directory.display());
+                                "surface"
+                            }
+                        };
+
+                        let generator = match generators::by_name(generator_name, seed) {
+                            Some(gen) => {
+                                log::debug!("Generator specified: {}", gen.name());
+                                gen
+                            }
+                            None => {
+                                log::warn!("Map generator with name '{}' does not exist", generator_name);
+                                Box::new(generators::SurfaceGenerator::new(seed))
+                            }
+                        };
+
+                        let map = Map {
+                            directory, generator,
+                            loaded_chunks: HashMap::new(),
+                            entities: Vec::new()
+                        };
+
+                        log::info!("Loaded map: {}", map);
+
+                        return Some(map);
+                    }
+
+                    Err(e) => log::warn!("Failed to parse map JSON file '{}' due to JSON error: {}",
+                                         map_file_path.display(), e)
+                }
+            }
+
+            Err(e) => log::warn!("Failed to read map JSON file '{}' due to IO error: {}",
+                                 map_file_path.display(), e)
+        }
+
+        None
+    }
+
+    /// Save this map to the filesystem. Will return `true` if able to save map
+    /// data successfully.
+    pub fn save(&self) -> bool {
+        let map_file_path = self.directory.join(MAP_JSON_FILE);
+
+        let data = serde_json::json!({
+            "generator": self.generator.name()
+        }).to_string();
+
+        match fs::write(&map_file_path, data) {
+            Ok(_) => {
+                log::info!("Saved map: {}", self);
+                true
+            }
+
+            Err(e) => {
+                log::warn!("Failed to write map JSON file '{}' due to IO error: {}",
+                           map_file_path.display(), e);
+                false
+            }
+        }
     }
 
     /// Get a reference to the tile at the given coordinates. If the coordinates
@@ -108,6 +189,13 @@ impl Map {
 
     fn get_loaded_chunk(&self, chunk_x: Coord, chunk_y: Coord) -> Option<&Chunk> {
         self.loaded_chunks.get(&(chunk_x, chunk_y))
+    }
+}
+
+impl fmt::Display for Map {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "'{}' (generator: {}, loaded chunks: {})", self.directory.display(),
+               self.generator.name(), self.loaded_chunks.len())
     }
 }
 

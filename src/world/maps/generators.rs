@@ -1,8 +1,10 @@
+use noise::Seedable;
+
 use super::{ Coord, Chunk };
 
-fn generator_by_name(name: &str, seed: u32) -> Option<Box<dyn Generator>> {
+pub fn by_name(name: &str, seed: u32) -> Option<Box<dyn Generator>> {
     match name {
-        "overworld" => Some(Box::new(OverworldGenerator::new(seed))),
+        "surface" => Some(Box::new(SurfaceGenerator::new(seed))),
         _ => None
     }
 }
@@ -12,15 +14,20 @@ pub trait Generator {
     fn generate(&self, chunk_x: Coord, chunk_y: Coord) -> Chunk;
 }
 
-pub struct OverworldGenerator {
-    seed: u32
+pub struct SurfaceGenerator {
+    noise_gen: noise::Perlin
 }
 
-impl OverworldGenerator {
-    pub fn new(seed: u32) -> Self { OverworldGenerator { seed } }
+impl SurfaceGenerator {
+    pub fn new(seed: u32) -> Self {
+        let noise_gen = noise::Perlin::new();
+        noise_gen.set_seed(seed);
+
+        SurfaceGenerator { noise_gen }
+    }
 }
 
-impl Generator for OverworldGenerator {
+impl Generator for SurfaceGenerator {
     fn name(&self) -> &'static str { "overworld" }
 
     fn generate(&self, chunk_x: Coord, chunk_y: Coord) -> Chunk {
