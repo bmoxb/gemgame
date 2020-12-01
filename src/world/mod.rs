@@ -80,7 +80,7 @@ impl World {
             let map_name = json["current map"].as_str().unwrap_or("surface/");
             let map_directory = directory.join(map_name);
 
-            let current_map = match Map::load(map_directory.clone(), seed) {
+            let mut current_map = match Map::load(map_directory.clone(), seed) {
                 Some(map) => map,
                 None => {
                     log::warn!("Specified current map '{}' could not be found so it will now be newly generated",
@@ -89,6 +89,9 @@ impl World {
                     Map::new(map_directory, Box::new(maps::generators::SurfaceGenerator::new(seed)))
                 }
             };
+
+            // Force loading of chunk:
+            current_map.tile_at(5, 5); // TODO: temporary!
 
             World {
                 title, directory, seed,

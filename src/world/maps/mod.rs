@@ -1,6 +1,14 @@
 pub mod generators;
 
-use std::{ path::PathBuf, collections::HashMap, fs, fmt };
+use std::{
+    path::{ Path, PathBuf },
+    collections::HashMap,
+    fs, fmt
+};
+
+use num_derive::{ FromPrimitive, ToPrimitive };
+
+use array_macro::array;
 
 use super::{ Coord, entities::Entity, load_json };
 
@@ -8,6 +16,7 @@ use generators::Generator;
 
 const CHUNK_WIDTH: Coord = 16;
 const CHUNK_HEIGHT: Coord = 16;
+const CHUNK_TILE_COUNT: usize = (CHUNK_WIDTH * CHUNK_HEIGHT) as usize;
 
 const MAP_JSON_FILE: &'static str = "map.json";
 
@@ -141,16 +150,16 @@ impl Map {
     /// chunk data could not be found (likely implies chunk has not yet been
     /// generated).
     fn load_chunk(&mut self, chunk_x: Coord, chunk_y: Coord) -> bool {
-        // TODO: Read chunk data from file.
-        // self.loaded_chunks.insert((chunk_x, chunk_y), chunk);
-
-        false
+        if let Some(chunk) = Chunk::load(&self.directory, chunk_x, chunk_y) {
+            self.loaded_chunks.insert((chunk_x, chunk_y), chunk);
+            true
+        } else { false }
     }
 
     fn unload_chunk(&mut self, chunk_x: Coord, chunk_y: Coord) {
-        // TODO: Save chunk data to file.
-
-        self.loaded_chunks.remove(&(chunk_x, chunk_y));
+        if let Some(old_chunk) = self.loaded_chunks.remove(&(chunk_x, chunk_y)) {
+            old_chunk.save(chunk_x, chunk_y);
+        }
     }
 
     /// Will generate a new chunk at the given chunk coordinates using this map's
@@ -178,12 +187,55 @@ impl fmt::Display for Map {
 /// loaded, and unloaded dynamically as necessary.
 pub struct Chunk {
     /// The tiles that this chunk is comprised of.
-    tiles: [Tile; (CHUNK_WIDTH * CHUNK_HEIGHT) as usize]
+    tiles: [Tile; CHUNK_TILE_COUNT]
 }
 
 impl Chunk {
-    fn new(tiles: [Tile; (CHUNK_WIDTH * CHUNK_HEIGHT) as usize]) -> Self {
+    fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self {
         Chunk { tiles }
+    }
+
+    fn load(map_directory: &Path, chunk_x: Coord, chunk_y: Coord) -> Option<Self> {
+        let chunk_file_path = map_directory.join(chunk_file_name(chunk_x, chunk_y));
+
+        match fs::read(&chunk_file_path) {
+            Ok(data) => {
+                log::trace!("Loaded chunk '{}' data: {:?}", chunk_file_path.display(), data);
+
+                let mut tiles = array![Tile::default(); CHUNK_TILE_COUNT];
+
+                for (index, pair) in data.chunks_exact(2).enumerate() {
+                    let tile_type_num = pair[0];
+                    let flags = pair[1];
+
+                    let tile = &mut tiles[index];
+
+                    tile.tile_type = num::FromPrimitive::from_u8(tile_type_num).unwrap_or_else(|| {
+                        log::warn!("Unkown tile type {} specified in chunk '{}'",
+                                tile_type_num, chunk_file_path.display());
+                        TileType::None
+                    });
+                    tile.blocking = flags & 1 != 0; // least-significant bit
+                    tile.seen = flags >> 1 & 1 != 0; // 2nd to least-significant
+
+                    log::trace!("Loaded tile: {:?}", tile);
+                }
+
+                log::debug!("Loaded chunk: {}", chunk_file_path.display());
+
+                Some(Chunk { tiles })
+            }
+
+            Err(e) => {
+                log::trace!("Could not find chunk '{}' due to IO error: {}",
+                            chunk_file_path.display(), e);
+                None
+            }
+        }
+    }
+
+    fn save(&self, chunk_x: Coord, chunk_y: Coord) {
+        unimplemented!(); // TODO!
     }
 
     fn tile_at_offset(&self, mut x: Coord, mut y: Coord) -> &Tile {
@@ -199,6 +251,28 @@ impl Chunk {
         &self.tiles[(y * CHUNK_WIDTH + x) as usize]
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct Tile {
+    /// Indicates characteristics of this tile such as its texture.
+    tile_type: TileType,
+    /// Whether or not tile prevents entities from moving over it.
+    blocking: bool,
+    /// Whether or not this tile has been seen by the player yet.
+    seen: bool
+}
+
+impl Tile {
+    fn default() -> Self {
+        Tile {
+            tile_type: TileType::None,
+            blocking: false, seen: false
+        }
+    }
+}
+
+#[derive(Debug, Clone, FromPrimitive, ToPrimitive)]
+pub enum TileType { None, Test }
 
 fn tile_coords_to_chunk_coords(x: Coord, y: Coord) -> (Coord, Coord) {
     let chunk_x = x / CHUNK_WIDTH;
@@ -220,12 +294,9 @@ fn tile_coords_to_chunk_offset_coords(x: Coord, y: Coord) -> (Coord, Coord) {
     )
 }
 
-pub struct Tile {
-    tile_type: TileType,
-    blocking: bool
+fn chunk_file_name(chunk_x: Coord, chunk_y: Coord) -> String {
+    format!("{}-{}.chunk", chunk_x, chunk_y)
 }
-
-enum TileType {}
 
 #[cfg(test)]
 mod test {
