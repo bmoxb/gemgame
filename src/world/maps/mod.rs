@@ -123,7 +123,7 @@ impl Map {
         let (chunk_x, chunk_y) = tile_coords_to_chunk_coords(x, y);
 
         if self.is_chunk_loaded(chunk_x, chunk_y) {
-            log::debug!("Chunk ({}, {}) which contains tile at ({}, {}) is already loaded",
+            log::trace!("Chunk ({}, {}) which contains tile at ({}, {}) is already loaded",
                         chunk_x, chunk_y, x, y);
         }
         else {

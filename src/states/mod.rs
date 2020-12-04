@@ -8,7 +8,7 @@ use raylib::prelude::*;
 pub trait State {
     fn title(&self) -> &'static str;
     fn update<'a>(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>>;
-    fn draw(&self, draw: &mut RaylibDrawHandle);
+    fn draw(&mut self, draw: &mut RaylibDrawHandle);
 }
 
 pub struct MainMenu {}
@@ -33,7 +33,7 @@ impl State for MainMenu {
         }
     }
 
-    fn draw(&self, draw: &mut RaylibDrawHandle) {
+    fn draw(&mut self, draw: &mut RaylibDrawHandle) {
         let text = "Press Space";
         let width = measure_text(text, 50);
 

@@ -1,6 +1,6 @@
 mod entities;
 mod maps;
-mod rendering;
+pub mod rendering;
 
 use std::{
     time::SystemTime,
