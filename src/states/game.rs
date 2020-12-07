@@ -26,9 +26,7 @@ impl State for Game {
         //let player = self.game_world.get_player_entity();
         //self.world_renderer.centre_camera_on(...);
 
-        if handle.is_mouse_button_down(MouseButton::MOUSE_LEFT_BUTTON) {
-            self.world_renderer.centre_camera_on(handle.get_mouse_x(), handle.get_mouse_y());
-        }
+        self.world_renderer.arrow_key_camera_movement(handle, delta);
 
         None
     }
