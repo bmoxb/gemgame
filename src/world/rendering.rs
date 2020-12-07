@@ -23,9 +23,9 @@ impl Renderer {
         }
     }
 
-    pub fn centre_camera_on(&mut self, x: f32, y: f32) {
-        self.camera.target.x = x;
-        self.camera.target.y = y;
+    pub fn centre_camera_on(&mut self, x: i32, y: i32) {
+        self.camera.target.x = x as f32;
+        self.camera.target.y = y as f32;
     }
 
     /// Draws the tiles & entities surrounding the player than are within view
