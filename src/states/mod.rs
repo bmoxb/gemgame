@@ -7,7 +7,7 @@ use raylib::prelude::*;
 
 pub trait State {
     fn title(&self) -> &'static str;
-    fn update<'a>(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>>;
+    fn update<'a>(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread, delta: f32) -> Option<Box<dyn State>>;
     fn draw(&mut self, draw: &mut RaylibDrawHandle);
 }
 
@@ -22,11 +22,12 @@ impl MainMenu {
 impl State for MainMenu {
     fn title(&self) -> &'static str { "Main Menu" }
 
-    fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>> {
+    fn update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread, delta: f32) -> Option<Box<dyn State>> {
         match handle.get_key_pressed() {
             Some(KeyboardKey::KEY_SPACE) => {
                 let world_title = "My World".to_string();
-                Some(Box::new(game::Game::new(world_title)))
+                let texture = handle.load_texture(thread, "assets/textures/tiles.png").unwrap(); // TODO: Proper asset manager!
+                Some(Box::new(game::Game::new(world_title, texture)))
             }
 
             _ => None

@@ -6,6 +6,8 @@ use std::{
     fs, fmt
 };
 
+use raylib::core::math::Rectangle;
+
 use num_derive::{ FromPrimitive, ToPrimitive };
 
 use array_macro::array;
@@ -216,7 +218,7 @@ impl Chunk {
                     tile.tile_type = num::FromPrimitive::from_u8(tile_type_num).unwrap_or_else(|| {
                         log::warn!("Unkown tile type {} specified in chunk '{}'",
                                 tile_type_num, chunk_file_path.display());
-                        TileType::None
+                        TileType::Dirt
                     });
                     tile.blocking = flags & 1 != 0; // least-significant bit
                     tile.seen = flags >> 1 & 1 != 0; // 2nd to least-significant
@@ -268,16 +270,30 @@ pub struct Tile {
 impl Tile {
     fn default() -> Self {
         Tile {
-            tile_type: TileType::None,
+            tile_type: TileType::Dirt,
             blocking: false, seen: false
+        }
+    }
+
+    pub fn texture_rec(&self, individual_tile_size: i32) -> Rectangle {
+        let (x, y) = self.texture_offset_coords();
+
+        Rectangle::new((x * individual_tile_size) as f32, (y * individual_tile_size) as f32,
+                       individual_tile_size as f32, individual_tile_size as f32)
+    }
+
+    fn texture_offset_coords(&self) -> (i32, i32) {
+        match self.tile_type {
+            TileType::Dirt => (0, 0),
+            TileType::Grass => (1, 0)
         }
     }
 }
 
 #[derive(Debug, Clone, FromPrimitive, ToPrimitive)]
-pub enum TileType { None, Test }
+pub enum TileType { Dirt, Grass }
 
-fn tile_coords_to_chunk_coords(x: Coord, y: Coord) -> (Coord, Coord) {
+const fn tile_coords_to_chunk_coords(x: Coord, y: Coord) -> (Coord, Coord) {
     let chunk_x = x / CHUNK_WIDTH;
     let chunk_y = y / CHUNK_HEIGHT;
 
@@ -287,7 +303,7 @@ fn tile_coords_to_chunk_coords(x: Coord, y: Coord) -> (Coord, Coord) {
     )
 }
 
-fn tile_coords_to_chunk_offset_coords(x: Coord, y: Coord) -> (Coord, Coord) {
+const fn tile_coords_to_chunk_offset_coords(x: Coord, y: Coord) -> (Coord, Coord) {
     let offset_x = x % CHUNK_WIDTH;
     let offset_y = y % CHUNK_HEIGHT;
 

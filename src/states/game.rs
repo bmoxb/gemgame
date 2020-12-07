@@ -11,10 +11,10 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(world_title: String/*, tiles_texture: Texture2D*/) -> Self {
+    pub fn new(world_title: String, tiles_texture: Texture2D) -> Self {
         Game {
             game_world: World::load(world_title).unwrap(),
-            world_renderer: Renderer::new(/*tiles_texture, */32)
+            world_renderer: Renderer::new(tiles_texture, 32)
         }
     }
 }
@@ -22,7 +22,7 @@ impl Game {
 impl State for Game {
     fn title(&self) -> &'static str { "Game" }
 
-    fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>> {
+    fn update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread, delta: f32) -> Option<Box<dyn State>> {
         //let player = self.game_world.get_player_entity();
         //self.world_renderer.centre_camera_on(...);
 

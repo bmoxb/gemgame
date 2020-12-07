@@ -4,13 +4,13 @@ use raylib::prelude::*;
 pub struct Renderer {
     camera: Camera2D,
     /// The loaded texture containing the sprites for each type of tile.
-    //tiles_texture: Texture2D,
+    tiles_texture: Texture2D,
     /// The width and height (in pixels) of the sprite/texture of each tile.
     individual_tile_size: i32
 }
 
 impl Renderer {
-    pub fn new(/*tiles_texture: Texture2D, */individual_tile_size: i32) -> Self {
+    pub fn new(tiles_texture: Texture2D, individual_tile_size: i32) -> Self {
         Renderer {
             camera: Camera2D {
                 target: Vector2::new(0.0, 0.0), // TODO
@@ -18,8 +18,7 @@ impl Renderer {
                 rotation: 0.0,
                 zoom: 1.0
             },
-            //tiles_texture,
-            individual_tile_size
+            tiles_texture, individual_tile_size
         }
     }
 
@@ -41,10 +40,11 @@ impl Renderer {
             for grid_y in 0..15 {
                 let tile = world.current_map.tile_at(grid_x, grid_y);
 
-                let texture_rec = Rectangle::EMPTY;
+                let rec = tile.texture_rec(self.individual_tile_size);
+                let pos = Vector2::new((grid_x * self.individual_tile_size) as f32,
+                                       (grid_y * self.individual_tile_size) as f32);
 
-                /*draw2d.draw_texture_rec(&self.tiles_texture, texture_rec, position,
-                                      Color::WHITE);*/
+                draw2d.draw_texture_rec(&self.tiles_texture, rec, pos, Color::WHITE);
 
                 #[cfg(debug_assertions)]
                 draw2d.draw_rectangle_lines(grid_x * self.individual_tile_size, grid_y * self.individual_tile_size,
@@ -54,5 +54,7 @@ impl Renderer {
         }
 
         // Entities:
+
+        // TODO: ...
     }
 }
