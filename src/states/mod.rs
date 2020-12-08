@@ -3,12 +3,16 @@
 
 mod game;
 
+use crate::{ TextureKey, asset_management::AssetManager };
+
 use raylib::prelude::*;
 
 pub trait State {
     fn title(&self) -> &'static str;
-    fn update<'a>(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread, delta: f32) -> Option<Box<dyn State>>;
-    fn draw(&mut self, draw: &mut RaylibDrawHandle);
+
+    fn begin(&mut self, assets: &mut AssetManager<TextureKey>, handle: &mut RaylibHandle, thread: &RaylibThread) {}
+    fn update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread, delta: f32) -> Option<Box<dyn State>>;
+    fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager<TextureKey>);
 }
 
 pub struct MainMenu {}
@@ -26,21 +30,20 @@ impl State for MainMenu {
         match handle.get_key_pressed() {
             Some(KeyboardKey::KEY_SPACE) => {
                 let world_title = "My World".to_string();
-                let texture = handle.load_texture(thread, "assets/textures/tiles.png").unwrap(); // TODO: Proper asset manager!
-                Some(Box::new(game::Game::new(world_title, handle, texture)))
+                Some(Box::new(game::Game::new(world_title, handle)))
             }
 
             _ => None
         }
     }
 
-    fn draw(&mut self, draw: &mut RaylibDrawHandle) {
+    fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager<TextureKey>) {
         let text = "Press Space";
         let width = measure_text(text, 50);
 
         draw.draw_text("Press Space",
-                       (crate::WINDOW_WIDTH - width) / 2,
-                       crate::WINDOW_HEIGHT / 2,
+                       (draw.get_screen_width() - width) / 2,
+                       draw.get_screen_height() / 2,
                        50, Color::WHITE);
     }
 }

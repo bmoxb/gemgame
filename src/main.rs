@@ -1,3 +1,4 @@
+mod asset_management;
 mod states;
 mod world;
 mod items;
@@ -7,21 +8,23 @@ use raylib::prelude::*;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-const WINDOW_WIDTH: i32 = 1280;
-const WINDOW_HEIGHT: i32 = 720;
-
 fn main() {
     pretty_env_logger::init();
 
     let (mut handle, thread) = raylib::init()
         .title("Potion/Alchemy Roguelike")
-        .size(WINDOW_WIDTH, WINDOW_HEIGHT)
+        .size(1280, 720).resizable()
         .build();
 
     log::info!("Initialised RayLib and created window");
 
+    let mut assets = asset_management::AssetManager::<TextureKey>::new("assets/", "textures/");
+
+    log::info!("Prepared the asset manager");
+
     let mut current_state: Box::<dyn states::State>;
     current_state = Box::new(states::MainMenu::new());
+    current_state.begin(&mut assets, &mut handle, &thread);
 
     log::info!("Created initial state - beginning main loop");
 
@@ -32,24 +35,37 @@ fn main() {
         let potential_state_change = current_state.update(&mut handle, &thread, delta);
 
         // Draw to screen:
+        {
+            let mut draw = handle.begin_drawing(&thread);
 
-        let mut draw = handle.begin_drawing(&thread);
+            draw.clear_background(Color::BLACK);
 
-        draw.clear_background(Color::BLACK);
+            current_state.draw(&mut draw, &assets);
 
-        current_state.draw(&mut draw);
-
-        draw_debug_text(&mut draw, Color::BLUE, 22);
+            draw_debug_text(&mut draw, Color::BLUE, 22);
+        }
 
         // Handle state transition (if necessary):
 
         if let Some(next_state) = potential_state_change {
             log::info!("Changing state from '{}' to '{}'", current_state.title(), next_state.title());
             current_state = next_state;
+            current_state.begin(&mut assets, &mut handle, &thread);
         }
     }
 
     log::info!("Exited main loop");
+}
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+enum TextureKey { Tiles }
+
+impl asset_management::AssetKey for TextureKey {
+    fn path(&self) -> &str {
+        match self {
+            TextureKey::Tiles => "tiles.png"
+        }
+    }
 }
 
 fn draw_debug_text(draw: &mut RaylibDrawHandle, col: Color, size: i32) {

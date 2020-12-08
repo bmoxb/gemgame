@@ -5,14 +5,12 @@ const CAMERA_MOVEMENT_SPEED: f32 = 250.0;
 /// Handles the drawing of the game world.
 pub struct Renderer {
     camera: Camera2D,
-    /// The loaded texture containing the sprites for each type of tile.
-    tiles_texture: Texture2D,
     /// The width and height (in pixels) of the sprite/texture of each tile.
     individual_tile_size: i32
 }
 
 impl Renderer {
-    pub fn new(handle: &RaylibHandle, tiles_texture: Texture2D, individual_tile_size: i32) -> Self {
+    pub fn new(handle: &RaylibHandle, individual_tile_size: i32) -> Self {
         Renderer {
             camera: Camera2D {
                 target: Vector2::new(0.0, 0.0),
@@ -21,7 +19,7 @@ impl Renderer {
                 rotation: 0.0,
                 zoom: 1.0
             },
-            tiles_texture, individual_tile_size
+            individual_tile_size
         }
     }
 
@@ -42,7 +40,7 @@ impl Renderer {
     /// Draws the tiles & entities surrounding the player than are within view
     /// (both in terms of in-game visibility ([`maps::Tile::seen`] property) as
     /// well as whether or not a tile is actually within the camera's viewport).
-    pub fn draw(&self, draw: &mut RaylibDrawHandle, world: &mut super::World) {
+    pub fn draw(&self, draw: &mut RaylibDrawHandle, tiles_texture: &Texture2D, world: &mut super::World) {
         let mut draw2d = draw.begin_mode2D(self.camera);
 
         // Tiles:
@@ -56,7 +54,7 @@ impl Renderer {
                 let pos = Vector2::new((grid_x * self.individual_tile_size) as f32,
                                        (grid_y * self.individual_tile_size) as f32);
 
-                draw2d.draw_texture_rec(&self.tiles_texture, rec, pos, Color::WHITE);
+                draw2d.draw_texture_rec(tiles_texture, rec, pos, Color::WHITE);
 
                 #[cfg(debug_assertions)]
                 draw2d.draw_rectangle_lines(grid_x * self.individual_tile_size, grid_y * self.individual_tile_size,
