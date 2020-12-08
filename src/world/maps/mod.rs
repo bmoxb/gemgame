@@ -323,22 +323,33 @@ fn chunk_file_name(chunk_x: Coord, chunk_y: Coord) -> String {
 mod test {
     #[test]
     fn tile_coords_to_chunk_coords() {
-        assert_eq!(super::tile_coords_to_chunk_coords(0, 0), (0, 0));
-        assert_eq!(super::tile_coords_to_chunk_coords(8, 6), (0, 0));
-        assert_eq!(super::tile_coords_to_chunk_coords(12, -14), (0, -1));
-        assert_eq!(super::tile_coords_to_chunk_coords(-13, 14), (-1, 0));
-        assert_eq!(super::tile_coords_to_chunk_coords(-3, -2), (-1, -1));
-        assert_eq!(super::tile_coords_to_chunk_coords(-34, -19), (-3, -2));
+        let test_data = &[
+            ((0, 0), (0, 0)),
+            ((12, -14), (0, -1)),
+            ((-14, 14), (-1, 0)),
+            ((-3, -2), (-1, -1)),
+            ((-34, -19), (-3, -2)),
+            ((16, 16), (1, 1))
+        ];
+        for ((in_x, in_y), out) in test_data {
+            assert_eq!(super::tile_coords_to_chunk_coords(*in_x, *in_y), *out);
+        }
     }
 
     #[test]
     fn tile_coords_to_chunk_offset_coords() {
-        assert_eq!(super::tile_coords_to_chunk_offset_coords(0, 0), (0, 0));
-        assert_eq!(super::tile_coords_to_chunk_offset_coords(8, 6), (8, 6));
-        assert_eq!(super::tile_coords_to_chunk_offset_coords(12, -14), (12, 2));
-        assert_eq!(super::tile_coords_to_chunk_offset_coords(-13, 14), (3, 14));
-        assert_eq!(super::tile_coords_to_chunk_offset_coords(-3, -2), (13, 14));
-        assert_eq!(super::tile_coords_to_chunk_offset_coords(-34, -19), (14, 13));
+        let test_data = &[
+            ((0, 0), (0, 0)),
+            ((8, 6), (8, 6)),
+            ((12, -14), (12, 2)),
+            ((-13, 14), (3, 14)),
+            ((-3, -2), (13, 14)),
+            ((-34, -19), (14, 13)),
+            ((16, 16), (0, 0))
+        ];
+        for ((in_x, in_y), out) in test_data {
+            assert_eq!(super::tile_coords_to_chunk_offset_coords(*in_x, *in_y), *out);
+        }
     }
 
     #[test]
