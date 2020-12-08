@@ -50,16 +50,25 @@ impl Renderer {
             for grid_y in -30..30 {
                 let tile = world.current_map.tile_at(grid_x, grid_y);
 
+                let x = grid_x * self.individual_tile_size;
+                let y = grid_y * self.individual_tile_size;
+
                 let rec = tile.texture_rec(self.individual_tile_size);
-                let pos = Vector2::new((grid_x * self.individual_tile_size) as f32,
-                                       (grid_y * self.individual_tile_size) as f32);
+                let pos = Vector2::new(x as f32, y as f32);
 
                 draw2d.draw_texture_rec(tiles_texture, rec, pos, Color::WHITE);
 
                 #[cfg(debug_assertions)]
-                draw2d.draw_rectangle_lines(grid_x * self.individual_tile_size, grid_y * self.individual_tile_size,
-                                            self.individual_tile_size, self.individual_tile_size,
-                                            Color::PINK);
+                {
+                    draw2d.draw_line(x - 3, y, x + 2, y, Color::DARKGREEN);
+                    draw2d.draw_line(x, y - 3, x, y + 2, Color::DARKGREEN);
+
+                    if tile.blocking {
+                        draw2d.draw_rectangle_lines(x - 1, y - 1,
+                                                    self.individual_tile_size + 1, self.individual_tile_size + 1,
+                                                    Color::DARKGRAY)
+                    }
+                }
             }
         }
 

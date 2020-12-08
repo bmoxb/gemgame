@@ -262,7 +262,7 @@ pub struct Tile {
     /// Indicates characteristics of this tile such as its texture.
     tile_type: TileType,
     /// Whether or not tile prevents entities from moving over it.
-    blocking: bool,
+    pub blocking: bool,
     /// Whether or not this tile has been seen by the player yet.
     seen: bool
 }
