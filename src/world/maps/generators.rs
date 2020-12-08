@@ -1,5 +1,7 @@
 use noise::Seedable;
 
+use array_macro::array;
+
 use super::{ Coord, Chunk };
 
 pub fn by_name(name: &str, seed: u32) -> Option<Box<dyn Generator>> {
@@ -31,6 +33,7 @@ impl Generator for SurfaceGenerator {
     fn name(&self) -> &'static str { "surface" }
 
     fn generate(&self, chunk_x: Coord, chunk_y: Coord) -> Chunk {
-        unimplemented!()
+        let tiles = array![super::Tile::default(); super::CHUNK_TILE_COUNT];
+        Chunk::new(tiles) // TODO: Proper chunk generation.
     }
 }
