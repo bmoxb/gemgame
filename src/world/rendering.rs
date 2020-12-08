@@ -12,11 +12,12 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(tiles_texture: Texture2D, individual_tile_size: i32) -> Self {
+    pub fn new(handle: &RaylibHandle, tiles_texture: Texture2D, individual_tile_size: i32) -> Self {
         Renderer {
             camera: Camera2D {
                 target: Vector2::new(0.0, 0.0),
-                offset: Vector2::new(0.0, 0.0),
+                offset: Vector2::new((handle.get_screen_width() / 2) as f32,
+                                     (handle.get_screen_height() / 2) as f32),
                 rotation: 0.0,
                 zoom: 1.0
             },

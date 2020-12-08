@@ -27,7 +27,7 @@ impl State for MainMenu {
             Some(KeyboardKey::KEY_SPACE) => {
                 let world_title = "My World".to_string();
                 let texture = handle.load_texture(thread, "assets/textures/tiles.png").unwrap(); // TODO: Proper asset manager!
-                Some(Box::new(game::Game::new(world_title, texture)))
+                Some(Box::new(game::Game::new(world_title, handle, texture)))
             }
 
             _ => None

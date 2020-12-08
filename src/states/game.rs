@@ -11,10 +11,10 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(world_title: String, tiles_texture: Texture2D) -> Self {
+    pub fn new(world_title: String, handle: &RaylibHandle, tiles_texture: Texture2D) -> Self {
         Game {
             game_world: World::load(world_title).unwrap(),
-            world_renderer: Renderer::new(tiles_texture, 32)
+            world_renderer: Renderer::new(handle, tiles_texture, 32)
         }
     }
 }
