@@ -298,20 +298,18 @@ impl TileType {
 const fn tile_coords_to_chunk_coords(x: Coord, y: Coord) -> (Coord, Coord) {
     let chunk_x = x / CHUNK_WIDTH;
     let chunk_y = y / CHUNK_HEIGHT;
-
     (
-        if x >= 0 { chunk_x } else { chunk_x - 1 },
-        if y >= 0 { chunk_y } else { chunk_y - 1 }
+        if x >= 0 || x % CHUNK_WIDTH == 0 { chunk_x } else { chunk_x - 1 },
+        if y >= 0 || y % CHUNK_HEIGHT == 0 { chunk_y } else { chunk_y - 1 }
     )
 }
 
 const fn tile_coords_to_chunk_offset_coords(x: Coord, y: Coord) -> (Coord, Coord) {
     let offset_x = x % CHUNK_WIDTH;
     let offset_y = y % CHUNK_HEIGHT;
-
     (
-        if x >= 0 { offset_x } else { CHUNK_WIDTH + offset_x },
-        if y >= 0 { offset_y } else { CHUNK_HEIGHT + offset_y }
+        if x >= 0 || offset_x == 0 { offset_x } else { CHUNK_WIDTH + offset_x },
+        if y >= 0 || offset_y == 0 { offset_y } else { CHUNK_HEIGHT + offset_y }
     )
 }
 
@@ -329,7 +327,8 @@ mod test {
             ((-14, 14), (-1, 0)),
             ((-3, -2), (-1, -1)),
             ((-34, -19), (-3, -2)),
-            ((16, 16), (1, 1))
+            ((-16, -17), (-1, -2)),
+            ((-33, -32), (-3, -2))
         ];
         for ((in_x, in_y), out) in test_data {
             assert_eq!(super::tile_coords_to_chunk_coords(*in_x, *in_y), *out);
@@ -345,7 +344,8 @@ mod test {
             ((-13, 14), (3, 14)),
             ((-3, -2), (13, 14)),
             ((-34, -19), (14, 13)),
-            ((16, 16), (0, 0))
+            ((-16, -17), (0, 15)),
+            ((-33, -32), (15, 0))
         ];
         for ((in_x, in_y), out) in test_data {
             assert_eq!(super::tile_coords_to_chunk_offset_coords(*in_x, *in_y), *out);
