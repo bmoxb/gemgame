@@ -3,7 +3,7 @@ use raylib::prelude::*;
 use super::State;
 
 use crate::{
-    TextureKey, asset_management::AssetManager,
+    AssetManager, TextureKey,
     world::{ World, rendering::Renderer }
 };
 
@@ -25,7 +25,7 @@ impl Game {
 impl State for Game {
     fn title(&self) -> &'static str { "Game" }
 
-    fn begin(&mut self, assets: &mut AssetManager<TextureKey>, handle: &mut RaylibHandle, thread: &RaylibThread) {
+    fn begin(&mut self, assets: &mut AssetManager, handle: &mut RaylibHandle, thread: &RaylibThread) {
         assets.require_texture(TextureKey::Tiles, handle, thread)
     }
 
@@ -40,7 +40,7 @@ impl State for Game {
         None
     }
 
-    fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager<TextureKey>) {
+    fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager) {
         self.world_renderer.draw(draw, assets.texture(&TextureKey::Tiles), &mut self.game_world);
     }
 }

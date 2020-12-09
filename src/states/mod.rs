@@ -3,16 +3,16 @@
 
 mod game;
 
-use crate::{ TextureKey, asset_management::AssetManager };
+use crate::AssetManager;
 
 use raylib::prelude::*;
 
 pub trait State {
     fn title(&self) -> &'static str;
 
-    fn begin(&mut self, assets: &mut AssetManager<TextureKey>, handle: &mut RaylibHandle, thread: &RaylibThread) {}
+    fn begin(&mut self, assets: &mut AssetManager, handle: &mut RaylibHandle, thread: &RaylibThread) {}
     fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>>;
-    fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager<TextureKey>);
+    fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager);
 }
 
 pub struct MainMenu {}
@@ -37,7 +37,7 @@ impl State for MainMenu {
         }
     }
 
-    fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager<TextureKey>) {
+    fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager) {
         let text = "Press Space";
         let width = measure_text(text, 50);
 

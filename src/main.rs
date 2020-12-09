@@ -18,7 +18,21 @@ fn main() {
 
     log::info!("Initialised RayLib and created window");
 
-    let mut assets = asset_management::AssetManager::<TextureKey>::new("assets/", "textures/");
+    let mut assets = AssetManager::new(
+        "assets/",
+        "textures/",
+        "colour palettes/",
+        asset_management::Palette {
+            background_colour: Color::BLANK,
+            foreground_colours: [
+                Color::from((68, 68, 68, 255)),     // dark
+                Color::from((136, 136, 136, 255)),  // medium dark
+                Color::from((187, 187, 187, 255)),  // medium light
+                Color::from((255, 255, 255, 255))   // light
+            ]
+        },
+        PaletteKey::PinksGreys // target colour palette
+    );
 
     log::info!("Prepared the asset manager");
 
@@ -57,6 +71,8 @@ fn main() {
     log::info!("Exited main loop");
 }
 
+pub type AssetManager = asset_management::AssetManager<TextureKey, PaletteKey>;
+
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub enum TextureKey { Tiles }
 
@@ -64,6 +80,17 @@ impl asset_management::AssetKey for TextureKey {
     fn path(&self) -> &str {
         match self {
             TextureKey::Tiles => "tiles.png"
+        }
+    }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+pub enum PaletteKey { PinksGreys }
+
+impl asset_management::AssetKey for PaletteKey {
+    fn path(&self) -> &str {
+        match self {
+            PaletteKey::PinksGreys => "pinks and greys.json"
         }
     }
 }

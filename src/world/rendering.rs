@@ -16,7 +16,7 @@ impl Renderer {
                 target: Vector2::new(0.0, 0.0),
                 offset: Vector2::new(0.0, 0.0),
                 rotation: 0.0,
-                zoom: 1.0
+                zoom: 2.0
             },
             individual_tile_size
         }
