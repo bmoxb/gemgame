@@ -11,7 +11,7 @@ pub trait State {
     fn title(&self) -> &'static str;
 
     fn begin(&mut self, assets: &mut AssetManager<TextureKey>, handle: &mut RaylibHandle, thread: &RaylibThread) {}
-    fn update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread, delta: f32) -> Option<Box<dyn State>>;
+    fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>>;
     fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager<TextureKey>);
 }
 
@@ -26,7 +26,7 @@ impl MainMenu {
 impl State for MainMenu {
     fn title(&self) -> &'static str { "Main Menu" }
 
-    fn update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread, delta: f32) -> Option<Box<dyn State>> {
+    fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>> {
         match handle.get_key_pressed() {
             Some(KeyboardKey::KEY_SPACE) => {
                 let world_title = "My World".to_string();

@@ -32,7 +32,7 @@ fn main() {
         // Update game logic:
 
         let delta = handle.get_frame_time();
-        let potential_state_change = current_state.update(&mut handle, &thread, delta);
+        let potential_state_change = current_state.update(&mut handle, delta);
 
         // Draw to screen:
         {

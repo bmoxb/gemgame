@@ -29,7 +29,7 @@ impl State for Game {
         assets.require_texture(TextureKey::Tiles, handle, thread)
     }
 
-    fn update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread, delta: f32) -> Option<Box<dyn State>> {
+    fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>> {
         self.world_renderer.update_camera_centre(handle);
 
         //let player = self.game_world.get_player_entity();
