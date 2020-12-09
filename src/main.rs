@@ -58,7 +58,7 @@ fn main() {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq)]
-enum TextureKey { Tiles }
+pub enum TextureKey { Tiles }
 
 impl asset_management::AssetKey for TextureKey {
     fn path(&self) -> &str {
