@@ -14,13 +14,17 @@ impl Renderer {
         Renderer {
             camera: Camera2D {
                 target: Vector2::new(0.0, 0.0),
-                offset: Vector2::new((handle.get_screen_width() / 2) as f32,
-                                     (handle.get_screen_height() / 2) as f32),
+                offset: Vector2::new(0.0, 0.0),
                 rotation: 0.0,
                 zoom: 1.0
             },
             individual_tile_size
         }
+    }
+
+    pub fn update_camera_centre(&mut self, handle: &RaylibHandle) {
+        self.camera.offset.x = (handle.get_screen_width() / 2) as f32;
+        self.camera.offset.y = (handle.get_screen_height() / 2) as f32;
     }
 
     pub fn centre_camera_on(&mut self, x: i32, y: i32) {
@@ -41,13 +45,19 @@ impl Renderer {
     /// (both in terms of in-game visibility ([`maps::Tile::seen`] property) as
     /// well as whether or not a tile is actually within the camera's viewport).
     pub fn draw(&self, draw: &mut RaylibDrawHandle, tiles_texture: &Texture2D, world: &mut super::World) {
+        let half_width = draw.get_screen_width() / 2;
+        let half_height = draw.get_screen_height() / 2;
+
         let mut draw2d = draw.begin_mode2D(self.camera);
 
         // Tiles:
 
-        // TODO: Decide on the appropriate range of tiles to draw based on camera position.
-        for grid_x in -30..30 {
-            for grid_y in -30..30 {
+        for grid_x in (self.camera.target.x as i32 - half_width) / self.individual_tile_size - 1..
+                      (self.camera.target.x as i32 + half_width) / self.individual_tile_size + 1 {
+
+            for grid_y in (self.camera.target.y as i32 - half_height) / self.individual_tile_size - 1..
+                          (self.camera.target.y as i32 + half_width) / self.individual_tile_size + 1 {
+
                 let tile = world.current_map.tile_at(grid_x, grid_y);
 
                 let x = grid_x * self.individual_tile_size;

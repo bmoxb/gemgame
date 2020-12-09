@@ -30,6 +30,8 @@ impl State for Game {
     }
 
     fn update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread, delta: f32) -> Option<Box<dyn State>> {
+        self.world_renderer.update_camera_centre(handle);
+
         //let player = self.game_world.get_player_entity();
         //self.world_renderer.centre_camera_on(...);
 
