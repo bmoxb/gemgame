@@ -68,7 +68,7 @@ impl<TextureKey: AssetKey, PaletteKey: AssetKey> AssetManager<TextureKey, Palett
             match Image::load_image(path.to_str().unwrap()) {
                 Ok(mut image) => {
                     let zipped = self.input_palette.foreground_colours.iter()
-                        .zip(self.palette(&self.target_palette_key).foreground_colours.iter());
+                        .zip(self.get_target_palette().foreground_colours.iter());
 
                     for (old, new) in zipped {
                         log::debug!("Replacing colour {:?} in image '{}' with colour {:?}", old, path.display(), new);
@@ -88,6 +88,10 @@ impl<TextureKey: AssetKey, PaletteKey: AssetKey> AssetManager<TextureKey, Palett
                 Err(msg) => log::warn!("Failure to load image for sake of texture '{:?}' due to error: {}", key, msg)
             }
         }
+    }
+
+    pub fn get_target_palette(&self) -> &Palette {
+        self.palette(&self.target_palette_key)
     }
 
     pub fn palette(&self, key: &PaletteKey) -> &Palette {

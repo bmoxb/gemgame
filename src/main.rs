@@ -52,7 +52,7 @@ fn main() {
         {
             let mut draw = handle.begin_drawing(&thread);
 
-            draw.clear_background(Color::BLACK);
+            draw.clear_background(assets.get_target_palette().background_colour);
 
             current_state.draw(&mut draw, &assets);
 
