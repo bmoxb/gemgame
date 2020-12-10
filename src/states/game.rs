@@ -26,7 +26,7 @@ impl State for Game {
     fn title(&self) -> &'static str { "Game" }
 
     fn begin(&mut self, assets: &mut AssetManager, handle: &mut RaylibHandle, thread: &RaylibThread) {
-        assets.require_texture(TextureKey::Tiles, handle, thread)
+        assets.require_texture(TextureKey::Tiles, handle, thread);
     }
 
     fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>> {

@@ -73,7 +73,7 @@ fn main() {
 
 pub type AssetManager = asset_management::AssetManager<TextureKey, PaletteKey>;
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum TextureKey { Tiles }
 
 impl asset_management::AssetKey for TextureKey {
@@ -84,7 +84,7 @@ impl asset_management::AssetKey for TextureKey {
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum PaletteKey { PinksGreys }
 
 impl asset_management::AssetKey for PaletteKey {
