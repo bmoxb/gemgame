@@ -117,6 +117,7 @@ impl<TextureKey: AssetKey, PaletteKey: AssetKey> AssetManager<TextureKey, Palett
                             let palette = Palette::from_json(&json, &path);
 
                             log::info!("Loaded colour palette '{:?}' from path: {}", key, path.display());
+                            log::debug!("Colour palette: {:?}", palette);
                             self.loaded_palettes.insert(key, palette);
                         }
 
@@ -130,6 +131,7 @@ impl<TextureKey: AssetKey, PaletteKey: AssetKey> AssetManager<TextureKey, Palett
     }
 }
 
+#[derive(Debug)]
 pub struct Palette {
     pub background_colour: Color,
     pub foreground_colours: [Color; 4]
@@ -145,7 +147,7 @@ impl Palette {
         });
 
         let background_colour = Color::from_hex(background_colour_str).unwrap_or_else(|_| {
-            log::warn!("Could palette JSON file '{}' has an invalid colour field: {}",
+            log::warn!("Colour palette JSON file '{}' has an invalid colour field: {}",
                        path.display(), background_colour_str);
 
             ERROR_PALETTE.background_colour
@@ -155,17 +157,22 @@ impl Palette {
             Some(vector) => {
                 vector.iter().map(|colour_json| {
                     let colour_str = colour_json.as_str().unwrap_or_else(|| {
-                        log::warn!("");
+                        log::warn!("Colour palette JSON file '{}' contains invalid foreground colour",
+                                   path.display());
+
                         "000000"
                     });
 
                     Color::from_hex(colour_str).unwrap_or_else(|_| {
-                        log::warn!("");
+                        log::warn!("Failed to parse colour '{}' in colour palette JSON file '{}'",
+                                   colour_str, path.display());
+
                         Color::BLACK
                     })
                 })
                 .collect::<Vec<Color>>().try_into().unwrap_or_else(|_| {
-                    log::warn!("");
+                    log::warn!("The foreground colours field of colour palette JSON file '{}', while present, is invalid",
+                               path.display());
 
                     ERROR_PALETTE.foreground_colours
                 })

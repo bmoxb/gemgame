@@ -16,7 +16,7 @@ impl Renderer {
                 target: Vector2::new(0.0, 0.0),
                 offset: Vector2::new(0.0, 0.0),
                 rotation: 0.0,
-                zoom: 2.0
+                zoom: 3.0
             },
             individual_tile_size
         }
@@ -70,13 +70,13 @@ impl Renderer {
 
                 #[cfg(debug_assertions)]
                 {
-                    draw2d.draw_line(x - 3, y, x + 2, y, Color::DARKGREEN);
-                    draw2d.draw_line(x, y - 3, x, y + 2, Color::DARKGREEN);
+                    draw2d.draw_line(x - 1, y, x + 1, y, Color::DARKGREEN);
+                    draw2d.draw_line(x, y - 1, x, y + 1, Color::DARKGREEN);
 
                     if tile.blocking {
                         draw2d.draw_rectangle_lines(x - 1, y - 1,
                                                     self.individual_tile_size + 1, self.individual_tile_size + 1,
-                                                    Color::DARKGRAY)
+                                                    Color::DARKGREEN)
                     }
                 }
             }
