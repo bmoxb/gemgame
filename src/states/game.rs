@@ -14,10 +14,10 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(world_title: String, handle: &RaylibHandle) -> Self {
+    pub fn new(world_title: String) -> Self {
         Game {
             game_world: World::load(world_title).unwrap(),
-            world_renderer: Renderer::new(handle, 32)
+            world_renderer: Renderer::new(32)
         }
     }
 }

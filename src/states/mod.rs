@@ -30,7 +30,7 @@ impl State for MainMenu {
         match handle.get_key_pressed() {
             Some(KeyboardKey::KEY_SPACE) => {
                 let world_title = "My World".to_string();
-                Some(Box::new(game::Game::new(world_title, handle)))
+                Some(Box::new(game::Game::new(world_title)))
             }
 
             _ => None

@@ -10,7 +10,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(handle: &RaylibHandle, individual_tile_size: i32) -> Self {
+    pub fn new(individual_tile_size: i32) -> Self {
         Renderer {
             camera: Camera2D {
                 target: Vector2::new(0.0, 0.0),
@@ -33,7 +33,7 @@ impl Renderer {
     }
 
     pub fn arrow_key_camera_movement(&mut self, handle: &mut RaylibHandle, delta: f32) {
-        let change = (CAMERA_MOVEMENT_SPEED * delta).round();
+        let change = CAMERA_MOVEMENT_SPEED * delta;
 
         if handle.is_key_down(KeyboardKey::KEY_LEFT) { self.camera.target.x -= change; }
         if handle.is_key_down(KeyboardKey::KEY_RIGHT) { self.camera.target.x += change; }
@@ -45,18 +45,18 @@ impl Renderer {
     /// (both in terms of in-game visibility ([`maps::Tile::seen`] property) as
     /// well as whether or not a tile is actually within the camera's viewport).
     pub fn draw(&self, draw: &mut RaylibDrawHandle, tiles_texture: &Texture2D, world: &mut super::World) {
-        let half_width = draw.get_screen_width() / 2;
-        let half_height = draw.get_screen_height() / 2;
+        let half_width = draw.get_screen_width() as f32 / 2.0 / self.camera.zoom;
+        let half_height = draw.get_screen_height() as f32 / 2.0 / self.camera.zoom;
 
         let mut draw2d = draw.begin_mode2D(self.camera);
 
         // Tiles:
 
-        for grid_x in (self.camera.target.x as i32 - half_width) / self.individual_tile_size - 1..
-                      (self.camera.target.x as i32 + half_width) / self.individual_tile_size + 1 {
+        for grid_x in (self.camera.target.x - half_width).floor() as i32 / self.individual_tile_size - 1..
+                      (self.camera.target.x + half_width).ceil() as i32 / self.individual_tile_size + 1 {
 
-            for grid_y in (self.camera.target.y as i32 - half_height) / self.individual_tile_size - 1..
-                          (self.camera.target.y as i32 + half_width) / self.individual_tile_size + 1 {
+            for grid_y in (self.camera.target.y - half_height).floor() as i32 / self.individual_tile_size - 1..
+                          (self.camera.target.y + half_height).ceil() as i32 / self.individual_tile_size + 1 {
 
                 let tile = world.current_map.tile_at(grid_x, grid_y);
 
