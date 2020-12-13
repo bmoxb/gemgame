@@ -27,6 +27,8 @@ impl State for Game {
 
     fn begin(&mut self, assets: &mut AssetManager, handle: &mut RaylibHandle, thread: &RaylibThread) {
         assets.require_texture(TextureKey::Tiles, handle, thread);
+
+        self.game_world.save(); // TODO: temp
     }
 
     fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>> {

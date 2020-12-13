@@ -84,8 +84,19 @@ impl Map {
     }
 
     /// Save this map to the filesystem. Will return `true` if able to save map
-    /// data successfully.
+    /// data successfully as well as save all currently loaded map chunks.
     pub fn save(&self) -> bool {
+        // Save currently loaded chunks:
+
+        let mut chunks_saved_successfully = true;
+
+        for ((chunk_x, chunk_y), chunk) in self.loaded_chunks.iter() {
+            let success = chunk.save(&self.directory, *chunk_x, *chunk_y);
+            chunks_saved_successfully = chunks_saved_successfully && success;
+        }
+
+        // Save map JSON data:
+
         let map_file_path = self.directory.join(MAP_JSON_FILE);
 
         let data = serde_json::json!({
@@ -95,7 +106,7 @@ impl Map {
         match fs::write(&map_file_path, data) {
             Ok(_) => {
                 log::info!("Saved map: {}", self);
-                true
+                true && chunks_saved_successfully
             }
 
             Err(e) => {
@@ -207,19 +218,29 @@ impl Chunk {
             Ok(file) => {
                 log::trace!("Opened chunk '{}' file: {:?}", chunk_file_path.display(), file);
 
-                // TODO: May be able to skip the vector conversion when const generics are stablised?
-                let mut tiles_vec: Vec<Tile> = bincode::deserialize_from(file).unwrap();
-                tiles_vec.resize_with(CHUNK_TILE_COUNT, || {
-                    log::warn!("Chunk '{}' contains the incorrect number of tiles",
-                               chunk_file_path.display());
-                    Tile::default()
-                });
+                match bincode::deserialize_from::<fs::File, Vec<Tile>>(file) {
+                    Ok(mut tiles_vec) => {
+                        // TODO: May be able to skip the vector conversion when const generics are stablised?
 
-                let tiles: [Tile; CHUNK_TILE_COUNT] = tiles_vec.try_into().unwrap();
+                        tiles_vec.resize_with(CHUNK_TILE_COUNT, || {
+                            log::warn!("Chunk '{}' contains the incorrect number of tiles",
+                                       chunk_file_path.display());
+                            Tile::default()
+                        });
 
-                log::debug!("Loaded chunk: {}", chunk_file_path.display());
+                        let tiles: [Tile; CHUNK_TILE_COUNT] = tiles_vec.try_into().unwrap();
 
-                Some(Chunk { tiles })
+                        log::debug!("Loaded chunk: {}", chunk_file_path.display());
+
+                        Some(Chunk { tiles })
+                    }
+
+                    Err(e) => {
+                        log::warn!("Chunk '{}' data could not be deserialised: {}",
+                                   chunk_file_path.display(), e);
+                        None
+                    }
+                }
             }
 
             Err(e) => {
