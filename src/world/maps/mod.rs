@@ -325,15 +325,27 @@ impl Tile {
     }
 
     pub const fn texture_col(&self, colours: &Palette) -> Color {
-        match self.tile_type {
-            _ => colours.background_colour
+        match &self.tile_type {
+            TileType::Ground
+            | TileType::Dirt => colours.ground,
+
+            TileType::Wall => colours.wall,
+
+            TileType::Flower(state)
+            | TileType::Tree(state)
+            | TileType::Bush(state) => match &state {
+                PlantState::Ripe => colours.ripe_plant,
+                PlantState::Harvested => colours.harvested_plant,
+                PlantState::Dead => colours.dead_plant
+            }
         }
     }
 
     pub const fn blocking(&self) -> bool {
         match self.tile_type {
-            TileType::Wall |
-            TileType::Flower(_) | TileType::Tree(_) | TileType::Bush(_) => true,
+            TileType::Wall
+            | TileType::Flower(_) | TileType::Tree(_) | TileType::Bush(_) => true,
+
             _ => false
         }
     }
@@ -342,8 +354,7 @@ impl Tile {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TileType {
     Ground, Wall, Dirt,
-    Flower(PlantState),
-    Tree(PlantState), Bush(PlantState)
+    Flower(PlantState), Tree(PlantState), Bush(PlantState)
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

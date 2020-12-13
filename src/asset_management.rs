@@ -5,50 +5,41 @@ use std::{
     collections::HashMap,
     hash::Hash,
     fmt::Debug,
-    convert::TryInto,
     path::{ Path, PathBuf }
 };
 
-const ERROR_PALETTE: Palette = Palette {
-    background_colour: Color::BLACK,
-    foreground_colours: [ Color::RED, Color::GREEN, Color::BLUE, Color::WHITE ]
-};
+use serde::{ Serialize, Deserialize };
 
 pub trait AssetKey: PartialEq + Eq + Hash + Debug + Clone {
     fn path(&self) -> &str;
 }
 
-pub struct AssetManager<TextureKey: AssetKey, PaletteKey: AssetKey> {
+pub struct AssetManager<TextureKey: AssetKey> {
     /// Directory containing texture image files.
     textures_directory: PathBuf,
     loaded_textures: HashMap<TextureKey, Texture2D>,
-    /// The colour palette used in images containing texture data. The colours
-    /// in this palette will be replaced by those of the palette specified by
-    /// the `target_palette_key` field.
-    input_palette: Palette,
     /// Directory containing colour palette JSON files.
     palettes_directory: PathBuf,
-    loaded_palettes: HashMap<PaletteKey, Palette>,
-    /// Key that indicates the colour palette that loaded textures should be
-    /// made to use.
-    target_palette_key: PaletteKey
+    pub current_palette: Palette
 }
 
-impl<TextureKey: AssetKey, PaletteKey: AssetKey> AssetManager<TextureKey, PaletteKey> {
-    pub fn new(dir: &str, textures_subdir: &str, palettes_subdir: &str, input_palette: Palette, target_palette_key: PaletteKey) -> Self {
+impl<TextureKey: AssetKey> AssetManager<TextureKey> {
+    pub fn new(dir: &str, textures_subdir: &str, palettes_subdir: &str) -> Self {
         let directory = Path::new(dir);
 
-        let mut manager = AssetManager {
+        AssetManager {
             textures_directory: directory.join(textures_subdir),
             loaded_textures: HashMap::new(),
-            input_palette,
             palettes_directory: directory.join(palettes_subdir),
-            loaded_palettes: HashMap::new(),
-            target_palette_key: target_palette_key.clone()
-        };
-
-        manager.require_palette(target_palette_key);
-        manager
+            current_palette: Palette {
+                background: Color::GRAY,
+                ground: Color::WHITE,
+                wall: Color::WHITE,
+                ripe_plant: Color::WHITE,
+                harvested_plant: Color::WHITE,
+                dead_plant: Color::WHITE
+            }
+        }
     }
 
     pub fn texture(&self, key: &TextureKey) -> &Texture2D {
@@ -61,131 +52,64 @@ impl<TextureKey: AssetKey, PaletteKey: AssetKey> AssetManager<TextureKey, Palett
         }
     }
 
-    pub fn require_texture(&mut self, key: TextureKey, handle: &mut RaylibHandle, thread: &RaylibThread) {
+    pub fn require_texture(&mut self, key: TextureKey, handle: &mut RaylibHandle, thread: &RaylibThread) -> bool {
         if !self.loaded_textures.contains_key(&key) {
             let path = self.textures_directory.join(key.path());
 
-            match Image::load_image(path.to_str().unwrap()) {
-                Ok(mut image) => {
-                    let zipped = self.input_palette.foreground_colours.iter()
-                        .zip(self.get_target_palette().foreground_colours.iter());
-
-                    for (old, new) in zipped {
-                        log::debug!("Replacing colour {:?} in image '{}' with colour {:?}", old, path.display(), new);
-                        image.color_replace(old, new);
-                    }
-
-                    match handle.load_texture_from_image(thread, &image) {
-                        Ok(texture) => {
-                            log::info!("Loaded texture '{:?}' from path: {}", key, path.display());
-                            self.loaded_textures.insert(key, texture);
-                        }
-
-                        Err(msg) => log::warn!("Failed to load texture '{:?}' from image due to error: {}", key, msg)
-                    }
+            match handle.load_texture(thread, path.to_str().unwrap()) {
+                Ok(texture) => {
+                    log::info!("Loaded texture '{:?}' from path: {}", key, path.display());
+                    self.loaded_textures.insert(key, texture);
+                    return true;
                 }
 
-                Err(msg) => log::warn!("Failure to load image for sake of texture '{:?}' due to error: {}", key, msg)
+                Err(msg) => log::warn!("Failed to load texture '{:?}' due to error: {}", key, msg)
             }
         }
+
+        false
     }
 
-    pub fn get_target_palette(&self) -> &Palette {
-        self.palette(&self.target_palette_key)
-    }
+    pub fn load_palette<Key: AssetKey>(&mut self, key: Key) -> bool {
+        let path = self.palettes_directory.join(key.path());
 
-    pub fn palette(&self, key: &PaletteKey) -> &Palette {
-        match self.loaded_palettes.get(&key) {
-            Some(palette) => palette,
-            None => {
-                log::error!("Could not get colour palette by key: {:?}", key);
-                &ERROR_PALETTE
-            }
-        }
-    }
+        match fs::File::open(&path) {
+            Ok(file) => {
+                log::debug!("Opened colour palette JSON file: {}", path.display());
 
-    pub fn require_palette(&mut self, key: PaletteKey) {
-        if !self.loaded_palettes.contains_key(&key) {
-            let path = self.palettes_directory.join(key.path());
+                match serde_json::from_reader::<fs::File, Palette>(file) {
+                    Ok(palette) => {
+                        log::info!("Loaded colour palette '{:?}' from path: {}", key, path.display());
+                        self.current_palette = palette;
+                        true
+                    }
 
-            match fs::File::open(&path) {
-                Ok(file) => {
-                    log::debug!("Opened colour palette JSON file: {}", path.display());
-
-                    match serde_json::from_reader::<fs::File, serde_json::Value>(file) {
-                        Ok(json) => {
-                            let palette = Palette::from_json(&json, &path);
-
-                            log::info!("Loaded colour palette '{:?}' from path: {}", key, path.display());
-                            log::debug!("Colour palette: {:?}", palette);
-                            self.loaded_palettes.insert(key, palette);
-                        }
-
-                        Err(e) => {}
+                    Err(e) => {
+                        log::warn!("Failed to parse colour palette '{:?}' data due to error: {}", key, e);
+                        false
                     }
                 }
+            }
 
-                Err(e) => {}
+            Err(e) => {
+                log::warn!("Failed to read colour palette '{:?}' JSON from path '{}' due to error: {}",
+                           key, path.display(), e);
+                false
             }
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Palette {
-    pub background_colour: Color,
-    pub foreground_colours: [Color; 4]
+    #[serde(with = "ColorDef")] pub background: Color,
+    #[serde(with = "ColorDef")] pub ground: Color,
+    #[serde(with = "ColorDef")] pub wall: Color,
+    #[serde(with = "ColorDef", rename = "ripe plant")] pub ripe_plant: Color,
+    #[serde(with = "ColorDef", rename = "harvested plant")] pub harvested_plant: Color,
+    #[serde(with = "ColorDef", rename = "dead plant")] pub dead_plant: Color
 }
 
-impl Palette {
-    fn from_json(json: &serde_json::Value, path: &Path) -> Self {
-        let background_colour_str = json["background"].as_str().unwrap_or_else(|| {
-            log::warn!("Colour palette JSON file '{}' lacks a proper background colour field",
-                       path.display());
-
-            "000000"
-        });
-
-        let background_colour = Color::from_hex(background_colour_str).unwrap_or_else(|_| {
-            log::warn!("Colour palette JSON file '{}' has an invalid colour field: {}",
-                       path.display(), background_colour_str);
-
-            ERROR_PALETTE.background_colour
-        });
-
-        let foreground_colours = match json["foreground"].as_array() {
-            Some(vector) => {
-                vector.iter().map(|colour_json| {
-                    let colour_str = colour_json.as_str().unwrap_or_else(|| {
-                        log::warn!("Colour palette JSON file '{}' contains invalid foreground colour",
-                                   path.display());
-
-                        "000000"
-                    });
-
-                    Color::from_hex(colour_str).unwrap_or_else(|_| {
-                        log::warn!("Failed to parse colour '{}' in colour palette JSON file '{}'",
-                                   colour_str, path.display());
-
-                        Color::BLACK
-                    })
-                })
-                .collect::<Vec<Color>>().try_into().unwrap_or_else(|_| {
-                    log::warn!("The foreground colours field of colour palette JSON file '{}', while present, is invalid",
-                               path.display());
-
-                    ERROR_PALETTE.foreground_colours
-                })
-            }
-
-            None => {
-                log::warn!("Colour palette JSON file '{}' lacks a proper foreground field",
-                           path.display());
-
-                ERROR_PALETTE.foreground_colours
-            }
-        };
-
-        Palette { background_colour, foreground_colours }
-    }
-}
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "Color")]
+struct ColorDef { r: u8, g: u8, b: u8, a: u8 }

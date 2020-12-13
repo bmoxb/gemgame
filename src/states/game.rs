@@ -43,6 +43,6 @@ impl State for Game {
     }
 
     fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager) {
-        //self.world_renderer.draw(draw, assets.texture(&TextureKey::Tiles), &mut self.game_world);
+        self.world_renderer.draw(draw, assets.texture(&TextureKey::Tiles), &assets.current_palette, &mut self.game_world);
     }
 }

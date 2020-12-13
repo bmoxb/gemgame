@@ -21,18 +21,9 @@ fn main() {
     let mut assets = AssetManager::new(
         "assets/",
         "textures/",
-        "colour palettes/",
-        asset_management::Palette {
-            background_colour: Color::BLANK,
-            foreground_colours: [
-                Color::from((68, 68, 68, 255)),     // dark
-                Color::from((136, 136, 136, 255)),  // medium dark
-                Color::from((187, 187, 187, 255)),  // medium light
-                Color::from((255, 255, 255, 255))   // light
-            ]
-        },
-        PaletteKey::Coffee // target colour palette
+        "colour palettes/"
     );
+    assets.load_palette(PaletteKey::Default);
 
     log::info!("Prepared the asset manager");
 
@@ -52,7 +43,7 @@ fn main() {
         {
             let mut draw = handle.begin_drawing(&thread);
 
-            draw.clear_background(assets.get_target_palette().background_colour);
+            draw.clear_background(assets.current_palette.background);
 
             current_state.draw(&mut draw, &assets);
 
@@ -71,7 +62,7 @@ fn main() {
     log::info!("Exited main loop");
 }
 
-pub type AssetManager = asset_management::AssetManager<TextureKey, PaletteKey>;
+pub type AssetManager = asset_management::AssetManager<TextureKey>;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum TextureKey { Tiles }
@@ -85,12 +76,12 @@ impl asset_management::AssetKey for TextureKey {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub enum PaletteKey { Coffee }
+pub enum PaletteKey { Default }
 
 impl asset_management::AssetKey for PaletteKey {
     fn path(&self) -> &str {
         match self {
-            PaletteKey::Coffee => "coffee.json"
+            PaletteKey::Default => "default.json"
         }
     }
 }
