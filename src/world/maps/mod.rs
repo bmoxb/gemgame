@@ -3,16 +3,16 @@ pub mod generators;
 use std::{
     path::{ Path, PathBuf },
     collections::HashMap,
+    convert::TryInto,
     fs, fmt
 };
 
-use raylib::core::math::Rectangle;
+use raylib::prelude::*;
 
-use num_derive::{ FromPrimitive, ToPrimitive };
-
-use array_macro::array;
+use serde::{ Serialize, Deserialize };
 
 use super::{ Coord, entities::Entity, load_json };
+use crate::asset_management::Palette;
 
 use generators::Generator;
 
@@ -163,7 +163,7 @@ impl Map {
     /// happen on call of this method.
     fn unload_chunk(&mut self, chunk_x: Coord, chunk_y: Coord) {
         if let Some(old_chunk) = self.loaded_chunks.remove(&(chunk_x, chunk_y)) {
-            old_chunk.save(chunk_x, chunk_y);
+            old_chunk.save(&self.directory, chunk_x, chunk_y);
         }
     }
 
@@ -203,28 +203,19 @@ impl Chunk {
     fn load(map_directory: &Path, chunk_x: Coord, chunk_y: Coord) -> Option<Self> {
         let chunk_file_path = map_directory.join(chunk_file_name(chunk_x, chunk_y));
 
-        match fs::read(&chunk_file_path) {
-            Ok(data) => {
-                log::trace!("Loaded chunk '{}' data: {:?}", chunk_file_path.display(), data);
+        match fs::File::open(&chunk_file_path) {
+            Ok(file) => {
+                log::trace!("Opened chunk '{}' file: {:?}", chunk_file_path.display(), file);
 
-                let mut tiles = array![Tile::default(); CHUNK_TILE_COUNT];
+                // TODO: May be able to skip the vector conversion when const generics are stablised?
+                let mut tiles_vec: Vec<Tile> = bincode::deserialize_from(file).unwrap();
+                tiles_vec.resize_with(CHUNK_TILE_COUNT, || {
+                    log::warn!("Chunk '{}' contains the incorrect number of tiles",
+                               chunk_file_path.display());
+                    Tile::default()
+                });
 
-                for (index, pair) in data.chunks_exact(2).enumerate() {
-                    let tile_type_num = pair[0];
-                    let flags = pair[1];
-
-                    let tile = &mut tiles[index];
-
-                    tile.tile_type = num::FromPrimitive::from_u8(tile_type_num).unwrap_or_else(|| {
-                        log::warn!("Unkown tile type {} specified in chunk '{}'",
-                                tile_type_num, chunk_file_path.display());
-                        TileType::Dirt
-                    });
-                    tile.blocking = flags & 1 != 0; // least-significant bit
-                    tile.seen = flags >> 1 & 1 != 0; // 2nd to least-significant
-
-                    log::trace!("Loaded tile: {:?}", tile);
-                }
+                let tiles: [Tile; CHUNK_TILE_COUNT] = tiles_vec.try_into().unwrap();
 
                 log::debug!("Loaded chunk: {}", chunk_file_path.display());
 
@@ -232,15 +223,40 @@ impl Chunk {
             }
 
             Err(e) => {
-                log::trace!("Could not find chunk '{}' due to IO error: {}",
+                log::trace!("Could not open chunk '{}' file: {}",
                             chunk_file_path.display(), e);
                 None
             }
         }
     }
 
-    fn save(&self, chunk_x: Coord, chunk_y: Coord) {
-        unimplemented!(); // TODO!
+    fn save(&self, map_directory: &Path, chunk_x: Coord, chunk_y: Coord) -> bool {
+        let chunk_file_path = map_directory.join(chunk_file_name(chunk_x, chunk_y));
+
+        match fs::File::create(&chunk_file_path) {
+            Ok(file) => {
+                // TODO: Const generics?
+                let tiles_vec = self.tiles.to_vec();
+
+                if let Err(e) = bincode::serialize_into(file, &tiles_vec) {
+                    log::warn!("Failed to serialize and write chunk '{}': {}",
+                               chunk_file_path.display(), e);
+
+                    return false;
+                }
+
+                log::debug!("Saved chunk: {}", chunk_file_path.display());
+            }
+
+            Err(e) => {
+                log::trace!("Could not write chunk '{}' file: {}",
+                            chunk_file_path.display(), e);
+
+                return false;
+            }
+        }
+
+        true
     }
 
     fn tile_at_offset(&self, mut x: Coord, mut y: Coord) -> &Tile {
@@ -257,43 +273,60 @@ impl Chunk {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tile {
     /// Indicates characteristics of this tile such as its texture.
     tile_type: TileType,
-    /// Whether or not tile prevents entities from moving over it.
-    pub blocking: bool,
     /// Whether or not this tile has been seen by the player yet.
     seen: bool
 }
 
 impl Tile {
     fn default() -> Self {
-        Tile {
-            tile_type: TileType::Dirt,
-            blocking: false, seen: false
-        }
+        Tile { tile_type: TileType::Ground, seen: false }
     }
 
     pub const fn texture_rec(&self, individual_tile_size: i32) -> Rectangle {
-        let (x, y) = self.tile_type.texture_offset_coords();
+        let (offset_x, offset_y) = match self.tile_type {
+            TileType::Ground => (0, 0),
+            TileType::Wall => (1, 0),
+            TileType::Dirt => (2, 0),
+            TileType::Flower(_) => (0, 1),
+            TileType::Tree(_) => (1, 1),
+            TileType::Bush(_) => (2, 1)
+        };
 
-        Rectangle::new((x * individual_tile_size) as f32, (y * individual_tile_size) as f32,
+        let texture_x = offset_x * individual_tile_size;
+        let texture_y = offset_y * individual_tile_size;
+
+        Rectangle::new(texture_x as f32, texture_y as f32,
                        individual_tile_size as f32, individual_tile_size as f32)
     }
-}
 
-#[derive(Debug, Clone, FromPrimitive, ToPrimitive)]
-pub enum TileType { Dirt, Grass }
+    pub const fn texture_col(&self, colours: &Palette) -> Color {
+        match self.tile_type {
+            _ => colours.background_colour
+        }
+    }
 
-impl TileType {
-    const fn texture_offset_coords(&self) -> (i32, i32) {
-        match self {
-            TileType::Dirt => (0, 0),
-            TileType::Grass => (1, 0)
+    pub const fn blocking(&self) -> bool {
+        match self.tile_type {
+            TileType::Wall |
+            TileType::Flower(_) | TileType::Tree(_) | TileType::Bush(_) => true,
+            _ => false
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum TileType {
+    Ground, Wall, Dirt,
+    Flower(PlantState),
+    Tree(PlantState), Bush(PlantState)
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum PlantState { Ripe, Harvested, Dead }
 
 const fn tile_coords_to_chunk_coords(x: Coord, y: Coord) -> (Coord, Coord) {
     let chunk_x = x / CHUNK_WIDTH;
