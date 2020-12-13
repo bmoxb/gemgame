@@ -1,5 +1,7 @@
 use raylib::prelude::*;
 
+use crate::asset_management::Palette;
+
 const CAMERA_MOVEMENT_SPEED: f32 = 250.0;
 
 /// Handles the drawing of the game world.
@@ -16,7 +18,7 @@ impl Renderer {
                 target: Vector2::new(0.0, 0.0),
                 offset: Vector2::new(0.0, 0.0),
                 rotation: 0.0,
-                zoom: 3.0
+                zoom: 5.0
             },
             individual_tile_size
         }
@@ -44,7 +46,7 @@ impl Renderer {
     /// Draws the tiles & entities surrounding the player than are within view
     /// (both in terms of in-game visibility ([`maps::Tile::seen`] property) as
     /// well as whether or not a tile is actually within the camera's viewport).
-    pub fn draw(&self, draw: &mut RaylibDrawHandle, tiles_texture: &Texture2D, world: &mut super::World) {
+    pub fn draw(&self, draw: &mut RaylibDrawHandle, tiles_texture: &Texture2D, colours: &Palette, world: &mut super::World) {
         let half_width = draw.get_screen_width() as f32 / 2.0 / self.camera.zoom;
         let half_height = draw.get_screen_height() as f32 / 2.0 / self.camera.zoom;
 
@@ -63,20 +65,23 @@ impl Renderer {
                 let x = grid_x * self.individual_tile_size;
                 let y = grid_y * self.individual_tile_size;
 
-                let rec = tile.texture_rec(self.individual_tile_size);
+                let rectangle = tile.texture_rec(self.individual_tile_size);
+                let colour = tile.texture_col(colours);
                 let pos = Vector2::new(x as f32, y as f32);
 
-                draw2d.draw_texture_rec(tiles_texture, rec, pos, Color::WHITE);
+                draw2d.draw_texture_rec(tiles_texture, rectangle, pos, colour);
 
                 #[cfg(debug_assertions)]
                 {
                     draw2d.draw_line(x - 1, y, x + 1, y, Color::DARKGREEN);
                     draw2d.draw_line(x, y - 1, x, y + 1, Color::DARKGREEN);
 
-                    if tile.blocking {
-                        draw2d.draw_rectangle_lines(x - 1, y - 1,
-                                                    self.individual_tile_size + 1, self.individual_tile_size + 1,
-                                                    Color::DARKGREEN)
+                    if tile.blocking() {
+                        let centre_x = x + (self.individual_tile_size / 2);
+                        let centre_y = y + (self.individual_tile_size / 2);
+
+                        draw2d.draw_line(centre_x + 1, centre_y + 1, centre_x - 1, centre_y - 1, Color::DARKGREEN);
+                        draw2d.draw_line(centre_x + 1, centre_y - 1, centre_x - 1, centre_y + 1, Color::DARKGREEN);
                     }
                 }
             }

@@ -31,7 +31,7 @@ fn main() {
                 Color::from((255, 255, 255, 255))   // light
             ]
         },
-        PaletteKey::PinksPurples // target colour palette
+        PaletteKey::Coffee // target colour palette
     );
 
     log::info!("Prepared the asset manager");
@@ -85,12 +85,12 @@ impl asset_management::AssetKey for TextureKey {
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub enum PaletteKey { PinksPurples }
+pub enum PaletteKey { Coffee }
 
 impl asset_management::AssetKey for PaletteKey {
     fn path(&self) -> &str {
         match self {
-            PaletteKey::PinksPurples => "pinks and purples.json"
+            PaletteKey::Coffee => "coffee.json"
         }
     }
 }

@@ -17,7 +17,7 @@ impl Game {
     pub fn new(world_title: String) -> Self {
         Game {
             game_world: World::load(world_title).unwrap(),
-            world_renderer: Renderer::new(32)
+            world_renderer: Renderer::new(16)
         }
     }
 }
@@ -41,6 +41,6 @@ impl State for Game {
     }
 
     fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager) {
-        self.world_renderer.draw(draw, assets.texture(&TextureKey::Tiles), &mut self.game_world);
+        //self.world_renderer.draw(draw, assets.texture(&TextureKey::Tiles), &mut self.game_world);
     }
 }
