@@ -4,7 +4,7 @@ use std::{
     path::{ Path, PathBuf },
     collections::HashMap,
     convert::TryInto,
-    fs, fmt
+    fs, fmt, time
 };
 
 use raylib::prelude::*;
@@ -19,6 +19,8 @@ use generators::Generator;
 const CHUNK_WIDTH: Coord = 16;
 const CHUNK_HEIGHT: Coord = 16;
 const CHUNK_TILE_COUNT: usize = (CHUNK_WIDTH * CHUNK_HEIGHT) as usize;
+
+const MAX_LOADED_CHUNKS: usize = 20;
 
 const MAP_JSON_FILE: &'static str = "map.json";
 
@@ -146,8 +148,28 @@ impl Map {
             }
             else {
                 self.generate_and_load_chunk(chunk_x, chunk_y);
-                log::info!("Generated chunk ({}, {})", chunk_x, chunk_y);
+                log::debug!("Generated chunk ({}, {}) as no existing chunk containing the requested tile ({}, {}) could be found",
+                           chunk_x, chunk_y, x, y);
             }
+        }
+
+        while self.loaded_chunks.len() > MAX_LOADED_CHUNKS {
+            log::info!("Observed that too many chunks ({}) are loaded - selecting the most appropriate chunk to unload...",
+                        self.loaded_chunks.len());
+
+            let mut oldest_chunk_x = 0;
+            let mut oldest_chunk_y = 0;
+            let mut oldest_instant = time::Instant::now();
+
+            for((chunk_x, chunk_y), chunk) in self.loaded_chunks.iter() {
+                if chunk.last_access_instant < oldest_instant {
+                    oldest_chunk_x = *chunk_x;
+                    oldest_chunk_y = *chunk_y;
+                    oldest_instant = chunk.last_access_instant;
+                }
+            }
+
+            self.unload_chunk(oldest_chunk_x, oldest_chunk_y);
         }
 
         self.get_loaded_chunk(chunk_x, chunk_y).unwrap()
@@ -174,6 +196,7 @@ impl Map {
     /// happen on call of this method.
     fn unload_chunk(&mut self, chunk_x: Coord, chunk_y: Coord) {
         if let Some(old_chunk) = self.loaded_chunks.remove(&(chunk_x, chunk_y)) {
+            log::info!("Unloaded chunk: {}, {}", chunk_x, chunk_y);
             old_chunk.save(&self.directory, chunk_x, chunk_y);
         }
     }
@@ -184,11 +207,21 @@ impl Map {
     /// unloaded (see [`Self::unload_chunk`]).
     fn generate_and_load_chunk(&mut self, chunk_x: Coord, chunk_y: Coord) {
         let chunk = self.generator.generate(chunk_x, chunk_y);
+        log::info!("Generated chunk: {}, {}", chunk_x, chunk_y);
         self.loaded_chunks.insert((chunk_x, chunk_y), chunk);
     }
 
-    fn get_loaded_chunk(&self, chunk_x: Coord, chunk_y: Coord) -> Option<&Chunk> {
-        self.loaded_chunks.get(&(chunk_x, chunk_y))
+    /// Fetch the chunk at the given chunk coordinates if it is loaded. Will
+    /// update the [`Chunk::last_access_instant`] field before returning a
+    /// reference to the chunk.
+    fn get_loaded_chunk(&mut self, chunk_x: Coord, chunk_y: Coord) -> Option<&mut Chunk> {
+        let mut option_chunk = self.loaded_chunks.get_mut(&(chunk_x, chunk_y));
+
+        if let Some(chunk) = &mut option_chunk {
+            chunk.last_access_instant = time::Instant::now();
+        }
+
+        option_chunk
     }
 }
 
@@ -203,12 +236,15 @@ impl fmt::Display for Map {
 /// loaded, and unloaded dynamically as necessary.
 pub struct Chunk {
     /// The tiles that this chunk is comprised of.
-    tiles: [Tile; CHUNK_TILE_COUNT]
+    tiles: [Tile; CHUNK_TILE_COUNT],
+    /// The instant at which this chunk was last used (i.e. fetched by the
+    /// [`Map::get_loaded_chunk`] method).
+    last_access_instant: time::Instant
 }
 
 impl Chunk {
     fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self {
-        Chunk { tiles }
+        Chunk { tiles, last_access_instant: time::Instant::now() }
     }
 
     fn load(map_directory: &Path, chunk_x: Coord, chunk_y: Coord) -> Option<Self> {
@@ -230,9 +266,9 @@ impl Chunk {
 
                         let tiles: [Tile; CHUNK_TILE_COUNT] = tiles_vec.try_into().unwrap();
 
-                        log::debug!("Loaded chunk: {}", chunk_file_path.display());
+                        log::info!("Loaded chunk: {}", chunk_file_path.display());
 
-                        Some(Chunk { tiles })
+                        Some(Self::new(tiles))
                     }
 
                     Err(e) => {
@@ -266,7 +302,7 @@ impl Chunk {
                     return false;
                 }
 
-                log::debug!("Saved chunk: {}", chunk_file_path.display());
+                log::info!("Saved chunk: {}", chunk_file_path.display());
             }
 
             Err(e) => {
