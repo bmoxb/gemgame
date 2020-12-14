@@ -27,8 +27,6 @@ impl State for Game {
 
     fn begin(&mut self, assets: &mut AssetManager, handle: &mut RaylibHandle, thread: &RaylibThread) {
         assets.require_texture(TextureKey::Tiles, handle, thread);
-
-        self.game_world.save(); // TODO: temp
     }
 
     fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>> {
@@ -38,6 +36,8 @@ impl State for Game {
         //self.world_renderer.centre_camera_on(...);
 
         self.world_renderer.arrow_key_camera_movement(handle, delta);
+
+        if handle.is_key_pressed(KeyboardKey::KEY_S) { self.game_world.save(); }
 
         None
     }

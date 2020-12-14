@@ -27,14 +27,11 @@ impl State for MainMenu {
     fn title(&self) -> &'static str { "Main Menu" }
 
     fn update(&mut self, handle: &mut RaylibHandle, delta: f32) -> Option<Box<dyn State>> {
-        match handle.get_key_pressed() {
-            Some(KeyboardKey::KEY_SPACE) => {
-                let world_title = "My World".to_string();
-                Some(Box::new(game::Game::new(world_title)))
-            }
-
-            _ => None
+        if handle.is_key_pressed(KeyboardKey::KEY_SPACE) {
+            let world_title = "My World".to_string();
+            Some(Box::new(game::Game::new(world_title)))
         }
+        else { None }
     }
 
     fn draw(&mut self, draw: &mut RaylibDrawHandle, assets: &AssetManager) {
