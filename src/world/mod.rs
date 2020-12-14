@@ -91,9 +91,6 @@ impl World {
                 }
             };
 
-            // Force loading of chunk:
-            current_map.tile_at(5, 5); // TODO: temporary!
-
             World {
                 title, directory, seed,
                 created_timestamp, last_played_timestamp,
