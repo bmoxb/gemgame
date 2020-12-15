@@ -45,7 +45,14 @@ impl Generator for SurfaceGenerator {
                 let y = (chunk_y + CHUNK_HEIGHT + offset_y) as f64;
 
                 let value = self.noise_gen.get([x, y, 1.0]);
-                if (value * 100.0) as i32 % 12 == 0 { tile.tile_type = TileType::Flower(PlantState::Ripe); }
+                if (value * 100.0) as i32 % 12 == 0 {
+                    let state = match (value * 10.0) as i32 % 3 {
+                        0 => PlantState::Harvested,
+                        1 => PlantState::Dead,
+                        _ => PlantState::Ripe
+                    };
+                    tile.tile_type = TileType::Flower(state);
+                }
             }
         }
 
