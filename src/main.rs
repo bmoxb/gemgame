@@ -47,7 +47,7 @@ fn main() {
 
             current_state.draw(&mut draw, &assets);
 
-            draw_debug_text(&mut draw, Color::BLUE, 22);
+            draw_debug_text(&mut draw, assets.current_palette.debug, 22);
         }
 
         // Handle state transition (if necessary):
@@ -65,12 +65,13 @@ fn main() {
 pub type AssetManager = asset_management::AssetManager<TextureKey>;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub enum TextureKey { Tiles }
+pub enum TextureKey { Tiles, Entities }
 
 impl asset_management::AssetKey for TextureKey {
     fn path(&self) -> &str {
         match self {
-            TextureKey::Tiles => "tiles.png"
+            TextureKey::Tiles => "tiles.png",
+            TextureKey::Entities => "entities.png"
         }
     }
 }

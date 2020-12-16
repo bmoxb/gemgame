@@ -8,7 +8,7 @@ use std::{
     path::{ Path, PathBuf }
 };
 
-use serde::{ Serialize, Deserialize };
+use serde::Deserialize;
 
 pub trait AssetKey: PartialEq + Eq + Hash + Debug + Clone {
     fn path(&self) -> &str;
@@ -32,6 +32,7 @@ impl<TextureKey: AssetKey> AssetManager<TextureKey> {
             loaded_textures: HashMap::new(),
             palettes_directory: directory.join(palettes_subdir),
             current_palette: Palette {
+                debug: default_debug_colour(),
                 background: Color::GRAY,
                 ground: Color::WHITE,
                 wall: Color::WHITE,
@@ -100,8 +101,9 @@ impl<TextureKey: AssetKey> AssetManager<TextureKey> {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Palette {
+    #[serde(with = "ColorDef", default = "default_debug_colour")] pub debug: Color,
     #[serde(with = "ColorDef")] pub background: Color,
     #[serde(with = "ColorDef")] pub ground: Color,
     #[serde(with = "ColorDef")] pub wall: Color,
@@ -110,6 +112,8 @@ pub struct Palette {
     #[serde(with = "ColorDef", rename = "dead plant")] pub dead_plant: Color
 }
 
-#[derive(Serialize, Deserialize)]
+fn default_debug_colour() -> Color { Color::PURPLE }
+
+#[derive(Deserialize)]
 #[serde(remote = "Color")]
 struct ColorDef { r: u8, g: u8, b: u8, a: u8 }

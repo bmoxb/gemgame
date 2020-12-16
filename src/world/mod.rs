@@ -3,10 +3,15 @@ mod maps;
 pub mod rendering;
 
 use std::{
-    time::SystemTime,
     path::{ Path, PathBuf },
+    time::SystemTime,
+    rc::Rc,
     fs, fmt
 };
+
+use raylib::prelude::*;
+
+use entities::Entity;
 
 use maps::Map;
 
@@ -32,7 +37,12 @@ pub struct World {
     last_played_timestamp: u64,
 
     /// The current loaded map.
-    current_map: Map
+    current_map: Map,
+
+    /// The player entity.
+    player: Entity,
+
+    turn_of_player: bool
 }
 
 impl World {
@@ -49,7 +59,9 @@ impl World {
             ),
             title, directory, seed,
             created_timestamp: now,
-            last_played_timestamp: now
+            last_played_timestamp: now,
+            player: Entity::new(Rc::new(entities::PlayerController {}), 0, 0),
+            turn_of_player: true
         }
     }
 
@@ -81,7 +93,7 @@ impl World {
             let map_name = json["current map"].as_str().unwrap_or("surface/");
             let map_directory = directory.join(map_name);
 
-            let mut current_map = match Map::load(map_directory.clone(), seed) {
+            let current_map = match Map::load(map_directory.clone(), seed) {
                 Some(map) => map,
                 None => {
                     log::warn!("Specified current map '{}' could not be found so it will now be newly generated",
@@ -91,10 +103,14 @@ impl World {
                 }
             };
 
+            let turn_of_player = json["player's turn"].as_bool().unwrap_or(true);
+
             World {
                 title, directory, seed,
                 created_timestamp, last_played_timestamp,
-                current_map
+                current_map,
+                player: Entity::new(Rc::new(entities::PlayerController {}), 0, 0), // TODO: Load player!
+                turn_of_player
             }
         })
     }
@@ -108,7 +124,8 @@ impl World {
             "version": crate::VERSION,
             "seed": self.seed,
             "created": self.created_timestamp,
-            "last played": self.last_played_timestamp
+            "last played": self.last_played_timestamp,
+            "player's turn": self.turn_of_player
         }).to_string();
 
         log::debug!("Created world JSON data: {}", data);
@@ -125,6 +142,18 @@ impl World {
                            world_file_path.display(), e);
                 false
             }
+        }
+    }
+
+    pub fn update(&mut self, handle: &RaylibHandle) {
+        if self.turn_of_player {
+            let completed_turn = self.player.your_turn(&mut self.current_map, handle);
+            self.turn_of_player = !completed_turn;
+        }
+        else {
+            self.current_map.have_entities_take_their_turns(handle);
+            log::info!("Non-player entities have completed their turns - waiting for player...");
+            self.turn_of_player = true;
         }
     }
 }

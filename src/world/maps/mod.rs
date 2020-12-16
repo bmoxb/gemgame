@@ -4,6 +4,8 @@ use std::{
     path::{ Path, PathBuf },
     collections::HashMap,
     convert::TryInto,
+    cell::{ Ref, RefCell },
+    rc::Rc,
     fs, fmt, time
 };
 
@@ -11,7 +13,8 @@ use raylib::prelude::*;
 
 use serde::{ Serialize, Deserialize };
 
-use super::{ Coord, entities::Entity, load_json };
+use super::{ Coord, load_json, entities::Entity };
+
 use crate::asset_management::Palette;
 
 use generators::Generator;
@@ -35,8 +38,9 @@ pub struct Map {
     /// chunk coordinates).
     loaded_chunks: HashMap<(Coord, Coord), Chunk>,
 
-    /// Entities currently on this map.
-    entities: Vec<Entity>
+    /// All entities that are not the player entity (which is stored on the
+    /// [`super::World`] structure due to its ability to move between maps).
+    non_player_entities: Vec<Rc<RefCell<Entity>>>
 }
 
 impl Map {
@@ -46,7 +50,7 @@ impl Map {
         Map {
             directory, generator,
             loaded_chunks: HashMap::new(),
-            entities: Vec::new()
+            non_player_entities: Vec::new()
         }
     }
 
@@ -80,7 +84,7 @@ impl Map {
             Map {
                 directory, generator,
                 loaded_chunks: HashMap::new(),
-                entities: Vec::new()
+                non_player_entities: Vec::new() // TODO: Load entities!
             }
         })
     }
@@ -117,6 +121,16 @@ impl Map {
                 false
             }
         }
+    }
+
+    pub fn have_entities_take_their_turns(&mut self, handle: &RaylibHandle) {
+        for entity_ref in self.non_player_entities.clone() {
+            entity_ref.borrow_mut().your_turn(self, handle);
+        }
+    }
+
+    pub fn iterate_non_player_entities(&self) -> impl Iterator<Item=Ref<Entity>> {
+        self.non_player_entities.iter().map(|x| x.borrow())
     }
 
     /// Get a reference to the tile at the given coordinates. If the coordinates
