@@ -2,6 +2,8 @@
 //! entities (i.e. AI) as well as the abilities certain entities can have (e.g.
 //! the ability to attack other entities, to carry items, etc.)
 
+//mod animation;
+
 use std::rc::Rc;
 
 use raylib::prelude::*;
@@ -18,7 +20,9 @@ pub struct Entity {
     /// The width of this entity in tiles (usually `1`).
     width: u8,
     /// The height of this entity in tiles (usually `1`).
-    height: u8
+    height: u8,
+
+    //animations: animation::Set
     // optional abilities, etc.
 }
 

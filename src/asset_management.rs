@@ -38,7 +38,8 @@ impl<TextureKey: AssetKey> AssetManager<TextureKey> {
                 wall: Color::WHITE,
                 ripe_plant: Color::WHITE,
                 harvested_plant: Color::WHITE,
-                dead_plant: Color::WHITE
+                dead_plant: Color::WHITE,
+                player: Color::WHITE
             }
         }
     }
@@ -109,7 +110,8 @@ pub struct Palette {
     #[serde(with = "ColorDef")] pub wall: Color,
     #[serde(with = "ColorDef", rename = "ripe plant")] pub ripe_plant: Color,
     #[serde(with = "ColorDef", rename = "harvested plant")] pub harvested_plant: Color,
-    #[serde(with = "ColorDef", rename = "dead plant")] pub dead_plant: Color
+    #[serde(with = "ColorDef", rename = "dead plant")] pub dead_plant: Color,
+    #[serde(with = "ColorDef")] pub player: Color
 }
 
 fn default_debug_colour() -> Color { Color::PURPLE }
