@@ -1,0 +1,19 @@
+[package]
+name = "client"
+version = "0.1.0"
+authors = ["WiredSound <maxoblack@yahoo.com>"]
+edition = "2018"
+
+[dependencies]
+core = { version = "*", path = "../" }
+
+macroquad = "0.3.0-alpha"
+
+serde = "1.0"
+bincode = "1.3"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+sapp-jsutils = "0.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ws = "0.9"
