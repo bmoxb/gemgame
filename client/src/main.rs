@@ -1,4 +1,5 @@
 mod networking;
+mod maps;
 
 use macroquad::prelude as quad;
 
