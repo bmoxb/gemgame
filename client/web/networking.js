@@ -1,21 +1,17 @@
 var socket;
-var connected = 0;
+var status = 0;
 
 function register_plugin(importObject) {
     importObject.env.ws_connect = function(addr) {
         socket = new WebSocket(consume_js_object(addr));
         socket.binaryType = "arraybuffer";
 
-        console.log("WebSocket object created");
-
-        socket.onopen = function() {
-            console.log("Connection established");
-            connected = 1;
-        }
+        socket.onopen = function() { status = 1; }
+        socket.onerror = function(e) { status = -1; }
     };
 
-    importObject.env.ws_is_connected = function() {
-        return connected;
+    importObject.env.ws_connection_status = function() {
+        return status;
     }
 
     importObject.env.ws_send = function(data) {

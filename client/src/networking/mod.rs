@@ -1,50 +1,77 @@
 #[cfg(target_arch = "wasm32")]
-mod websocket;
+mod wasm;
 
 #[cfg(not(target_arch = "wasm32"))]
-mod tcpsocket;
+mod desktop;
+
+use std::convert;
 
 use serde::{ Serialize, de::DeserializeOwned };
 
-trait Socket {
-    fn connect(addr: &str, port: usize) -> Result<Self, std::io::Error> where Self: Sized;
-    fn is_connected(&self) -> bool;
-    fn send(&mut self, data: &[u8]);
+#[cfg(target_arch = "wasm32")]
+pub fn connect(addr: &str, port: usize) -> wasm::PendingConnection {
+    wasm::PendingConnection::new(&full_addr(addr, port))
 }
 
-pub struct Connection {
-    socket: Box<dyn Socket>
+#[cfg(not(target_arch = "wasm32"))]
+pub fn connect(addr: &str, port: usize) -> desktop::PendingConnection {
+    desktop::PendingConnection::new(&full_addr(addr, port))
 }
 
-impl Connection {
-    pub fn new(addr: &str, port: usize) -> Result<Connection, std::io::Error> {
-        #[cfg(target_arch = "wasm32")]
-        let socket = Box::new(websocket::WebSocket::connect(addr, port).unwrap());
+fn full_addr(addr: &str, port: usize) -> String { format!("wss://{}:{}", addr, port) }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        let socket = Box::new(tcpsocket::TcpSocket::connect(addr, port)?);
+pub trait PendingConnection<T: Connection> {
+    fn new(url: &str) -> Self where Self: Sized;
+    fn ready(&self) -> Result<T>;
+}
 
-        Ok(Connection { socket })
-    }
-
-    pub fn is_connected(&self) -> bool { self.socket.is_connected() }
-
+pub trait Connection {
     /// Send data of a given type that can be encoded in bincode format.
-    pub fn send<T: Serialize>(&mut self, data: &T) -> Result<(), bincode::Error> {
+    fn send<S: Serialize>(&mut self, data: &S) -> Result<()> {
         let bytes = bincode::serialize(data)?;
-        self.send_bytes(bytes.as_slice());
-        Ok(())
+        self.send_bytes(bytes)
     }
 
     /// Send some bytes.
-    fn send_bytes(&mut self, bytes: &[u8]) { self.socket.send(bytes) }
+    fn send_bytes(&mut self, bytes: Vec<u8>) -> Result<()>;
 
-    /// Receive bincode data and deserialise it to the specified type.
-    pub fn receive<T: DeserializeOwned>(&mut self) -> Result<T, bincode::Error> {
-        let bytes = self.receive_bytes();
-        bincode::deserialize(bytes.as_slice())
+    /// Attempt to receive some bincode data and deserialise it to the specified
+    /// type (non-blocking).
+    fn receive<D: DeserializeOwned>(&mut self) -> Result<Option<D>> {
+        match self.receive_bytes()? {
+            Some(bytes) => {
+                match bincode::deserialize(bytes.as_slice()) {
+                    Ok(value) => Ok(Some(value)),
+                    Err(e) => Err(e.into())
+                }
+            }
+            None => Ok(None)
+        }
     }
 
-    /// Receive some bytes.
-    fn receive_bytes(&mut self) -> Vec<u8> { unimplemented!() }
+    /// Attempt to receive some bytes (non-blocking).
+    fn receive_bytes(&mut self) -> Result<Option<Vec<u8>>>;
 }
+
+#[derive(Debug)]
+pub enum Error {
+    /// Occurs when an attempt to send/receive data is made despite the
+    /// underlying socket still being in the process of establishing a
+    /// connection to the server.
+    NotYetConnected,
+
+    /// Indicates that the underlying socket has experienced some sort of issue
+    /// with its connection to the server or failed to establish a connection in
+    /// the first place.
+    ConnectionError,
+
+    /// Occurs when bincode data sent/received over the connection could not be
+    /// properly (de)serialised.
+    BincodeError(bincode::Error)
+}
+
+impl convert::From<bincode::Error> for Error {
+    fn from(e: bincode::Error) -> Self { Error::BincodeError(e) }
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
