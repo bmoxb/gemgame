@@ -4,21 +4,34 @@ mod wasm;
 #[cfg(not(target_arch = "wasm32"))]
 mod desktop;
 
-use std::convert;
+use std::{ fmt, convert };
 
 use serde::{ Serialize, de::DeserializeOwned };
 
 #[cfg(target_arch = "wasm32")]
-pub fn connect(addr: &str, port: usize) -> wasm::PendingConnection {
-    wasm::PendingConnection::new(&full_addr(addr, port))
+pub fn connect(protocol: Protocol, addr: &str, port: usize) -> wasm::PendingConnection {
+    wasm::PendingConnection::new(&full_addr(protocol, addr, port))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn connect(addr: &str, port: usize) -> desktop::PendingConnection {
-    desktop::PendingConnection::new(&full_addr(addr, port))
+pub fn connect(protocol: Protocol, addr: &str, port: usize) -> desktop::PendingConnection {
+    desktop::PendingConnection::new(&full_addr(protocol, addr, port))
 }
 
-fn full_addr(addr: &str, port: usize) -> String { format!("wss://{}:{}", addr, port) }
+pub enum Protocol { WebSocket, WebSocketSecure }
+
+impl fmt::Display for Protocol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Protocol::WebSocket => write!(f, "ws"),
+            Protocol::WebSocketSecure => write!(f, "wss")
+        }
+    }
+}
+
+fn full_addr(protocol: Protocol, addr: &str, port: usize) -> String {
+    format!("{}://{}:{}", protocol, addr, port)
+}
 
 pub trait PendingConnection<T: Connection> {
     fn new(url: &str) -> Self where Self: Sized;

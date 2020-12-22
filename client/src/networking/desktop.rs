@@ -48,7 +48,17 @@ impl super::Connection for Connection {
         Ok(())
     }
 
-    fn receive_bytes(&mut self) -> Result<Option<Vec<u8>>> { unimplemented!() }
+    fn receive_bytes(&mut self) -> Result<Option<Vec<u8>>> {
+        match self.ws.recv_message() {
+            Ok(websocket::OwnedMessage::Binary(data)) => Ok(Some(data)),
+            Ok(_) => Ok(None),
+            Err(websocket::WebSocketError::IoError(io_err)) => {
+                if io_err.kind() == std::io::ErrorKind::WouldBlock { Ok(None) }
+                else { Err(io_err.into()) }
+            }
+            Err(other) => Err(other.into())
+        }
+    }
 }
 
 impl convert::From<std::io::Error> for Error {
