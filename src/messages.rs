@@ -1,5 +1,5 @@
 //! Contains (de)serialisable enumerations that the server and client
-//! applications may communicate by.
+//! applications may communicate by means of.
 
 use crate::maps;
 
@@ -13,13 +13,13 @@ pub enum ToServer {
     /// reason for wanting this chunk (e.g. the client's player character is
     /// moving towards the requested chunk) then the server will response with
     /// [`FromServer::ProvideChunk`] with the chunk data.
-    RequestChunk(maps::Coord, maps::Coord),
+    RequestChunk(maps::ChunkCoords),
 
     /// Inform the server that this client has unloaded a chunk. This is done so
     /// that the server knows that it does not need to send [`FromServer::UpdateTile`]
     /// messages for tiles in the specified chunk to this client (the server
     /// keeps track of what chunks it believes each client has currently loaded).
-    ChunkUnloadedLocally(maps::Coord, maps::Coord)
+    ChunkUnloadedLocally(maps::ChunkCoords)
 }
 
 /// Message sent from the server to the client over the WebSocket protocol.
@@ -27,10 +27,10 @@ pub enum ToServer {
 pub enum FromServer {
     /// Provide chunk data to a client so it may store it locally. Chunks are
     /// provided when requested by the client.
-    ProvideChunk(maps::Coord, maps::Coord, maps::Chunk),
+    ProvideChunk(maps::ChunkCoords, maps::Chunk),
 
     /// Whenever a tile in a chunk is modified, the server sends a message
     /// about the changed to each client that it believes has the chunk in
     /// question loaded.
-    UpdateTile(maps::Coord, maps::Coord, maps::Tile)
+    UpdateTile(maps::TileCoords, maps::Tile)
 }
