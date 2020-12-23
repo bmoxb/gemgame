@@ -9,33 +9,31 @@ use std::{ fmt, convert };
 use serde::{ Serialize, de::DeserializeOwned };
 
 #[cfg(target_arch = "wasm32")]
-pub fn connect(protocol: Protocol, addr: &str, port: usize) -> wasm::PendingConnection {
-    wasm::PendingConnection::new(&full_addr(protocol, addr, port))
+pub fn connect(addr: &str, port: usize, secure: bool) -> wasm::PendingConnection {
+    wasm::PendingConnection::new(addr_port_to_url(secure, addr, port))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn connect(protocol: Protocol, addr: &str, port: usize) -> desktop::PendingConnection {
-    desktop::PendingConnection::new(&full_addr(protocol, addr, port))
+pub fn connect(addr: &str, port: usize, secure: bool) -> desktop::PendingConnection {
+    desktop::PendingConnection::new(addr_port_to_url(secure, addr, port))
 }
 
-pub enum Protocol { WebSocket, WebSocketSecure }
-
-impl fmt::Display for Protocol {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Protocol::WebSocket => write!(f, "ws"),
-            Protocol::WebSocketSecure => write!(f, "wss")
-        }
-    }
+/// Simple helper function that builds a WebSocket URL given an address, port,
+/// and a boolean indicating whether the connection will be secure or not.
+fn addr_port_to_url(secure: bool, addr: &str, port: usize) -> String {
+    format!("{}://{}:{}", if secure { "wss" } else { "ws" }, addr, port)
 }
 
-fn full_addr(protocol: Protocol, addr: &str, port: usize) -> String {
-    format!("{}://{}:{}", protocol, addr, port)
-}
-
+/// Represents a connection that has not yet been fully established (i.e. still
+/// performing handshake).
 pub trait PendingConnection<T: Connection> {
-    fn new(url: &str) -> Self where Self: Sized;
-    fn ready(&self) -> Result<T>;
+    /// Establishes an intent to connect to a specified URL (non-blocking).
+    fn new(full_url: String) -> Self where Self: Sized;
+
+    /// Check if the connection has been established. Will return `Ok(None)`
+    /// when no errors have been encountered but the connection is still in the
+    /// process of being established.
+    fn ready(&self) -> Result<Option<T>>;
 }
 
 pub trait Connection {
@@ -68,19 +66,27 @@ pub trait Connection {
 
 #[derive(Debug)]
 pub enum Error {
-    /// Occurs when an attempt to send/receive data is made despite the
-    /// underlying socket still being in the process of establishing a
-    /// connection to the server.
-    NotYetConnected,
-
     /// Indicates that the underlying socket has experienced some sort of issue
     /// with its connection to the server or failed to establish a connection in
     /// the first place.
-    ConnectionError,
+    ConnectionError(Box<dyn std::error::Error + Send>),
 
     /// Occurs when bincode data sent/received over the connection could not be
     /// properly (de)serialised.
     BincodeError(bincode::Error)
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::ConnectionError(e) => write!(f, "Connection error - {}", e),
+            Error::BincodeError(e) => write!(f, "(De)serialisation error - {}", e)
+        }
+    }
+}
+
+impl convert::From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self { Error::ConnectionError(Box::new(e)) }
 }
 
 impl convert::From<bincode::Error> for Error {

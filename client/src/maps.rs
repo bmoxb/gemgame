@@ -1,4 +1,4 @@
-use core::maps::{ Coord, Chunk, Chunks };
+use core::maps::{ Chunk, Chunks };
 
 struct Map {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
@@ -6,7 +6,7 @@ struct Map {
 
     // socket connection, etc.
 }
-
+/*
 impl core::maps::Map for Map {
     fn chunk_at(&mut self, chunk_x: Coord, chunk_y: Coord) -> &Chunk {
         // TODO: If chunk is in memory then return reference.
@@ -14,3 +14,4 @@ impl core::maps::Map for Map {
         unimplemented!();
     }
 }
+*/

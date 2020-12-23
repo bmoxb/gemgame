@@ -10,22 +10,26 @@ extern "C" {
     fn ws_send(buffer: JsObject);
 }
 
+const IO_ERROR_MSG: &'static str = "Please see the browser console for error message";
+
 pub struct PendingConnection;
 
 impl super::PendingConnection<Connection> for PendingConnection {
-    fn new(url: &str) -> Self {
-        let obj = JsObject::string(url);
+    fn new(full_url: String) -> Self {
+        let obj = JsObject::string(&full_url);
         unsafe { ws_connect(obj) };
 
         PendingConnection {}
     }
 
-    fn ready(&self) -> Result<Connection> {
+    fn ready(&self) -> Result<Option<Connection>> {
         let status = unsafe { ws_connection_status() };
 
-        if status > 0 { Ok(Connection {}) } // connected
-        else if status < 0 { Err(Error::ConnectionError) } // error
-        else { Err(Error::NotYetConnected) } // waiting to connect
+        if status > 0 { Ok(Some(Connection {})) } // connected
+        else if status < 0 { // error
+            Err(io::Error::new(io::ErrorKind::ConnectionRefused, IO_ERROR_MSG).into())
+        }
+        else { Ok(None) } // still waiting to connect
     }
 }
 
@@ -38,7 +42,7 @@ impl super::Connection for Connection {
         unsafe { ws_send(obj) };
 
         if unsafe { ws_connection_status() } > 0 { Ok(()) }
-        else { Err(Error::ConnectionError) }
+        else { Err(io::Error::new(io::ErrorKind::Other, IO_ERROR_MSG).into()) }
     }
 
     fn receive_bytes(&mut self) -> Result<Option<Vec<u8>>> { unimplemented!() }
