@@ -1,54 +1,41 @@
+mod states;
 mod networking;
 mod maps;
 
-use networking::PendingConnection;
-
 use macroquad::prelude as quad;
-
-const SERVER_ADDRESS: &str = "echo.websocket.org";
-const SERVER_PORT: usize = 80;
-const SECURE_CONNECTION: bool = false;
 
 #[macroquad::main("Client")]
 async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
-    pretty_env_logger::init(); // Only have logging when build for desktop.
+    pretty_env_logger::init(); // Only have logging when targeting desktop.
 
-    log::info!("Connecting to '{}' on port {}...", SERVER_ADDRESS, SERVER_PORT);
-    let pending = networking::connect(SERVER_ADDRESS, SERVER_PORT, SECURE_CONNECTION);
+    let mut current_state: Box<dyn states::State> = Box::new(states::pregame::ConnectToServerState::new());
+
+    log::info!("Created initial state '{}' - beginning main loop...", current_state.title());
 
     loop {
-        match pending.ready() {
-            Ok(Some(connection)) => {
-                log::info!("Connection established! Beginning game loop...");
-                game_loop(connection).await;
-                break;
-            }
+        // Update game logic and draw:
 
-            Ok(None) => {
-                log::trace!("Connection pending...");
+        quad::clear_background(quad::BLACK);
 
-                quad::draw_text("Connecting...", 0.0, 0.0, 32.0, quad::ORANGE);
-                quad::next_frame().await;
-            }
+        let delta = quad::get_frame_time();
+        let potential_state_change = current_state.update_and_draw(delta);
 
-            Err(e) => {
-                log::warn!("Failed to connect to server: {}", e);
+        draw_debug_text(32.0, quad::RED);
 
-                quad::clear_background(quad::BLACK);
-                loop {
-                    quad::draw_text("Failed to connect to server :(", 0.0, 0.0, 32.0, quad::RED);
-                    quad::next_frame().await;
-                }
-            }
+        quad::next_frame().await;
+
+        // Handle state transition (if necessary):
+
+        if let Some(next_state) = potential_state_change {
+            log::info!("Changing state from '{}' to '{}'", current_state.title(),
+                                                           next_state.title());
+            current_state = next_state;
         }
     }
 }
 
-async fn game_loop(mut connection: impl networking::Connection) {
-    loop {
-        quad::clear_background(quad::BLACK);
-        quad::draw_text("Connected!", 0.0, 0.0, 32.0, quad::GREEN);
-        quad::next_frame().await;
-    }
+fn draw_debug_text(size: f32, col: quad::Color) {
+    quad::draw_text(&format!("Frames: {}/sec", quad::get_fps()), 0.0, quad::screen_height() - size, size, col);
+    quad::draw_text(&format!("Delta: {:.2}ms", quad::get_frame_time() * 1000.0), 0.0, quad::screen_height() - (size * 2.0), size, col);
 }
