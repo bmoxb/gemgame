@@ -14,7 +14,7 @@ const IO_ERROR_MSG: &'static str = "Please see the browser console for error mes
 
 pub struct PendingConnection;
 
-impl super::PendingConnection<Connection> for PendingConnection {
+impl super::PendingConnectionTrait<Connection> for PendingConnection {
     fn new(full_url: String) -> Self {
         let obj = JsObject::string(&full_url);
         unsafe { ws_connect(obj) };
@@ -36,7 +36,7 @@ impl super::PendingConnection<Connection> for PendingConnection {
 /// WebSocket connection relying on the web browser's JavaScript API.
 pub struct Connection;
 
-impl super::Connection for Connection {
+impl super::ConnectionTrait for Connection {
     fn send_bytes(&mut self, bytes: Vec<u8>) -> Result<()> {
         let obj = JsObject::buffer(bytes.as_slice());
         unsafe { ws_send(obj) };

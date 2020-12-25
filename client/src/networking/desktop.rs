@@ -8,7 +8,7 @@ pub struct PendingConnection {
     thread_receiver: mpsc::Receiver<Result<Connection>>
 }
 
-impl super::PendingConnection<Connection> for PendingConnection {
+impl super::PendingConnectionTrait<Connection> for PendingConnection {
     fn new(full_url: String) -> Self {
         let (thread_sender, thread_receiver) = mpsc::channel();
 
@@ -54,7 +54,7 @@ pub struct Connection {
     ws: ws2::WebSocket<ws2::client::AutoStream>
 }
 
-impl super::Connection for Connection {
+impl super::ConnectionTrait for Connection {
     fn send_bytes(&mut self, bytes: Vec<u8>) -> Result<()> {
         let msg = ws2::Message::binary(bytes);
         self.ws.write_message(msg)?;

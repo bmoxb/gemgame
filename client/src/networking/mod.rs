@@ -1,21 +1,19 @@
 #[cfg(target_arch = "wasm32")]
 mod wasm;
+#[cfg(target_arch = "wasm32")]
+pub use wasm::*;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod desktop;
+#[cfg(not(target_arch = "wasm32"))]
+pub use desktop::*;
 
 use std::{ fmt, convert };
 
 use serde::{ Serialize, de::DeserializeOwned };
 
-#[cfg(target_arch = "wasm32")]
-pub fn connect(addr: &str, port: usize, secure: bool) -> wasm::PendingConnection {
-    wasm::PendingConnection::new(addr_port_to_url(secure, addr, port))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn connect(addr: &str, port: usize, secure: bool) -> desktop::PendingConnection {
-    desktop::PendingConnection::new(addr_port_to_url(secure, addr, port))
+pub fn connect(addr: &str, port: usize, secure: bool) -> PendingConnection {
+    PendingConnection::new(addr_port_to_url(secure, addr, port))
 }
 
 /// Simple helper function that builds a WebSocket URL given an address, port,
@@ -26,7 +24,7 @@ fn addr_port_to_url(secure: bool, addr: &str, port: usize) -> String {
 
 /// Represents a connection that has not yet been fully established (i.e. still
 /// performing handshake).
-pub trait PendingConnection<T: Connection> {
+pub trait PendingConnectionTrait<T: ConnectionTrait> {
     /// Establishes an intent to connect to a specified URL (non-blocking).
     fn new(full_url: String) -> Self where Self: Sized;
 
@@ -36,7 +34,7 @@ pub trait PendingConnection<T: Connection> {
     fn ready(&self) -> Result<Option<T>>;
 }
 
-pub trait Connection {
+pub trait ConnectionTrait {
     /// Send data of a given type that can be encoded in bincode format.
     fn send<S: Serialize>(&mut self, data: &S) -> Result<()> {
         let bytes = bincode::serialize(data)?;
