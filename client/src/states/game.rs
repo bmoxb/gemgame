@@ -2,16 +2,21 @@ use macroquad::prelude as quad;
 
 use core::messages;
 
-use crate::networking::{ self, ConnectionTrait };
+use crate::{
+    maps,
+    networking::{ self, ConnectionTrait }
+};
+
 use super::State;
 
 pub struct GameState {
-    connection: networking::Connection
+    connection: networking::Connection,
+    map: maps::ClientMap
 }
 
 impl GameState {
     pub fn new(connection: networking::Connection) -> Self {
-        GameState { connection }
+        GameState { connection, map: maps::ClientMap::new() }
     }
 }
 
@@ -20,7 +25,9 @@ impl GameState {
         log::info!("Received message from server: {}", msg);
 
         match msg {
-            messages::FromServer::ProvideChunk(coords, chunk) => unimplemented!(),
+            messages::FromServer::ProvideChunk(coords, chunk) => {
+                self.map.provide_chunk(coords, chunk, &mut self.connection).unwrap(); // TODO
+            }
             messages::FromServer::UpdateTile(coords, tile) => unimplemented!()
         }
     }

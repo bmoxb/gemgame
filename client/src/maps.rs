@@ -5,14 +5,18 @@ use core::{
     maps::{ Map, Tile, Chunk, Chunks, ChunkCoords, TileCoords }
 };
 
-struct ClientMap {
+use std::collections::HashMap;
+
+pub struct ClientMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
     loaded_chunks: Chunks
-
-    // socket connection, etc.
 }
 
 impl ClientMap {
+    pub fn new() -> Self {
+        ClientMap { loaded_chunks: HashMap::new() }
+    }
+
     pub fn tile_at(&self, pos: TileCoords, connection: &mut networking::Connection) -> networking::Result<Option<&Tile>> {
         let tile_option = self.loaded_tile_at(&pos);
 
@@ -27,6 +31,24 @@ impl ClientMap {
         if chunk_option.is_none() { request_chunk(pos, connection)? }
 
         Ok(chunk_option)
+    }
+
+    pub fn provide_chunk(&mut self, pos: ChunkCoords, chunk: Chunk, connection: &mut networking::Connection) -> networking::Result<()> {
+        // TODO: Unload chunk(s) should too many be loaded already.
+
+        log::debug!("Loaded chunk: {}", pos);
+        self.loaded_chunks.insert(pos, chunk);
+
+        Ok(())
+    }
+
+    fn unload_chunk(&mut self, pos: ChunkCoords, connection: &mut networking::Connection) -> networking::Result<()> {
+        if let Some(_) = self.loaded_chunks.remove(&pos) {
+            log::debug!("Unloaded chunk: {}", pos);
+
+            connection.send(&messages::ToServer::ChunkUnloadedLocally(pos))?;
+        }
+        Ok(())
     }
 }
 
