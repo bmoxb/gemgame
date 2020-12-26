@@ -3,10 +3,12 @@
 
 use crate::maps;
 
+use std::fmt;
+
 use serde::{ Serialize, Deserialize };
 
 /// Message sent from the client to the server over the WebSocket protocol.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub enum ToServer {
     /// Indicate to the server that this client would like the data for the
     /// chunk at the specified chunk coordinates. Should the client have a valid
@@ -22,6 +24,15 @@ pub enum ToServer {
     ChunkUnloadedLocally(maps::ChunkCoords)
 }
 
+impl fmt::Display for ToServer {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ToServer::RequestChunk(coords) => write!(f, "request chunk at {}", coords),
+            ToServer::ChunkUnloadedLocally(coords) => write!(f, "chunk at {} has been unloaded locally", coords)
+        }
+    }
+}
+
 /// Message sent from the server to the client over the WebSocket protocol.
 #[derive(Serialize, Deserialize)]
 pub enum FromServer {
@@ -33,4 +44,13 @@ pub enum FromServer {
     /// about the changed to each client that it believes has the chunk in
     /// question loaded.
     UpdateTile(maps::TileCoords, maps::Tile)
+}
+
+impl fmt::Display for FromServer {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FromServer::ProvideChunk(coords, _) => write!(f, "provide chunk at {}", coords),
+            FromServer::UpdateTile(coords, _) => write!(f, "update tile at {}", coords)
+        }
+    }
 }
