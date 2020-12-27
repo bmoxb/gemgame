@@ -1,5 +1,5 @@
-use core::maps::{ Coord, Chunk };
+use core::maps::{ ChunkCoords, Chunk };
 
 pub trait Generator {
-    fn generate(&self, chunk_x: Coord, chunk_y: Coord) -> Chunk;
+    fn generate(&self, coords: &ChunkCoords) -> Chunk;
 }

@@ -1,4 +1,4 @@
-//mod maps;
+mod maps;
 
 use std::{
     net::SocketAddr,
@@ -24,7 +24,7 @@ async fn main() {
             while let Ok((stream, addr)) = listener.accept().await {
                 log::info!("Incoming connection from: {}", addr);
 
-                tokio::spawn(handle_connection(shared.clone(), stream, addr));
+                tokio::spawn(handle_connection(stream, addr, shared.clone()));
             }
         }
 
@@ -37,7 +37,7 @@ async fn main() {
 /// Data shared between all connection threads.
 struct Shared {}
 
-async fn handle_connection(shared: Arc<Mutex<Shared>>, stream: TcpStream, addr: SocketAddr) {
+async fn handle_connection(stream: TcpStream, addr: SocketAddr, shared: Arc<Mutex<Shared>>) {
     match tokio_tungstenite::accept_async(stream).await {
         Ok(ws) => {
             log::debug!("Performed WebSocket handshake successfully with: {}", addr);

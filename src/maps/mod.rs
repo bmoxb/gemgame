@@ -18,17 +18,24 @@ const CHUNK_HEIGHT: i32 = 16;
 const CHUNK_TILE_COUNT: usize = CHUNK_WIDTH as usize * CHUNK_HEIGHT as usize;
 
 pub trait Map {
+    /// Fetch the tile at the given tile coordinates assuming it is in a chunk
+    /// that is already loaded.
     fn loaded_tile_at(&self, pos: &TileCoords) -> Option<&Tile> {
         let chunk = self.loaded_chunk_at(&pos.as_chunk_coords())?;
         Some(chunk.tile_at_offset(pos.as_chunk_offset_coords()))
     }
 
-    /// Returns the chunk at the given chunk coordinates. This method is not
-    /// implemented by default as the means by which a chunk is obtained differs
-    /// between client and server: on the client side a chunk is obtained either
-    /// from the local cache of chunks or by fetching it from the sever, while
-    /// on the sever side chunks are read from disk or newly generated.
+    fn is_tile_loaded(&self, pos: &TileCoords) -> bool {
+        self.loaded_chunk_at(&pos.as_chunk_coords()).is_some()
+    }
+
+    /// Returns the chunk at the given chunk coordinates assuming it is already
+    /// loaded.
     fn loaded_chunk_at(&self, pos: &ChunkCoords) -> Option<&Chunk>;
+
+    fn is_chunk_loaded(&self, pos: &ChunkCoords) -> bool {
+        self.loaded_chunk_at(pos).is_some()
+    }
 }
 
 /// Type alias for a hash map that maps chunk coordinates to chunks.
