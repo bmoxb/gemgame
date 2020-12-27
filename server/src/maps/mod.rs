@@ -31,12 +31,12 @@ impl ServerMap {
 
     /// Fetch/read from the filesystem/newly generate the chunk at the specified
     /// coordinates
-    async fn chunk_at(&mut self, coords: &ChunkCoords) -> &Chunk {
-        if !self.is_chunk_loaded(&coords) {
+    async fn chunk_at(&mut self, coords: ChunkCoords) -> &Chunk {
+        if !self.is_chunk_loaded(coords) {
             let new_chunk = self.read_chunk_from_filesystem(coords).await
                                 .unwrap_or_else(|| self.generate_new_chunk(coords));
 
-            self.loaded_chunks.insert(coords.clone(), new_chunk);
+            self.loaded_chunks.insert(coords, new_chunk);
         }
 
         self.loaded_chunk_at(coords).unwrap()
@@ -45,7 +45,7 @@ impl ServerMap {
     /// Attempt to asynchronously read data from the file system for the chunk
     /// at the specified coordinates. Note that this method will *not* insert
     /// the loaded chunk into the `loaded_chunks` hash map.
-    async fn read_chunk_from_filesystem(&self, coords: &ChunkCoords) -> Option<Chunk> {
+    async fn read_chunk_from_filesystem(&self, coords: ChunkCoords) -> Option<Chunk> {
         let chunk_file_path = self.directory.join(format!("{}_{}.chunk", coords.x, coords.y));
 
         log::debug!("Attempting to load chunk at {} from file: {}", coords, chunk_file_path.display());
@@ -77,7 +77,7 @@ impl ServerMap {
     /// Generate a new chunk by passing the specified chunk coordinates to this
     /// map's generator. Note that this method will *not* insert the generated
     /// chunk into the `loaded_chunks` hash map.
-    fn generate_new_chunk(&self, coords: &ChunkCoords) -> Chunk {
+    fn generate_new_chunk(&self, coords: ChunkCoords) -> Chunk {
         log::info!("Generating new chunk at: {}", coords);
 
         self.generator.generate(coords)
@@ -85,7 +85,7 @@ impl ServerMap {
 }
 
 impl Map for ServerMap {
-    fn loaded_chunk_at(&self, pos: &ChunkCoords) -> Option<&Chunk> {
-        self.loaded_chunks.get(pos)
+    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> {
+        self.loaded_chunks.get(&coords)
     }
 }

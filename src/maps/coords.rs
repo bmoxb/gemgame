@@ -4,7 +4,7 @@ use std::{ fmt, hash::Hash };
 
 use serde::{ Serialize, Deserialize };
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub struct TileCoords { pub x: i32, pub y: i32 }
 
 impl TileCoords {
@@ -39,7 +39,7 @@ impl fmt::Display for TileCoords {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ChunkCoords { pub x: i32, pub y: i32 }
 
 impl fmt::Display for ChunkCoords {
@@ -48,7 +48,7 @@ impl fmt::Display for ChunkCoords {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct OffsetCoords { pub x: u8, pub y: u8 }
 
 impl fmt::Display for OffsetCoords {

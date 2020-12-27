@@ -17,47 +17,47 @@ impl ClientMap {
         ClientMap { loaded_chunks: HashMap::new() }
     }
 
-    pub fn tile_at(&self, pos: TileCoords, connection: &mut networking::Connection) -> networking::Result<Option<&Tile>> {
-        let tile_option = self.loaded_tile_at(&pos);
+    pub fn tile_at(&self, coords: TileCoords, connection: &mut networking::Connection) -> networking::Result<Option<&Tile>> {
+        let tile_option = self.loaded_tile_at(coords);
 
-        if tile_option.is_none() { request_chunk(pos.as_chunk_coords(), connection)? }
+        if tile_option.is_none() { request_chunk(coords.as_chunk_coords(), connection)? }
 
         Ok(tile_option)
     }
 
-    pub fn chunk_at(&self, pos: ChunkCoords, connection: &mut networking::Connection) -> networking::Result<Option<&Chunk>> {
-        let chunk_option = self.loaded_chunk_at(&pos);
+    pub fn chunk_at(&self, coords: ChunkCoords, connection: &mut networking::Connection) -> networking::Result<Option<&Chunk>> {
+        let chunk_option = self.loaded_chunk_at(coords);
 
-        if chunk_option.is_none() { request_chunk(pos, connection)? }
+        if chunk_option.is_none() { request_chunk(coords, connection)? }
 
         Ok(chunk_option)
     }
 
-    pub fn provide_chunk(&mut self, pos: ChunkCoords, chunk: Chunk, connection: &mut networking::Connection) -> networking::Result<()> {
+    pub fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk, connection: &mut networking::Connection) -> networking::Result<()> {
         // TODO: Unload chunk(s) should too many be loaded already.
 
-        log::debug!("Loaded chunk: {}", pos);
-        self.loaded_chunks.insert(pos, chunk);
+        log::debug!("Loaded chunk: {}", coords);
+        self.loaded_chunks.insert(coords, chunk);
 
         Ok(())
     }
 
-    fn unload_chunk(&mut self, pos: ChunkCoords, connection: &mut networking::Connection) -> networking::Result<()> {
-        if let Some(_) = self.loaded_chunks.remove(&pos) {
-            log::debug!("Unloaded chunk: {}", pos);
+    fn unload_chunk(&mut self, coords: ChunkCoords, connection: &mut networking::Connection) -> networking::Result<()> {
+        if let Some(_) = self.loaded_chunks.remove(&coords) {
+            log::debug!("Unloaded chunk: {}", coords);
 
-            connection.send(&messages::ToServer::ChunkUnloadedLocally(pos))?;
+            connection.send(&messages::ToServer::ChunkUnloadedLocally(coords))?;
         }
         Ok(())
     }
 }
 
 impl Map for ClientMap {
-    fn loaded_chunk_at(&self, pos: &ChunkCoords) -> Option<&Chunk> {
-        self.loaded_chunks.get(pos)
+    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> {
+        self.loaded_chunks.get(&coords)
     }
 }
 
-fn request_chunk(pos: ChunkCoords, connection: &mut networking::Connection) -> networking::Result<()> {
-    connection.send(&messages::ToServer::RequestChunk(pos))
+fn request_chunk(coords: ChunkCoords, connection: &mut networking::Connection) -> networking::Result<()> {
+    connection.send(&messages::ToServer::RequestChunk(coords))
 }

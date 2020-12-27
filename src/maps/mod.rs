@@ -20,21 +20,21 @@ const CHUNK_TILE_COUNT: usize = CHUNK_WIDTH as usize * CHUNK_HEIGHT as usize;
 pub trait Map {
     /// Fetch the tile at the given tile coordinates assuming it is in a chunk
     /// that is already loaded.
-    fn loaded_tile_at(&self, pos: &TileCoords) -> Option<&Tile> {
-        let chunk = self.loaded_chunk_at(&pos.as_chunk_coords())?;
-        Some(chunk.tile_at_offset(pos.as_chunk_offset_coords()))
+    fn loaded_tile_at(&self, coords: TileCoords) -> Option<&Tile> {
+        let chunk = self.loaded_chunk_at(coords.as_chunk_coords())?;
+        Some(chunk.tile_at_offset(coords.as_chunk_offset_coords()))
     }
 
-    fn is_tile_loaded(&self, pos: &TileCoords) -> bool {
-        self.loaded_chunk_at(&pos.as_chunk_coords()).is_some()
+    fn is_tile_loaded(&self, coords: TileCoords) -> bool {
+        self.loaded_chunk_at(coords.as_chunk_coords()).is_some()
     }
 
     /// Returns the chunk at the given chunk coordinates assuming it is already
     /// loaded.
-    fn loaded_chunk_at(&self, pos: &ChunkCoords) -> Option<&Chunk>;
+    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk>;
 
-    fn is_chunk_loaded(&self, pos: &ChunkCoords) -> bool {
-        self.loaded_chunk_at(pos).is_some()
+    fn is_chunk_loaded(&self, coords: ChunkCoords) -> bool {
+        self.loaded_chunk_at(coords).is_some()
     }
 }
 
