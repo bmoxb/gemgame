@@ -8,7 +8,7 @@ use std::{ path::PathBuf, collections::HashMap };
 
 use tokio::io::AsyncReadExt;
 
-struct ServerMap {
+pub struct ServerMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
     loaded_chunks: Chunks,
 
@@ -16,13 +16,13 @@ struct ServerMap {
     directory: PathBuf,
 
     /// The generator to be used when new chunks must be made.
-    generator: Box<dyn Generator>
+    generator: Box<dyn Generator + Send>
 
     // players, entities, etc.
 }
 
 impl ServerMap {
-    pub fn new(directory: PathBuf, generator: Box<dyn Generator>) -> Self {
+    pub fn new(directory: PathBuf, generator: Box<dyn Generator + Send>) -> Self {
         ServerMap {
             loaded_chunks: HashMap::new(),
             directory, generator
