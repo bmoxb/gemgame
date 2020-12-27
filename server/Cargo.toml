@@ -8,7 +8,9 @@ edition = "2018"
 core = { version = "*", path = "../" }
 
 log = "0.4"
-pretty_env_logger = "0.4"
+flexi_logger = { version = "0.16", features = ["colors"] }
+
+structopt = "0.3"
 
 tokio-tungstenite = "0.12"
 tokio = { version = "0.3", features = ["rt-multi-thread", "macros", "fs"] }
