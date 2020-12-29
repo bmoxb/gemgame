@@ -55,7 +55,11 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    fn tile_at_offset(&self, mut offset: OffsetCoords) -> &Tile {
+    pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self {
+        Chunk { tiles, last_access_instant: time::Instant::now() }
+    }
+
+    pub fn tile_at_offset(&self, mut offset: OffsetCoords) -> &Tile {
         // Ensure offset coordinates are within the chunk's bounds:
         offset.x = cmp::max(0, cmp::min(offset.x, CHUNK_WIDTH as u8 - 1));
         offset.y = cmp::max(0, cmp::min(offset.y, CHUNK_HEIGHT as u8 - 1));
