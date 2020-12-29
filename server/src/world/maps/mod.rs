@@ -4,7 +4,9 @@ use generators::Generator;
 
 use core::maps::{ ChunkCoords, Chunk, Chunks, Map };
 
-use std::{ path::PathBuf, collections::HashMap };
+use std::{ io, path::PathBuf, collections::HashMap };
+
+use serde::{ Serialize, Deserialize };
 
 use tokio::io::AsyncReadExt;
 
@@ -16,17 +18,73 @@ pub struct ServerMap {
     directory: PathBuf,
 
     /// The generator to be used when new chunks must be made.
-    generator: Box<dyn Generator + Send>
+    generator: Box<dyn Generator + Send>,
+
+    /// Seed used by the generator.
+    seed: u32
 
     // players, entities, etc.
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct ServerMapConfig {
+    #[serde(rename = "generator")]
+    generator_name: String,
+    seed: u32
+}
+
+const MAP_CONFIG_FILE_NAME: &'static str = "map.json";
+
 impl ServerMap {
-    pub fn new(directory: PathBuf, generator: Box<dyn Generator + Send>) -> Self {
-        ServerMap {
+    pub async fn load_or_new(directory: PathBuf) -> Option<Self> {
+        unimplemented!()
+    }
+
+    /// Create a new map at a specified path with a given generator and seed.
+    pub async fn new(directory: PathBuf, generator: Box<dyn Generator + Send>, seed: u32) -> io::Result<Self> {
+        tokio::fs::create_dir_all(&directory).await?;
+
+        Ok(ServerMap {
             loaded_chunks: HashMap::new(),
-            directory, generator
+            directory, generator, seed
+        })
+    }
+
+    /// Attempt to load an existing map.
+    pub async fn load(directory: PathBuf) -> Option<Self> { // TODO: Use Result type.
+        let config_file_path = directory.join(MAP_CONFIG_FILE_NAME);
+
+        log::debug!("Attempting to load map configuration file: {}", config_file_path.display());
+
+        if let Ok(mut file) = tokio::fs::File::open(&config_file_path).await {
+            let mut buffer = Vec::new();
+            match file.read_buf(&mut buffer).await {
+                Ok(_) => match serde_json::from_slice::<ServerMapConfig>(buffer.as_slice()) {
+                    Ok(config) => {
+                        log::trace!("Map configuration: {:?}", config);
+
+                        if let Some(generator) = generators::by_name(&config.generator_name) {
+                            log::debug!("Loaded map configuration from file: {}",
+                                        config_file_path.display());
+
+                            return ServerMap::new(directory, generator, config.seed).await.ok();
+                        }
+                        else {
+                            log::warn!("Generator specified in map configuration file '{}' does not exist: {}",
+                                       config_file_path.display(), config.generator_name);
+                        }
+                    }
+
+                    Err(json_error) => log::warn!("Failed decode JSON map configuration from file '{}' - {}",
+                                                  config_file_path.display(), json_error)
+                }
+
+                Err(io_error) => log::warn!("Failed to read map configuration from file '{}' - {}",
+                                            config_file_path.display(), io_error)
+            }
         }
+
+        None
     }
 
     /// Fetch/read from the filesystem/newly generate the chunk at the specified
@@ -48,16 +106,14 @@ impl ServerMap {
     async fn read_chunk_from_filesystem(&self, coords: ChunkCoords) -> Option<Chunk> {
         let chunk_file_path = self.directory.join(format!("{}_{}.chunk", coords.x, coords.y));
 
-        log::debug!("Attempting to load chunk at {} from file: {}", coords, chunk_file_path.display());
+        log::trace!("Attempting to load chunk at {} from file: {}", coords, chunk_file_path.display());
 
         if let Ok(mut file) = tokio::fs::File::open(&chunk_file_path).await {
-            log::trace!("Opened chunk file: {}", chunk_file_path.display());
-
             let mut buffer = Vec::new();
             match file.read_buf(&mut buffer).await {
                 Ok(_) => match bincode::deserialize(buffer.as_slice()) {
                     Ok(chunk) => {
-                        log::info!("Loaded chunk from file: {}", chunk_file_path.display());
+                        log::debug!("Loaded chunk from file: {}", chunk_file_path.display());
 
                         return Some(chunk);
                     }
