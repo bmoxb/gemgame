@@ -196,6 +196,8 @@ impl ServerMap {
         else { Err(Error::DoesNotExist(chunk_file_path)) }
     }
 
+    /// Attempt to asynchronously save the data of the chunk provided to the
+    /// filesystem.
     async fn save_chunk_to_filesystem(&self, coords: ChunkCoords, chunk: &Chunk) -> Result<()> {
         let chunk_file_path = self.directory.join(chunk_file_name(coords));
 
