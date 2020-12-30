@@ -38,9 +38,8 @@ async fn main() {
 
     let host_address = format!("127.0.0.1:{}", options.port);
 
-    let shared = Arc::new(Mutex::new(Shared {
-        game_world: world::World::load_or_new(options.world_directory.clone())
-    }));
+    let game_world = world::World::new(options.world_directory.clone()).expect("Failed to create game world");
+    let shared = Arc::new(Mutex::new(Shared { game_world }));
 
     match TcpListener::bind(&host_address).await {
         Ok(listener) => {

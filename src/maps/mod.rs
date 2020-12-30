@@ -11,11 +11,11 @@ use serde_big_array::big_array;
 big_array! { BigArray; }
 
 /// How many tiles wide a chunk is.
-const CHUNK_WIDTH: i32 = 16;
+pub const CHUNK_WIDTH: i32 = 16;
 /// How many tiles high a chunk is.
-const CHUNK_HEIGHT: i32 = 16;
+pub const CHUNK_HEIGHT: i32 = 16;
 /// Total number of tiles contained in a chunk.
-const CHUNK_TILE_COUNT: usize = CHUNK_WIDTH as usize * CHUNK_HEIGHT as usize;
+pub const CHUNK_TILE_COUNT: usize = CHUNK_WIDTH as usize * CHUNK_HEIGHT as usize;
 
 pub trait Map {
     /// Fetch the tile at the given tile coordinates assuming it is in a chunk
@@ -55,7 +55,11 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    fn tile_at_offset(&self, mut offset: OffsetCoords) -> &Tile {
+    pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self {
+        Chunk { tiles, last_access_instant: time::Instant::now() }
+    }
+
+    pub fn tile_at_offset(&self, mut offset: OffsetCoords) -> &Tile {
         // Ensure offset coordinates are within the chunk's bounds:
         offset.x = cmp::max(0, cmp::min(offset.x, CHUNK_WIDTH as u8 - 1));
         offset.y = cmp::max(0, cmp::min(offset.y, CHUNK_HEIGHT as u8 - 1));
