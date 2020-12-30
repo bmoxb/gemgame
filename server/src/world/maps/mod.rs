@@ -68,33 +68,33 @@ impl ServerMap {
                         else {
                             log::warn!("Generator specified in map configuration file '{}' does not exist: {}",
                                        config_file_path.display(), config.generator_name);
-                            Err(LoadError::InvalidGenerator)
+                            Err(LoadError::InvalidGenerator(config.generator_name))
                         }
                     }
 
                     Err(json_error) => {
                         log::warn!("Failed decode JSON map configuration from file '{}' - {}",
                                    config_file_path.display(), json_error);
-                        Err(LoadError::CouldNotParseConfig)
+                        Err(LoadError::CouldNotDecode(Box::new(json_error)))
                     }
                 }
 
                 Err(io_error) => {
                     log::warn!("Failed to read map configuration from file '{}' - {}",
                                config_file_path.display(), io_error);
-                    Err(LoadError::CouldNotReadConfig)
+                    Err(LoadError::CouldNotRead(io_error))
                 }
             }
         }
-        else { Err(LoadError::DoesNotExist) }
+        else { Err(LoadError::DoesNotExist(config_file_path)) }
     }
 
-    /// Fetch/read from the filesystem/newly generate the chunk at the specified
-    /// coordinates
+    /// Fetch from memory/read from the filesystem/newly generate the chunk at
+    /// the specified coordinates.
     async fn chunk_at(&mut self, coords: ChunkCoords) -> &Chunk {
         if !self.is_chunk_loaded(coords) {
             let new_chunk = self.read_chunk_from_filesystem(coords).await
-                                .unwrap_or_else(|| self.generate_new_chunk(coords));
+                                .unwrap_or_else(|_| self.generate_new_chunk(coords));
 
             self.loaded_chunks.insert(coords, new_chunk);
         }
@@ -105,7 +105,7 @@ impl ServerMap {
     /// Attempt to asynchronously read data from the file system for the chunk
     /// at the specified coordinates. Note that this method will *not* insert
     /// the loaded chunk into the `loaded_chunks` hash map.
-    async fn read_chunk_from_filesystem(&self, coords: ChunkCoords) -> Option<Chunk> {
+    async fn read_chunk_from_filesystem(&self, coords: ChunkCoords) -> LoadResult<Chunk> {
         let chunk_file_path = self.directory.join(format!("{}_{}.chunk", coords.x, coords.y));
 
         log::trace!("Attempting to load chunk at {} from file: {}", coords, chunk_file_path.display());
@@ -117,19 +117,24 @@ impl ServerMap {
                     Ok(chunk) => {
                         log::debug!("Loaded chunk from file: {}", chunk_file_path.display());
 
-                        return Some(chunk);
+                        Ok(chunk)
                     }
 
-                    Err(bincode_error) => log::warn!("Failed to decode chunk data read from file '{}' - {}",
-                                         chunk_file_path.display(), bincode_error)
+                    Err(bincode_error) => {
+                        log::warn!("Failed to decode chunk data read from file '{}' - {}",
+                                   chunk_file_path.display(), bincode_error);
+                        Err(LoadError::CouldNotDecode(bincode_error))
+                    }
                 }
 
-                Err(io_error) => log::warn!("Failed to read chunk data from file '{}' - {}",
-                                     chunk_file_path.display(), io_error)
+                Err(io_error) => {
+                    log::warn!("Failed to read chunk data from file '{}' - {}",
+                               chunk_file_path.display(), io_error);
+                    Err(LoadError::CouldNotRead(io_error))
+                }
             }
         }
-
-        None
+        else { Err(LoadError::DoesNotExist(chunk_file_path)) }
     }
 
     /// Generate a new chunk by passing the specified chunk coordinates to this
@@ -150,10 +155,10 @@ impl Map for ServerMap {
 
 #[derive(Debug)]
 pub enum LoadError {
-    DoesNotExist,
-    CouldNotReadConfig,
-    CouldNotParseConfig,
-    InvalidGenerator
+    DoesNotExist(PathBuf),
+    CouldNotRead(io::Error),
+    CouldNotDecode(Box<dyn std::error::Error>),
+    InvalidGenerator(String)
 }
 
 pub type LoadResult<T> = std::result::Result<T, LoadError>;
