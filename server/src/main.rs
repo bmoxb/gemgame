@@ -1,12 +1,12 @@
+mod handling;
 mod world;
 
 use std::{
     path::PathBuf,
-    net::SocketAddr,
     sync::{ Arc, Mutex }
 };
 
-use tokio::net::{ TcpListener, TcpStream };
+use tokio::net::TcpListener;
 
 use structopt::StructOpt;
 
@@ -48,7 +48,7 @@ async fn main() {
             while let Ok((stream, addr)) = listener.accept().await {
                 log::info!("Incoming connection from: {}", addr);
 
-                tokio::spawn(handle_connection(stream, addr, shared.clone()));
+                tokio::spawn(handling::handle_connection(stream, addr, shared.clone()));
             }
         }
 
@@ -83,24 +83,6 @@ struct Options {
 }
 
 /// Data shared between all connection threads.
-struct Shared {
+pub struct Shared {
     game_world: world::World
-}
-
-/// Handle a connection with an individual client. This function is called
-/// concurrently as a Tokio task.
-async fn handle_connection(stream: TcpStream, addr: SocketAddr, shared: Arc<Mutex<Shared>>) {
-    match tokio_tungstenite::accept_async(stream).await {
-        Ok(ws) => {
-            log::debug!("Performed WebSocket handshake successfully with: {}", addr);
-
-            // ...
-
-            log::info!("Client disconnected: {}", addr);
-        }
-
-        Err(e) => {
-            log::error!("Failed to perform WebSocket handshake with '{}' - {}", addr, e);
-        }
-    }
 }
