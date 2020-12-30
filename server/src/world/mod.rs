@@ -1,6 +1,6 @@
 mod maps;
 
-use std::{ io, path::PathBuf, collections::HashMap };
+use std::{ io, fs, path::PathBuf, collections::HashMap };
 
 use serde::{ Serialize, Deserialize };
 
@@ -14,21 +14,14 @@ pub struct World {
     //players: Vec<entities::Entity>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct WorldConfig { /* ... */ }
-
-const MAPS_DIRECTORY: &'static str = "maps/";
-const ENTITIES_DIRECTORY: &'static str = "entities/";
-
 impl World {
-    pub async fn load_or_new(directory: PathBuf) -> Option<Self> {
-        unimplemented!()
-    }
-
-    /// Create a new game world.
-    pub async fn new(directory: PathBuf) -> io::Result<Self> {
-        tokio::fs::create_dir_all(directory.join(MAPS_DIRECTORY)).await?;
-        tokio::fs::create_dir_all(directory.join(ENTITIES_DIRECTORY)).await?;
+    /// Create a new game world instance. Any world data that already exists at
+    /// the given path will not be removed.
+    ///
+    /// This function does not need to be asynchronous as it is only to be run
+    /// before beginning to listen for incoming connections.
+    pub fn new(directory: PathBuf) -> io::Result<Self> {
+        fs::create_dir_all(directory)?;
 
         Ok(World {
             directory,
@@ -36,14 +29,8 @@ impl World {
         })
     }
 
-    /// Load an existing game world.
-    pub async fn load(directory: PathBuf) -> Option<Self> {
-        unimplemented!()
-    }
-
     pub async fn load_map(&mut self, title: String) -> Option<()> { // TODO: Use Result type.
-        let map_directory = self.directory.join(MAPS_DIRECTORY).join(&title);
-        let map = maps::ServerMap::load(map_directory).await?;
+        let map = maps::ServerMap::load(self.directory.clone()).await?;
 
         // TODO: Check if already loaded?
         self.loaded_maps.insert(title, map);
