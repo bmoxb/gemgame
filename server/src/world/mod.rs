@@ -2,6 +2,8 @@ mod maps;
 
 use std::{ io, fs, path::PathBuf, collections::HashMap };
 
+use core::maps::ChunkCoords;
+
 pub struct World {
     /// Directory containing world data.
     directory: PathBuf,
