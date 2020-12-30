@@ -8,7 +8,7 @@ use std::{ io, path::PathBuf, collections::HashMap };
 
 use serde::{ Serialize, Deserialize };
 
-use tokio::io::AsyncReadExt;
+use tokio::io::{ AsyncReadExt, AsyncWriteExt };
 
 pub struct ServerMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
@@ -47,17 +47,17 @@ impl ServerMap {
     }
 
     /// Attempt to load an existing map.
-    pub async fn load(directory: PathBuf) -> LoadResult<Self> {
+    pub async fn load(directory: PathBuf) -> Result<Self> {
         let config_file_path = directory.join(MAP_CONFIG_FILE_NAME);
 
         log::debug!("Attempting to load map configuration file: {}", config_file_path.display());
 
         if let Ok(mut file) = tokio::fs::File::open(&config_file_path).await {
             let mut buffer = Vec::new();
-            match file.read_buf(&mut buffer).await {
+            match file.read_to_end(&mut buffer).await {
                 Ok(_) => match serde_json::from_slice::<ServerMapConfig>(buffer.as_slice()) {
                     Ok(config) => {
-                        log::trace!("Map configuration: {:?}", config);
+                        log::trace!("Map configuration struct: {:?}", config);
 
                         if let Some(generator) = generators::by_name(&config.generator_name) {
                             log::debug!("Loaded map configuration from file: {}",
@@ -68,26 +68,77 @@ impl ServerMap {
                         else {
                             log::warn!("Generator specified in map configuration file '{}' does not exist: {}",
                                        config_file_path.display(), config.generator_name);
-                            Err(LoadError::InvalidGenerator(config.generator_name))
+                            Err(Error::InvalidGenerator(config.generator_name))
                         }
                     }
 
                     Err(json_error) => {
                         log::warn!("Failed decode JSON map configuration from file '{}' - {}",
                                    config_file_path.display(), json_error);
-                        Err(LoadError::CouldNotDecode(Box::new(json_error)))
+                        Err(Error::DecodingFailure(Box::new(json_error)))
                     }
                 }
 
                 Err(io_error) => {
                     log::warn!("Failed to read map configuration from file '{}' - {}",
                                config_file_path.display(), io_error);
-                    Err(LoadError::CouldNotRead(io_error))
+                    Err(Error::AccessFailure(io_error))
                 }
             }
         }
-        else { Err(LoadError::DoesNotExist(config_file_path)) }
+        else { Err(Error::DoesNotExist(config_file_path)) }
     }
+
+    /// Save this map's configuration and its currently loaded chunks.
+    pub async fn save_all(&self) -> Result<()> {
+        let config_saved = self.save_config().await;
+        let chunks_saved = self.save_loaded_chunks().await;
+
+        config_saved.and(chunks_saved)
+    }
+
+    /// Save this map's configuration (i.e. map generation seed, type of generator
+    /// used, etc.)
+    pub async fn save_config(&self) -> Result<()> {
+        let config_file_path = self.directory.join(MAP_CONFIG_FILE_NAME);
+
+        log::debug!("Attempting to save map configuration file: {}", config_file_path.display());
+
+        match tokio::fs::File::create(&config_file_path).await {
+            Ok(mut file) => {
+                let config = ServerMapConfig {
+                    generator_name: self.generator.name().to_string(),
+                    seed: self.seed
+                };
+                let config_json = serde_json::to_string(&config).unwrap();
+
+                log::trace!("Map configuration JSON: {}", config_json);
+
+                match file.write_all(config_json.as_bytes()).await {
+                    Ok(_) => {
+                        log::debug!("Saved map configuration to file: {}",
+                                    config_file_path.display());
+                        Ok(())
+                    }
+
+                    Err(write_error) => {
+                        log::warn!("Failed to write map configuration to file '{}' - {}",
+                                   config_file_path.display(), write_error);
+                        Err(Error::AccessFailure(write_error))
+                    }
+                }
+            }
+
+            Err(create_error) => {
+                log::warn!("Failed to create/overwrite map configuration file '{}' - {}",
+                           config_file_path.display(), create_error);
+                Err(Error::AccessFailure(create_error))
+            }
+        }
+    }
+
+    /// Save all of this map's chunks that are currently loaded.
+    pub async fn save_loaded_chunks(&self) -> Result<()> { unimplemented!() }
 
     /// Fetch from memory/read from the filesystem/newly generate the chunk at
     /// the specified coordinates.
@@ -105,7 +156,7 @@ impl ServerMap {
     /// Attempt to asynchronously read data from the file system for the chunk
     /// at the specified coordinates. Note that this method will *not* insert
     /// the loaded chunk into the `loaded_chunks` hash map.
-    async fn read_chunk_from_filesystem(&self, coords: ChunkCoords) -> LoadResult<Chunk> {
+    async fn read_chunk_from_filesystem(&self, coords: ChunkCoords) -> Result<Chunk> {
         let chunk_file_path = self.directory.join(format!("{}_{}.chunk", coords.x, coords.y));
 
         log::trace!("Attempting to load chunk at {} from file: {}", coords, chunk_file_path.display());
@@ -123,18 +174,18 @@ impl ServerMap {
                     Err(bincode_error) => {
                         log::warn!("Failed to decode chunk data read from file '{}' - {}",
                                    chunk_file_path.display(), bincode_error);
-                        Err(LoadError::CouldNotDecode(bincode_error))
+                        Err(Error::DecodingFailure(bincode_error))
                     }
                 }
 
                 Err(io_error) => {
                     log::warn!("Failed to read chunk data from file '{}' - {}",
                                chunk_file_path.display(), io_error);
-                    Err(LoadError::CouldNotRead(io_error))
+                    Err(Error::AccessFailure(io_error))
                 }
             }
         }
-        else { Err(LoadError::DoesNotExist(chunk_file_path)) }
+        else { Err(Error::DoesNotExist(chunk_file_path)) }
     }
 
     /// Generate a new chunk by passing the specified chunk coordinates to this
@@ -154,11 +205,11 @@ impl Map for ServerMap {
 }
 
 #[derive(Debug)]
-pub enum LoadError {
+pub enum Error {
     DoesNotExist(PathBuf),
-    CouldNotRead(io::Error),
-    CouldNotDecode(Box<dyn std::error::Error>),
+    AccessFailure(io::Error),
+    DecodingFailure(Box<dyn std::error::Error>),
     InvalidGenerator(String)
 }
 
-pub type LoadResult<T> = std::result::Result<T, LoadError>;
+pub type Result<T> = std::result::Result<T, Error>;

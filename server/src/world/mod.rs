@@ -28,7 +28,7 @@ impl World {
     }
 
     /// Attempt to load an existing map with the specified title.
-    pub async fn load_map(&mut self, title: &str) -> maps::LoadResult<()> {
+    pub async fn load_map(&mut self, title: &str) -> maps::Result<()> {
         if self.loaded_maps.contains_key(title) {
             log::warn!("Attempt made to load map that is already loaded: {}", title);
         }
