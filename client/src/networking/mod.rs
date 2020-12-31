@@ -12,13 +12,13 @@ use std::{ fmt, convert };
 
 use serde::{ Serialize, de::DeserializeOwned };
 
-pub fn connect(addr: &str, port: usize, secure: bool) -> PendingConnection {
+pub fn connect(addr: &str, port: u16, secure: bool) -> PendingConnection {
     PendingConnection::new(addr_port_to_url(secure, addr, port))
 }
 
 /// Simple helper function that builds a WebSocket URL given an address, port,
 /// and a boolean indicating whether the connection will be secure or not.
-fn addr_port_to_url(secure: bool, addr: &str, port: usize) -> String {
+fn addr_port_to_url(secure: bool, addr: &str, port: u16) -> String {
     format!("{}://{}:{}", if secure { "wss" } else { "ws" }, addr, port)
 }
 

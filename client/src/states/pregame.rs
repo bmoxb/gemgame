@@ -3,8 +3,9 @@ use macroquad::prelude as quad;
 use crate::networking::{ self, PendingConnectionTrait };
 use super::State;
 
-const SERVER_ADDRESS: &str = "echo.websocket.org";
-const SERVER_PORT: usize = 80;
+use core::WEBSOCKET_CONNECTION_PORT;
+
+const SERVER_ADDRESS: &str = "localhost";
 const SECURE_CONNECTION: bool = false;
 
 pub struct ConnectToServerState {
@@ -14,9 +15,9 @@ pub struct ConnectToServerState {
 
 impl ConnectToServerState {
     pub fn new() -> Self {
-        log::info!("Connecting to '{}' on port {}...", SERVER_ADDRESS, SERVER_PORT);
+        log::info!("Connecting to '{}' on port {}...", SERVER_ADDRESS, WEBSOCKET_CONNECTION_PORT);
         ConnectToServerState {
-            pending_connection: networking::connect(SERVER_ADDRESS, SERVER_PORT, SECURE_CONNECTION),
+            pending_connection: networking::connect(SERVER_ADDRESS, WEBSOCKET_CONNECTION_PORT, SECURE_CONNECTION),
             text: String::new()
         }
     }

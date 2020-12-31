@@ -41,8 +41,6 @@ pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, shared: Arc<
                         log::warn!("Message from {} is not binary: {}", addr, not_binary_msg);
                     }
 
-                    Err(tungstenite::Error::ConnectionClosed) => { break; }
-
                     Err(ws_error) => {
                         log::warn!("Failed to receive message from client {} - {}",
                                    addr, ws_error);

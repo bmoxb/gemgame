@@ -6,6 +6,8 @@ use std::{
     sync::{ Arc, Mutex }
 };
 
+use core::WEBSOCKET_CONNECTION_PORT;
+
 use tokio::net::TcpListener;
 
 use structopt::StructOpt;
@@ -14,7 +16,8 @@ use structopt::StructOpt;
 async fn main() {
     // Command-line arguments:
 
-    let options = Options::from_args();
+    let mut options = Options::from_args();
+    if options.port == 0 { options.port = core::WEBSOCKET_CONNECTION_PORT; }
 
     // Logger initialisation:
 
@@ -65,8 +68,8 @@ async fn main() {
 #[structopt(name = "MMO Server")]
 struct Options {
     /// The port on which listen for incoming connections.
-    #[structopt(short, long, default_value = "8000")]
-    port: usize,
+    #[structopt(short, long, default_value = "0")]
+    port: u16,
 
     /// Directory containing game world data.
     #[structopt(long, default_value = "world/", parse(from_os_str))]
