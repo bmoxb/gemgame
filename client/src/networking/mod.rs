@@ -71,14 +71,19 @@ pub enum Error {
 
     /// Occurs when bincode data sent/received over the connection could not be
     /// properly (de)serialised.
-    BincodeError(bincode::Error)
+    BincodeError(bincode::Error),
+
+    /// This error type is returned when the message received from the remote
+    /// peer is a closing message and the closing handshake is performed.
+    ConnectionClosed
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::ConnectionError(e) => write!(f, "Connection error - {}", e),
-            Error::BincodeError(e) => write!(f, "(De)serialisation error - {}", e)
+            Error::BincodeError(e) => write!(f, "(De)serialisation error - {}", e),
+            Error::ConnectionClosed => write!(f, "Connection closed (closing handshake performed)")
         }
     }
 }

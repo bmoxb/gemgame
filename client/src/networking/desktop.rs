@@ -28,7 +28,7 @@ impl super::PendingConnectionTrait<Connection> for PendingConnection {
                 }
 
                 Err(e) => {
-                    log::warn!("Failed to establish WebSocket connection: {}", e);
+                    log::error!("Failed to establish WebSocket connection: {}", e);
                     Err(e.into())
                 }
             };
@@ -63,13 +63,29 @@ impl super::ConnectionTrait for Connection {
 
     fn receive_bytes(&mut self) -> Result<Option<Vec<u8>>> {
         match self.ws.read_message() {
-            Ok(ws2::Message::Binary(data)) => Ok(Some(data)),
-            Ok(_) => Ok(None),
-            Err(ws2::Error::Io(io_err)) => {
-                if io_err.kind() == std::io::ErrorKind::WouldBlock { Ok(None) }
-                else { Err(io_err.into()) }
+            Ok(msg) => match msg {
+                // Return binary message:
+                ws2::Message::Binary(data) => Ok(Some(data)),
+
+                // Complete closing handshake and indicate to the caller that
+                // the connection is now closed:
+                ws2::Message::Close(_) => {
+                    log::debug!("Performing closing handshake");
+
+                    let _ = self.ws.close(None).and_then(|_| self.ws.write_pending());
+                    Err(Error::ConnectionClosed)
+                }
+
+                // Any other message type is ignored:
+                _ => Ok(None)
             }
-            Err(other) => Err(other.into())
+
+            Err(ws2::Error::Io(io_error)) => {
+                if io_error.kind() == std::io::ErrorKind::WouldBlock { Ok(None) }
+                else { Err(io_error.into()) }
+            }
+
+            Err(other_error) => Err(other_error.into())
         }
     }
 }

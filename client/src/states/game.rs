@@ -41,16 +41,22 @@ impl State for GameState {
             Ok(msg_option) => if let Some(msg) = msg_option {
                 self.handle_message_from_server(msg);
             }
-            Err(e) => match e {
-                networking::Error::BincodeError(bincode_e) => {
-                    log::warn!("Failed to decode message from server due to error: {}",
-                               bincode_e);
+            Err(e) => {
+                match e {
+                    networking::Error::BincodeError(bincode_error) => {
+                        log::warn!("Failed to decode message from server due to error: {}",
+                                bincode_error);
+                    }
+                    networking::Error::ConnectionError(connection_error) => {
+                        log::warn!("Failed to receive from server due to connection error: {}",
+                                connection_error);
+                    }
+
+                    networking::Error::ConnectionClosed => {
+                        log::error!("Connection closed by the server");
+                    }
                 }
-                networking::Error::ConnectionError(connection_e) => {
-                    log::warn!("Failed to receive from server due to connection error: {}",
-                               connection_e);
-                    // TODO: Attempt to reconnect...
-                }
+                panic!() // TODO
             }
         }
 
