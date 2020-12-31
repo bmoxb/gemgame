@@ -37,8 +37,20 @@ pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, shared: Arc<
                         }
                     }
 
+                    Ok(tungstenite::Message::Close(_)) => {
+                        log::debug!("Closing message from client {}", addr);
+
+                        let _ = ws.close(None).await;
+                        break;
+                    }
+
                     Ok(not_binary_msg) => {
                         log::warn!("Message from {} is not binary: {}", addr, not_binary_msg);
+                    }
+
+                    Err(tungstenite::Error::Protocol(vioation)) if vioation.contains("closing handshake") => {
+                        log::debug!("Client {} closed connection without performing the closing handshake", addr);
+                        break;
                     }
 
                     Err(ws_error) => {

@@ -17,7 +17,7 @@ async fn main() {
     // Command-line arguments:
 
     let mut options = Options::from_args();
-    if options.port == 0 { options.port = core::WEBSOCKET_CONNECTION_PORT; }
+    if options.port == 0 { options.port = WEBSOCKET_CONNECTION_PORT; }
 
     // Logger initialisation:
 
