@@ -9,7 +9,7 @@ async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     pretty_env_logger::init(); // Only have logging when targeting desktop.
 
-    let mut current_state: Box<dyn states::State> = Box::new(states::pregame::ConnectToServerState::new());
+    let mut current_state: Box<dyn states::State> = Box::new(states::pregame::ConnectingState::new());
 
     log::info!("Created initial state '{}' - beginning main loop...", current_state.title());
 

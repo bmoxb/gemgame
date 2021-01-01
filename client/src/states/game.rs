@@ -26,11 +26,7 @@ impl GameState {
 
         match msg {
             messages::FromServer::Welcome { version } => {
-                if version == core::VERSION {
-                    log::debug!("Welcomed to server running the correct version: {}", version);
-                    // TODO: Perform this check in ConnectToServerState
-                }
-                else { unimplemented!() } // TODO
+                log::warn!("Unexpectedly received 'welcome' message from server");
             }
 
             messages::FromServer::ProvideChunk(coords, chunk) => {
