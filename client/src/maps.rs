@@ -17,6 +17,12 @@ impl ClientMap {
         ClientMap { loaded_chunks: HashMap::new() }
     }
 
+    /// Attempt to get the tile at the specified tile coordinates. This method
+    /// will return `Ok(Some(...))` should the chunk that the desired tile is in
+    /// be already loaded. If it is not loaded, the necessary chunk will be
+    /// requested from the server and either `Ok(None)` or `Err(...)` will be
+    /// returned depending on whether or not the chunk request message could be
+    /// sent successfully.
     pub fn tile_at(&self, coords: TileCoords, connection: &mut networking::Connection) -> networking::Result<Option<&Tile>> {
         let tile_option = self.loaded_tile_at(coords);
 
@@ -48,6 +54,7 @@ impl ClientMap {
 
             connection.send(&messages::ToServer::ChunkUnloadedLocally(coords))?;
         }
+
         Ok(())
     }
 }
@@ -58,6 +65,7 @@ impl Map for ClientMap {
     }
 }
 
+/// Request the chunk at the specified coordinates from the server.
 fn request_chunk(coords: ChunkCoords, connection: &mut networking::Connection) -> networking::Result<()> {
     connection.send(&messages::ToServer::RequestChunk(coords))
 }
