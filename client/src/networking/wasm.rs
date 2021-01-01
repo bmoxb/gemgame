@@ -8,6 +8,7 @@ extern "C" {
     fn ws_connect(addr: JsObject);
     fn ws_connection_status() -> i32;
     fn ws_send(buffer: JsObject);
+    fn ws_receive() ->JsObject;
 }
 
 const IO_ERROR_MSG: &'static str = "Please see the browser console for error message";
@@ -19,17 +20,11 @@ impl super::PendingConnectionTrait<Connection> for PendingConnection {
         let obj = JsObject::string(&full_url);
         unsafe { ws_connect(obj) };
 
-        PendingConnection {}
+        PendingConnection
     }
 
     fn ready(&self) -> Result<Option<Connection>> {
-        let status = unsafe { ws_connection_status() };
-
-        if status > 0 { Ok(Some(Connection {})) } // connected
-        else if status < 0 { // error
-            Err(io::Error::new(io::ErrorKind::ConnectionRefused, IO_ERROR_MSG).into())
-        }
-        else { Ok(None) } // still waiting to connect
+        ConnectionStatus::result(None, Some(Connection))
     }
 }
 
@@ -41,9 +36,42 @@ impl super::ConnectionTrait for Connection {
         let obj = JsObject::buffer(bytes.as_slice());
         unsafe { ws_send(obj) };
 
-        if unsafe { ws_connection_status() } > 0 { Ok(()) }
-        else { Err(io::Error::new(io::ErrorKind::Other, IO_ERROR_MSG).into()) }
+        ConnectionStatus::result((), ())
     }
 
-    fn receive_bytes(&mut self) -> Result<Option<Vec<u8>>> { unimplemented!() }
+    fn receive_bytes(&mut self) -> Result<Option<Vec<u8>>> {
+        let data = unsafe { ws_receive() };
+
+        if data.is_nil() { ConnectionStatus::result(None, None) }
+        else {
+            let mut buffer = Vec::new();
+            data.to_byte_buffer(&mut buffer);
+            Ok(Some(buffer))
+        }
+    }
+}
+
+enum ConnectionStatus { Pending, Ok, Closed, Error }
+
+impl ConnectionStatus {
+    /// Call on JavaScript code that identifies the current statis of the
+    /// WebSocket connection.
+    fn identify() -> ConnectionStatus {
+        match unsafe { ws_connection_status() } {
+            0 => ConnectionStatus::Pending,
+            1 => ConnectionStatus::Ok,
+            2 => ConnectionStatus::Closed,
+            _ => ConnectionStatus::Error
+        }
+    }
+
+    /// Return a `Result` value based on the current connection status.
+    fn result<T>(pending_value: T, ok_value: T) -> Result<T> {
+        match ConnectionStatus::identify() {
+            ConnectionStatus::Pending => Ok(pending_value),
+            ConnectionStatus::Ok => Ok(ok_value),
+            ConnectionStatus::Closed => Err(Error::ConnectionClosed),
+            ConnectionStatus::Error => Err(io::Error::new(io::ErrorKind::Other, IO_ERROR_MSG).into())
+        }
+    }
 }
