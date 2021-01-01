@@ -7,7 +7,7 @@ use std::{
 
 use core::messages;
 
-use futures_util::StreamExt;
+use futures_util::{ SinkExt, StreamExt };
 use tokio::net::TcpStream;
 use tokio_tungstenite::{ tungstenite, WebSocketStream };
 
@@ -17,6 +17,10 @@ pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, shared: Arc<
     match tokio_tungstenite::accept_async(stream).await {
         Ok(mut ws) => {
             log::debug!("Performed WebSocket handshake successfully with: {}", addr);
+
+            let welcome_msg = messages::FromServer::Welcome { version: core::VERSION.to_string() };
+            let encoded = bincode::serialize(&welcome_msg).unwrap();
+            ws.send(tungstenite::Message::Binary(encoded)).await.unwrap(); // TODO
 
             while let Some(ws_msg_option) = ws.next().await {
                 match ws_msg_option {

@@ -25,10 +25,19 @@ impl GameState {
         log::info!("Received message from server: {}", msg);
 
         match msg {
+            messages::FromServer::Welcome { version } => {
+                if version == core::VERSION {
+                    log::debug!("Welcomed to server running the correct version: {}", version);
+                    // TODO: Perform this check in ConnectToServerState
+                }
+                else { unimplemented!() } // TODO
+            }
+
             messages::FromServer::ProvideChunk(coords, chunk) => {
                 self.map.provide_chunk(coords, chunk, &mut self.connection).unwrap(); // TODO
             }
-            messages::FromServer::UpdateTile(coords, tile) => unimplemented!()
+
+            messages::FromServer::UpdateTile(coords, tile) => unimplemented!() // TODO
         }
     }
 }

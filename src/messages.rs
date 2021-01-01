@@ -36,6 +36,11 @@ impl fmt::Display for ToServer {
 /// Message sent from the server to the client over the WebSocket protocol.
 #[derive(Serialize, Deserialize)]
 pub enum FromServer {
+    /// Indicate the client the version of the server being connected to. This
+    /// should be the first message sent after the completion of the WebSocket
+    /// connection handshake.
+    Welcome { version: String },
+
     /// Provide chunk data to a client so it may store it locally. Chunks are
     /// provided when requested by the client.
     ProvideChunk(maps::ChunkCoords, maps::Chunk),
@@ -49,6 +54,7 @@ pub enum FromServer {
 impl fmt::Display for FromServer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            FromServer::Welcome { version } => write!(f, "welcome to server running version '{}'", version),
             FromServer::ProvideChunk(coords, _) => write!(f, "provide chunk at {}", coords),
             FromServer::UpdateTile(coords, _) => write!(f, "update tile at {}", coords)
         }
