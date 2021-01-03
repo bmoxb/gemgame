@@ -39,15 +39,6 @@ impl ClientMap {
         Ok(chunk_option)
     }
 
-    pub fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk, connection: &mut networking::Connection) -> networking::Result<()> {
-        // TODO: Unload chunk(s) should too many be loaded already.
-
-        log::debug!("Loaded chunk: {}", coords);
-        self.loaded_chunks.insert(coords, chunk);
-
-        Ok(())
-    }
-
     fn unload_chunk(&mut self, coords: ChunkCoords, connection: &mut networking::Connection) -> networking::Result<()> {
         if let Some(_) = self.loaded_chunks.remove(&coords) {
             log::debug!("Unloaded chunk: {}", coords);
@@ -62,6 +53,12 @@ impl ClientMap {
 impl Map for ClientMap {
     fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> {
         self.loaded_chunks.get(&coords)
+    }
+
+    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
+        // TODO: Unload chunk(s) should too many be loaded already?
+
+        self.loaded_chunks.insert(coords, chunk);
     }
 }
 

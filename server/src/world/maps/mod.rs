@@ -1,6 +1,6 @@
 mod config;
-mod chunks;
-mod generators;
+pub mod chunks;
+pub mod generators;
 use generators::Generator;
 
 use core::maps::{ ChunkCoords, Chunk, Chunks, Map };
@@ -11,8 +11,11 @@ pub struct ServerMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
     loaded_chunks: Chunks,
 
+    /// Path to the directory containing map data.
+    pub directory: PathBuf,
+
     /// The generator to be used when new chunks must be made.
-    generator: Box<dyn Generator + Send>,
+    pub generator: Box<dyn Generator + Send>,
 
     /// Seed used by the generator.
     seed: u32
@@ -21,11 +24,11 @@ pub struct ServerMap {
 }
 
 impl ServerMap {
-    /// Create a new map with a given generator and seed.
-    pub fn new(generator: Box<dyn Generator + Send>, seed: u32) -> io::Result<Self> {
+    /// Create a new map at a specified path with a given generator and seed.
+    pub fn new(directory: PathBuf, generator: Box<dyn Generator + Send>, seed: u32) -> io::Result<Self> {
         Ok(ServerMap {
             loaded_chunks: HashMap::new(),
-            generator, seed
+            directory, generator, seed
         })
     }
 }
@@ -33,6 +36,10 @@ impl ServerMap {
 impl Map for ServerMap {
     fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> {
         self.loaded_chunks.get(&coords)
+    }
+
+    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
+        self.loaded_chunks.insert(coords, chunk);
     }
 }
 

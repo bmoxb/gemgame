@@ -36,6 +36,9 @@ pub trait Map {
     fn is_chunk_loaded(&self, coords: ChunkCoords) -> bool {
         self.loaded_chunk_at(coords).is_some()
     }
+
+    /// Have this map include the given chunk in its collection of loaded chunks.
+    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk);
 }
 
 /// Type alias for a hash map that maps chunk coordinates to chunks.
@@ -43,7 +46,7 @@ pub type Chunks = HashMap<ChunkCoords, Chunk>;
 
 /// 1Area of tiles on a map. As maps are infinite, chunks are generated, loaded,
 /// and unloaded dynamically as necessary.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Chunk {
     /// The tiles that this chunk is comprised of.
     #[serde(with = "BigArray")]

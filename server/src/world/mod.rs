@@ -1,4 +1,6 @@
-mod maps;
+pub mod maps;
+
+use crate::Shared;
 
 use std::{ io, fs, path::PathBuf, collections::HashMap };
 
@@ -23,13 +25,21 @@ impl World {
     pub fn new(directory: PathBuf) -> io::Result<Self> {
         fs::create_dir_all(&directory)?;
 
-        Ok(World {
+        let mut x = World {
             directory,
             loaded_maps: HashMap::new()
-        })
+        };
+
+        // TODO: Temporary:
+        x.loaded_maps.insert(
+            "surface".to_string(),
+            maps::ServerMap::new(x.directory.join("surface"), Box::new(maps::generators::DefaultGenerator), 0).unwrap()
+        );
+
+        Ok(x)
     }
 
-    pub fn map(&self, title: &str) -> Option<&maps::ServerMap> {
-        self.loaded_maps.get(title)
+    pub fn get_map_mut(&mut self, title: &str) -> Option<&mut maps::ServerMap> {
+        self.loaded_maps.get_mut(title)
     }
 }

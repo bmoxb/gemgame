@@ -4,7 +4,9 @@ mod world;
 use world::World;
 
 use std::{
+    net::SocketAddr,
     path::PathBuf,
+    collections::HashMap,
     sync::{ Arc, Mutex }
 };
 
@@ -39,13 +41,17 @@ async fn main() {
     }
     logger.start().expect("Failed to initialise logger");
 
-    // Bind socket and handle connections:
+    // Prepare data structures that are to be shared between threads:
 
-    let host_address = format!("127.0.0.1:{}", options.port);
+    let connections: Shared<Connections> = Arc::new(Mutex::new(HashMap::new()));
 
     let world: Shared<World> = Arc::new(Mutex::new(
         World::new(options.world_directory.clone()).expect("Failed to create game world")
     ));
+
+    // Bind socket and handle connections:
+
+    let host_address = format!("127.0.0.1:{}", options.port);
 
     match TcpListener::bind(&host_address).await {
         Ok(listener) => {
@@ -54,7 +60,10 @@ async fn main() {
             while let Ok((stream, addr)) = listener.accept().await {
                 log::info!("Incoming connection from: {}", addr);
 
-                tokio::spawn(handling::handle_connection(stream, addr, world.clone()));
+                tokio::spawn(handling::handle_connection(
+                    stream, addr,
+                    Arc::clone(&connections), Arc::clone(&world)
+                ));
             }
         }
 
@@ -66,6 +75,12 @@ async fn main() {
 }
 
 type Shared<T> = Arc<Mutex<T>>;
+
+type Connections = HashMap<SocketAddr, Connection>;
+
+pub struct Connection {
+    current_map_key: String
+}
 
 // TODO: When Clap version 3 is stable, use that instead?
 /// Server application for not-yet-named web MMO roguelike.

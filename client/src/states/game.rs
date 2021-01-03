@@ -1,6 +1,6 @@
 use macroquad::prelude as quad;
 
-use core::{ maps::ChunkCoords, messages };
+use core::{ maps::{ Map, ChunkCoords }, messages };
 
 use crate::{
     maps,
@@ -16,10 +16,7 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(connection: networking::Connection) -> Self {
-        let mut x = GameState { connection, map: maps::ClientMap::new() };
-        // TODO: Temporary:
-        x.connection.send(&messages::ToServer::RequestChunk(ChunkCoords { x: 0, y: 0 })).unwrap();
-        x
+        GameState { connection, map: maps::ClientMap::new() }
     }
 }
 
@@ -32,7 +29,10 @@ impl GameState {
             }
 
             messages::FromServer::ProvideChunk(coords, chunk) => {
-                self.map.provide_chunk(coords, chunk, &mut self.connection)
+                log::debug!("Chunk loaded from server: {}", coords);
+
+                self.map.provide_chunk(coords, chunk);
+                Ok(())
             }
 
             messages::FromServer::UpdateTile(coords, tile) => unimplemented!() // TODO
@@ -44,6 +44,10 @@ impl State for GameState {
     fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
         quad::draw_text(self.title(), 0.0, 0.0, 32.0, quad::GREEN);
 
+        if quad::is_key_down(quad::KeyCode::X) { // TODO: Temporary.
+            self.connection.send(&messages::ToServer::RequestChunk(ChunkCoords { x: 0, y: 0 })).unwrap();
+        }
+
         match self.connection.receive::<messages::FromServer>() {
             Ok(msg_option) => if let Some(msg) = msg_option {
                 log::info!("Received message from server: {}", msg);
@@ -54,6 +58,7 @@ impl State for GameState {
                     log::warn!("Error occurred during the handling of message from server: {}", e);
                 }
             }
+
             Err(e) => {
                 match e {
                     networking::Error::BincodeError(bincode_error) => {
