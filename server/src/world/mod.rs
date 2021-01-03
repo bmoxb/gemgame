@@ -29,17 +29,7 @@ impl World {
         })
     }
 
-    /// Attempt to load an existing map with the specified title.
-    pub async fn load_map(&mut self, title: &str) -> maps::Result<()> {
-        if self.loaded_maps.contains_key(title) {
-            log::warn!("Attempt made to load map that is already loaded: {}", title);
-        }
-
-        let map = maps::ServerMap::load(self.directory.join(title)).await?;
-        self.loaded_maps.insert(title.to_string(), map);
-
-        log::info!("Loaded map: {}", title);
-
-        Ok(())
+    pub fn map(&self, title: &str) -> Option<&maps::ServerMap> {
+        self.loaded_maps.get(title)
     }
 }

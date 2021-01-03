@@ -1,6 +1,8 @@
 mod handling;
 mod world;
 
+use world::World;
+
 use std::{
     path::PathBuf,
     sync::{ Arc, Mutex }
@@ -41,8 +43,9 @@ async fn main() {
 
     let host_address = format!("127.0.0.1:{}", options.port);
 
-    let game_world = world::World::new(options.world_directory.clone()).expect("Failed to create game world");
-    let shared = Arc::new(Mutex::new(Shared { game_world }));
+    let world: Shared<World> = Arc::new(Mutex::new(
+        World::new(options.world_directory.clone()).expect("Failed to create game world")
+    ));
 
     match TcpListener::bind(&host_address).await {
         Ok(listener) => {
@@ -51,7 +54,7 @@ async fn main() {
             while let Ok((stream, addr)) = listener.accept().await {
                 log::info!("Incoming connection from: {}", addr);
 
-                tokio::spawn(handling::handle_connection(stream, addr, shared.clone()));
+                tokio::spawn(handling::handle_connection(stream, addr, world.clone()));
             }
         }
 
@@ -61,6 +64,8 @@ async fn main() {
         }
     }
 }
+
+type Shared<T> = Arc<Mutex<T>>;
 
 // TODO: When Clap version 3 is stable, use that instead?
 /// Server application for not-yet-named web MMO roguelike.
@@ -83,9 +88,4 @@ struct Options {
     /// addition to stdout.
     #[structopt(long)]
     log_to_file: bool
-}
-
-/// Data shared between all connection threads.
-pub struct Shared {
-    game_world: world::World
 }

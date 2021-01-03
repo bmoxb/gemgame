@@ -1,11 +1,11 @@
-use super::Shared;
+use crate::{ Shared, world::World };
 
 use std::{
     net::SocketAddr,
     sync::{ Arc, Mutex }
 };
 
-use core::messages;
+use core::{ messages, maps::Map };
 
 use futures_util::{ SinkExt, StreamExt };
 use tokio::net::TcpStream;
@@ -13,7 +13,9 @@ use tokio_tungstenite::{ tungstenite, WebSocketStream };
 
 /// Handle a connection with an individual client. This function is called
 /// concurrently as a Tokio task.
-pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, shared: Arc<Mutex<Shared>>) {
+pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, world: Shared<World>) {
+    // Perform the WebSocket handshake:
+
     match tokio_tungstenite::accept_async(stream).await {
         Ok(mut ws) => {
             log::debug!("Performed WebSocket handshake successfully with: {}", addr);
@@ -22,16 +24,20 @@ pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, shared: Arc<
             let encoded = bincode::serialize(&welcome_msg).unwrap();
             ws.send(tungstenite::Message::Binary(encoded)).await.unwrap(); // TODO
 
+            // Wait for messages over the connection:
+
             while let Some(ws_msg_option) = ws.next().await {
                 match ws_msg_option {
                     Ok(tungstenite::Message::Binary(data)) => {
                         log::trace!("Binary data from client {} - {:?}", addr, data);
 
+                        // Deserialise the message:
+
                         match bincode::deserialize::<messages::ToServer>(data.as_slice()) {
                             Ok(msg) => {
                                 log::debug!("Message from client {} - {}", addr, msg);
 
-                                handle_message(msg, &mut ws, &addr, &shared).await;
+                                handle_message(msg, &mut ws, &addr, &world).await;
                             }
 
                             Err(bincode_error) => {
@@ -73,10 +79,9 @@ pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, shared: Arc<
     }
 }
 
-async fn handle_message(msg: messages::ToServer, ws: &mut WebSocketStream<TcpStream>, addr: &SocketAddr, shared: &Arc<Mutex<Shared>>) {
+async fn handle_message(msg: messages::ToServer, ws: &mut WebSocketStream<TcpStream>, addr: &SocketAddr, world: &Shared<World>) {
     match msg {
         messages::ToServer::RequestChunk(coords) => {
-            // shared.lock().unwrap().game_world.chunk_at(coords);
         }
 
         messages::ToServer::ChunkUnloadedLocally(coords) => {
