@@ -1,14 +1,14 @@
-use super::{ Error, Result };
-
 use std::io;
 
 use sapp_jsutils::JsObject;
+
+use super::{Error, Result};
 
 extern "C" {
     fn ws_connect(addr: JsObject);
     fn ws_connection_status() -> i32;
     fn ws_send(buffer: JsObject);
-    fn ws_receive() ->JsObject;
+    fn ws_receive() -> JsObject;
 }
 
 const IO_ERROR_MSG: &'static str = "Please see the browser console for error message";
@@ -23,9 +23,7 @@ impl super::PendingConnectionTrait<Connection> for PendingConnection {
         PendingConnection
     }
 
-    fn ready(&self) -> Result<Option<Connection>> {
-        ConnectionStatus::result(None, Some(Connection))
-    }
+    fn ready(&self) -> Result<Option<Connection>> { ConnectionStatus::result(None, Some(Connection)) }
 }
 
 /// WebSocket connection relying on the web browser's JavaScript API.
@@ -42,7 +40,9 @@ impl super::ConnectionTrait for Connection {
     fn receive_bytes(&mut self) -> Result<Option<Vec<u8>>> {
         let data = unsafe { ws_receive() };
 
-        if data.is_nil() { ConnectionStatus::result(None, None) }
+        if data.is_nil() {
+            ConnectionStatus::result(None, None)
+        }
         else {
             let mut buffer = Vec::new();
             data.to_byte_buffer(&mut buffer);
@@ -51,11 +51,15 @@ impl super::ConnectionTrait for Connection {
     }
 }
 
-enum ConnectionStatus { Pending, Ok, Closed, Error }
+enum ConnectionStatus {
+    Pending,
+    Ok,
+    Closed,
+    Error
+}
 
 impl ConnectionStatus {
-    /// Call on JavaScript code that identifies the current statis of the
-    /// WebSocket connection.
+    /// Call on JavaScript code that identifies the current statis of the WebSocket connection.
     fn identify() -> ConnectionStatus {
         match unsafe { ws_connection_status() } {
             0 => ConnectionStatus::Pending,

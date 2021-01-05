@@ -1,8 +1,8 @@
-//! Module containing all code relating to game 'states' (e.g. the main menu
-//! state, the settings state, the gameplay state, etc.)
+//! Module containing all code relating to game 'states' (e.g. the main menu state, the settings state, the gameplay
+//! state, etc.)
 
-pub mod pregame;
 pub mod game;
+pub mod pregame;
 
 pub trait State {
     fn title(&self) -> &'static str;

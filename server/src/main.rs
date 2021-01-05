@@ -1,28 +1,27 @@
-mod networking;
 mod handling;
+mod networking;
 mod world;
 
-use world::World;
-
+use core::WEBSOCKET_CONNECTION_PORT;
 use std::{
+    collections::HashMap,
     net::SocketAddr,
     path::PathBuf,
-    collections::HashMap,
-    sync::{ Arc, Mutex }
+    sync::{Arc, Mutex}
 };
 
-use core::WEBSOCKET_CONNECTION_PORT;
-
-use tokio::net::TcpListener;
-
 use structopt::StructOpt;
+use tokio::net::TcpListener;
+use world::World;
 
 #[tokio::main]
 async fn main() {
     // Command-line arguments:
 
     let mut options = Options::from_args();
-    if options.port == 0 { options.port = WEBSOCKET_CONNECTION_PORT; }
+    if options.port == 0 {
+        options.port = WEBSOCKET_CONNECTION_PORT;
+    }
 
     // Logger initialisation:
 
@@ -31,14 +30,15 @@ async fn main() {
         .format_for_stdout(flexi_logger::colored_detailed_format);
 
     if options.log_to_file {
-        logger = logger.log_target(flexi_logger::LogTarget::File)
-                       .format_for_files(flexi_logger::detailed_format)
-                       .duplicate_to_stdout(flexi_logger::Duplicate::All)
-                       .rotate(
-                            flexi_logger::Criterion::Age(flexi_logger::Age::Day),
-                            flexi_logger::Naming::Timestamps,
-                            flexi_logger::Cleanup::KeepLogFiles(3)
-                       );
+        logger = logger
+            .log_target(flexi_logger::LogTarget::File)
+            .format_for_files(flexi_logger::detailed_format)
+            .duplicate_to_stdout(flexi_logger::Duplicate::All)
+            .rotate(
+                flexi_logger::Criterion::Age(flexi_logger::Age::Day),
+                flexi_logger::Naming::Timestamps,
+                flexi_logger::Cleanup::KeepLogFiles(3)
+            );
     }
     logger.start().expect("Failed to initialise logger");
 
@@ -46,9 +46,8 @@ async fn main() {
 
     let connections: Shared<ConnectionRecords> = Arc::new(Mutex::new(HashMap::new()));
 
-    let world: Shared<World> = Arc::new(Mutex::new(
-        World::new(options.world_directory.clone()).expect("Failed to create game world")
-    ));
+    let world: Shared<World> =
+        Arc::new(Mutex::new(World::new(options.world_directory.clone()).expect("Failed to create game world")));
 
     // Bind socket and handle connections:
 
@@ -61,16 +60,12 @@ async fn main() {
             while let Ok((stream, addr)) = listener.accept().await {
                 log::info!("Incoming connection from: {}", addr);
 
-                tokio::spawn(handling::handle_connection(
-                    stream, addr,
-                    Arc::clone(&connections), Arc::clone(&world)
-                ));
+                tokio::spawn(handling::handle_connection(stream, addr, Arc::clone(&connections), Arc::clone(&world)));
             }
         }
 
         Err(e) => {
-            log::error!("Failed to create TCP/IP listener at '{}' due to error - {}",
-                        host_address, e);
+            log::error!("Failed to create TCP/IP listener at '{}' due to error - {}", host_address, e);
         }
     }
 }
@@ -100,8 +95,7 @@ struct Options {
     #[structopt(short, long, default_value = "info")]
     log_level: String,
 
-    /// Specifiy whether or not log messages should be written to a file in
-    /// addition to stdout.
+    /// Specifiy whether or not log messages should be written to a file in addition to stdout.
     #[structopt(long)]
     log_to_file: bool
 }

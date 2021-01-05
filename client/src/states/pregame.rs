@@ -1,10 +1,9 @@
+use core::{messages, WEBSOCKET_CONNECTION_PORT};
+
 use macroquad::prelude as quad;
 
 use super::State;
-
-use crate::networking::{ self, PendingConnectionTrait, ConnectionTrait };
-
-use core::{ messages, WEBSOCKET_CONNECTION_PORT };
+use crate::networking::{self, ConnectionTrait, PendingConnectionTrait};
 
 const SERVER_ADDRESS: &str = "localhost";
 const SECURE_CONNECTION: bool = false;
@@ -35,10 +34,12 @@ impl ConnectingState {
 impl State for ConnectingState {
     fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
         match self.pending_connection.ready() {
-            Ok(connection_option) => if let Some(connection) = connection_option {
-                log::info!("Connection to server established!");
+            Ok(connection_option) => {
+                if let Some(connection) = connection_option {
+                    log::info!("Connection to server established!");
 
-                return Some(Box::new(ConnectedState::new(connection)));
+                    return Some(Box::new(ConnectedState::new(connection)));
+                }
             }
 
             Err(e) => {
@@ -63,40 +64,41 @@ struct ConnectedState {
 
 impl ConnectedState {
     fn new(connection: networking::Connection) -> Self {
-        ConnectedState {
-            connection: Some(connection),
-            text: CONNECTING_TEXT
-        }
+        ConnectedState { connection: Some(connection), text: CONNECTING_TEXT }
     }
 }
 
 impl State for ConnectedState {
     fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
         match self.connection.as_mut().unwrap().receive() {
-            Ok(msg_option) => if let Some(msg) = msg_option {
-                match msg {
-                    messages::FromServer::Welcome { version } => {
-                        log::debug!("Server version: {}", version);
+            Ok(msg_option) => {
+                if let Some(msg) = msg_option {
+                    match msg {
+                        messages::FromServer::Welcome { version } => {
+                            log::debug!("Server version: {}", version);
 
-                        if version == core::VERSION {
-                            let taken_connection = self.connection.take().unwrap();
-                            let game_state = super::game::GameState::new(taken_connection);
+                            if version == core::VERSION {
+                                let taken_connection = self.connection.take().unwrap();
+                                let game_state = super::game::GameState::new(taken_connection);
 
-                            return Some(Box::new(game_state));
+                                return Some(Box::new(game_state));
+                            }
+                            else {
+                                log::error!(
+                                    "Version of server ({}) differs from that of this client ({})",
+                                    version,
+                                    core::VERSION
+                                );
+
+                                self.text = WRONG_VERSION_TEXT;
+                            }
                         }
-                        else {
-                            log::error!("Version of server ({}) differs from that of this client ({})",
-                                        version, core::VERSION);
 
-                            self.text = WRONG_VERSION_TEXT;
+                        other_msg => {
+                            log::error!("Expected a 'welcome' message from server but instead received: {}", other_msg);
+
+                            self.text = FAILED_TEXT;
                         }
-                    }
-
-                    other_msg => {
-                        log::error!("Expected a 'welcome' message from server but instead received: {}",
-                                    other_msg);
-
-                        self.text = FAILED_TEXT;
                     }
                 }
             }

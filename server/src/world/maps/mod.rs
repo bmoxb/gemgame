@@ -1,11 +1,10 @@
-mod config;
 pub mod chunks;
+mod config;
 pub mod generators;
+use core::maps::{Chunk, ChunkCoords, Chunks, Map};
+use std::{collections::HashMap, io, path::PathBuf};
+
 use generators::Generator;
-
-use core::maps::{ ChunkCoords, Chunk, Chunks, Map };
-
-use std::{ io, path::PathBuf, collections::HashMap };
 
 pub struct ServerMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
@@ -19,28 +18,19 @@ pub struct ServerMap {
 
     /// Seed used by the generator.
     seed: u32
-
-    // players, entities, etc.
 }
 
 impl ServerMap {
     /// Create a new map at a specified path with a given generator and seed.
     pub fn new(directory: PathBuf, generator: Box<dyn Generator + Send>, seed: u32) -> io::Result<Self> {
-        Ok(ServerMap {
-            loaded_chunks: HashMap::new(),
-            directory, generator, seed
-        })
+        Ok(ServerMap { loaded_chunks: HashMap::new(), directory, generator, seed })
     }
 }
 
 impl Map for ServerMap {
-    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> {
-        self.loaded_chunks.get(&coords)
-    }
+    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> { self.loaded_chunks.get(&coords) }
 
-    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
-        self.loaded_chunks.insert(coords, chunk);
-    }
+    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) { self.loaded_chunks.insert(coords, chunk); }
 }
 
 #[derive(Debug)]

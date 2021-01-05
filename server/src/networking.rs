@@ -1,24 +1,18 @@
 use core::messages;
-
 use std::convert;
 
+use futures_util::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
+use tokio_tungstenite::{tungstenite, WebSocketStream};
 
-use futures_util::{ SinkExt, StreamExt };
-
-use tokio_tungstenite::{ tungstenite, WebSocketStream };
-
-/// Manages a WebSocket connection and simplifies the process of sending and
-/// receiving bincode messages.
+/// Manages a WebSocket connection and simplifies the process of sending and receiving bincode messages.
 pub struct Connection {
     ws: WebSocketStream<TcpStream>
 }
 
 impl Connection {
     pub async fn new(stream: TcpStream) -> tungstenite::Result<Self> {
-        Ok(Connection {
-            ws: tokio_tungstenite::accept_async(stream).await?
-        })
+        Ok(Connection { ws: tokio_tungstenite::accept_async(stream).await? })
     }
 
     pub async fn send(&mut self, msg: &messages::FromServer) -> Result<()> {
@@ -31,11 +25,7 @@ impl Connection {
     pub async fn receive(&mut self) -> Result<Option<messages::ToServer>> {
         if let Some(some_result) = self.ws.next().await {
             match some_result? {
-                tungstenite::Message::Binary(bytes_vec) => {
-                    Ok(Some(
-                        bincode::deserialize(bytes_vec.as_slice())?
-                    ))
-                }
+                tungstenite::Message::Binary(bytes_vec) => Ok(Some(bincode::deserialize(bytes_vec.as_slice())?)),
                 tungstenite::Message::Close(_) => {
                     let _ = self.ws.close(None).await;
                     Ok(None)
@@ -43,7 +33,9 @@ impl Connection {
                 not_binary_msg => Err(Error::MessageNotBinary(not_binary_msg))
             }
         }
-        else { Ok(None) }
+        else {
+            Ok(None)
+        }
     }
 }
 

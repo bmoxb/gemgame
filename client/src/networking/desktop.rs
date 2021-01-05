@@ -1,8 +1,8 @@
-use super::{ Error, Result };
-
-use std::{ net, convert, thread, sync::mpsc };
+use std::{convert, net, sync::mpsc, thread};
 
 use tungstenite as ws2;
+
+use super::{Error, Result};
 
 pub struct PendingConnection {
     thread_receiver: mpsc::Receiver<Result<Connection>>
@@ -48,8 +48,7 @@ impl super::PendingConnectionTrait<Connection> for PendingConnection {
     }
 }
 
-/// WebSocket connection relying on the `tungstenite` library's implementation
-/// of the protocol.
+/// WebSocket connection relying on the `tungstenite` library's implementation of the protocol.
 pub struct Connection {
     ws: ws2::WebSocket<ws2::client::AutoStream>
 }
@@ -67,8 +66,7 @@ impl super::ConnectionTrait for Connection {
                 // Return binary message:
                 ws2::Message::Binary(data) => Ok(Some(data)),
 
-                // Complete closing handshake and indicate to the caller that
-                // the connection is now closed:
+                // Complete closing handshake and indicate to the caller that the connection is now closed:
                 ws2::Message::Close(_) => {
                     log::debug!("Performing closing handshake");
 
@@ -78,11 +76,15 @@ impl super::ConnectionTrait for Connection {
 
                 // Any other message type is ignored:
                 _ => Ok(None)
-            }
+            },
 
             Err(ws2::Error::Io(io_error)) => {
-                if io_error.kind() == std::io::ErrorKind::WouldBlock { Ok(None) }
-                else { Err(io_error.into()) }
+                if io_error.kind() == std::io::ErrorKind::WouldBlock {
+                    Ok(None)
+                }
+                else {
+                    Err(io_error.into())
+                }
             }
 
             Err(other_error) => Err(other_error.into())
@@ -95,5 +97,7 @@ impl convert::From<ws2::Error> for Error {
 }
 
 impl convert::From<ws2::HandshakeError<ws2::ClientHandshake<net::TcpStream>>> for Error {
-    fn from(e: ws2::HandshakeError<ws2::ClientHandshake<net::TcpStream>>) -> Self { Error::ConnectionError(Box::new(e)) }
+    fn from(e: ws2::HandshakeError<ws2::ClientHandshake<net::TcpStream>>) -> Self {
+        Error::ConnectionError(Box::new(e))
+    }
 }

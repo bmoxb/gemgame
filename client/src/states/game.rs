@@ -1,13 +1,15 @@
-use macroquad::prelude as quad;
-
-use core::{ maps::{ Map, ChunkCoords }, messages };
-
-use crate::{
-    maps,
-    networking::{ self, ConnectionTrait }
+use core::{
+    maps::{ChunkCoords, Map},
+    messages
 };
 
+use macroquad::prelude as quad;
+
 use super::State;
+use crate::{
+    maps,
+    networking::{self, ConnectionTrait}
+};
 
 pub struct GameState {
     connection: networking::Connection,
@@ -15,9 +17,7 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(connection: networking::Connection) -> Self {
-        GameState { connection, map: maps::ClientMap::new() }
-    }
+    pub fn new(connection: networking::Connection) -> Self { GameState { connection, map: maps::ClientMap::new() } }
 }
 
 impl GameState {
@@ -44,30 +44,31 @@ impl State for GameState {
     fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
         quad::draw_text(self.title(), 0.0, 0.0, 32.0, quad::GREEN);
 
-        if quad::is_key_down(quad::KeyCode::X) { // TODO: Temporary.
+        if quad::is_key_down(quad::KeyCode::X) {
+            // TODO: Temporary.
             self.connection.send(&messages::ToServer::RequestChunk(ChunkCoords { x: 0, y: 0 })).unwrap();
         }
 
         match self.connection.receive::<messages::FromServer>() {
-            Ok(msg_option) => if let Some(msg) = msg_option {
-                log::info!("Received message from server: {}", msg);
+            Ok(msg_option) => {
+                if let Some(msg) = msg_option {
+                    log::info!("Received message from server: {}", msg);
 
-                let result = self.handle_message_from_server(msg);
+                    let result = self.handle_message_from_server(msg);
 
-                if let Err(e) = result {
-                    log::warn!("Error occurred during the handling of message from server: {}", e);
+                    if let Err(e) = result {
+                        log::warn!("Error occurred during the handling of message from server: {}", e);
+                    }
                 }
             }
 
             Err(e) => {
                 match e {
                     networking::Error::BincodeError(bincode_error) => {
-                        log::warn!("Failed to decode message from server due to error: {}",
-                                   bincode_error);
+                        log::warn!("Failed to decode message from server due to error: {}", bincode_error);
                     }
                     networking::Error::ConnectionError(connection_error) => {
-                        log::warn!("Failed to receive from server due to connection error: {}",
-                                   connection_error);
+                        log::warn!("Failed to receive from server due to connection error: {}", connection_error);
                     }
 
                     networking::Error::ConnectionClosed => {

@@ -1,11 +1,11 @@
 //! Contains (de)serialisable enumerations that the server and client
 //! applications may communicate by means of.
 
-use crate::maps;
-
 use std::fmt;
 
-use serde::{ Serialize, Deserialize };
+use serde::{Deserialize, Serialize};
+
+use crate::maps;
 
 /// Message sent from the client to the server over the WebSocket protocol.
 #[derive(Serialize, Deserialize)]
@@ -18,9 +18,10 @@ pub enum ToServer {
     RequestChunk(maps::ChunkCoords),
 
     /// Inform the server that this client has unloaded a chunk. This is done so
-    /// that the server knows that it does not need to send [`FromServer::UpdateTile`]
-    /// messages for tiles in the specified chunk to this client (the server
-    /// keeps track of what chunks it believes each client has currently loaded).
+    /// that the server knows that it does not need to send
+    /// [`FromServer::UpdateTile`] messages for tiles in the specified chunk
+    /// to this client (the server keeps track of what chunks it believes
+    /// each client has currently loaded).
     ChunkUnloadedLocally(maps::ChunkCoords)
 }
 
@@ -28,7 +29,9 @@ impl fmt::Display for ToServer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ToServer::RequestChunk(coords) => write!(f, "request chunk at {}", coords),
-            ToServer::ChunkUnloadedLocally(coords) => write!(f, "chunk at {} has been unloaded locally", coords)
+            ToServer::ChunkUnloadedLocally(coords) => {
+                write!(f, "chunk at {} has been unloaded locally", coords)
+            }
         }
     }
 }
@@ -54,7 +57,9 @@ pub enum FromServer {
 impl fmt::Display for FromServer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            FromServer::Welcome { version } => write!(f, "welcome to server running version '{}'", version),
+            FromServer::Welcome { version } => {
+                write!(f, "welcome to server running version '{}'", version)
+            }
             FromServer::ProvideChunk(coords, _) => write!(f, "provide chunk at {}", coords),
             FromServer::UpdateTile(coords, _) => write!(f, "update tile at {}", coords)
         }

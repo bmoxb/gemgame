@@ -1,17 +1,21 @@
-use super::{ CHUNK_WIDTH, CHUNK_HEIGHT };
+use std::{fmt, hash::Hash};
 
-use std::{ fmt, hash::Hash };
+use serde::{Deserialize, Serialize};
 
-use serde::{ Serialize, Deserialize };
+use super::{CHUNK_HEIGHT, CHUNK_WIDTH};
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
-pub struct TileCoords { pub x: i32, pub y: i32 }
+
+pub struct TileCoords {
+    pub x: i32,
+    pub y: i32
+}
 
 impl TileCoords {
-    /// Identify the coordinates of the chunk that the tile at these tile
-    /// coordinates would be found in.
+    /// Identify the coordinates of the chunk that the tile at these tile coordinates would be found in.
     pub fn as_chunk_coords(&self) -> ChunkCoords {
         let chunk_x = self.x / CHUNK_WIDTH;
+
         let chunk_y = self.y / CHUNK_HEIGHT;
 
         ChunkCoords {
@@ -20,10 +24,10 @@ impl TileCoords {
         }
     }
 
-    /// Identify the offset from its containing chunk that the specified tile
-    /// would be found at.
+    /// Identify the offset from its containing chunk that the specified tile would be found at.
     pub fn as_chunk_offset_coords(&self) -> OffsetCoords {
         let offset_x = self.x % CHUNK_WIDTH;
+
         let offset_y = self.y % CHUNK_HEIGHT;
 
         OffsetCoords {
@@ -34,22 +38,26 @@ impl TileCoords {
 }
 
 impl fmt::Display for TileCoords {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "tile coordinates ({}, {})", self.x, self.y)
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "tile coordinates ({}, {})", self.x, self.y) }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ChunkCoords { pub x: i32, pub y: i32 }
+
+pub struct ChunkCoords {
+    pub x: i32,
+    pub y: i32
+}
 
 impl fmt::Display for ChunkCoords {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "chunk coordinates ({}, {})", self.x, self.y)
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "chunk coordinates ({}, {})", self.x, self.y) }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct OffsetCoords { pub x: u8, pub y: u8 }
+
+pub struct OffsetCoords {
+    pub x: u8,
+    pub y: u8
+}
 
 impl fmt::Display for OffsetCoords {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -57,11 +65,10 @@ impl fmt::Display for OffsetCoords {
     }
 }
 
-
-
 #[cfg(test)]
+
 mod test {
-    use super::{ TileCoords, ChunkCoords, OffsetCoords };
+    use super::{ChunkCoords, OffsetCoords, TileCoords};
 
     #[test]
     fn tile_coords_to_chunk_coords() {
@@ -74,6 +81,7 @@ mod test {
             (TileCoords { x: -16, y: -17 }, ChunkCoords { x: -1, y: -2 }),
             (TileCoords { x: -33, y: -32 }, ChunkCoords { x: -3, y: -2 })
         ];
+
         for (tile, chunk) in test_data {
             assert_eq!(tile.as_chunk_coords(), *chunk);
         }
@@ -91,6 +99,7 @@ mod test {
             (TileCoords { x: -16, y: -17 }, OffsetCoords { x: 0, y: 15 }),
             (TileCoords { x: -33, y: -32 }, OffsetCoords { x: 15, y: 0 })
         ];
+
         for (tile, offset) in test_data {
             assert_eq!(tile.as_chunk_offset_coords(), *offset);
         }

@@ -1,6 +1,6 @@
-mod states;
-mod networking;
 mod maps;
+mod networking;
+mod states;
 
 use macroquad::prelude as quad;
 
@@ -28,8 +28,7 @@ async fn main() {
         // Handle state transition (if necessary):
 
         if let Some(next_state) = potential_state_change {
-            log::info!("Changing state from '{}' to '{}'", current_state.title(),
-                                                           next_state.title());
+            log::info!("Changing state from '{}' to '{}'", current_state.title(), next_state.title());
             current_state = next_state;
         }
     }
@@ -37,5 +36,11 @@ async fn main() {
 
 fn draw_debug_text(size: f32, col: quad::Color) {
     quad::draw_text(&format!("Frames: {}/sec", quad::get_fps()), 0.0, quad::screen_height() - size, size, col);
-    quad::draw_text(&format!("Delta: {:.2}ms", quad::get_frame_time() * 1000.0), 0.0, quad::screen_height() - (size * 2.0), size, col);
+    quad::draw_text(
+        &format!("Delta: {:.2}ms", quad::get_frame_time() * 1000.0),
+        0.0,
+        quad::screen_height() - (size * 2.0),
+        size,
+        col
+    );
 }

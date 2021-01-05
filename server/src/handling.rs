@@ -1,20 +1,19 @@
-use crate::{
-    Shared, ConnectionRecord, ConnectionRecords,
-    networking::{ self, Connection },
-    world::{ maps, World }
-};
-
-use core::{ messages, maps::Map };
-
+use core::{maps::Map, messages};
 use std::net::SocketAddr;
 
 use tokio::net::TcpStream;
-
 use tokio_tungstenite::tungstenite;
 
-/// Handle a connection with an individual client. This function is called
-/// concurrently as a Tokio task.
-pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, connections: Shared<ConnectionRecords>, world: Shared<World>) {
+use crate::{
+    networking::{self, Connection},
+    world::{maps, World},
+    ConnectionRecord, ConnectionRecords, Shared
+};
+
+/// Handle a connection with an individual client. This function is called concurrently as a Tokio task.
+pub async fn handle_connection(
+    stream: TcpStream, addr: SocketAddr, connections: Shared<ConnectionRecords>, world: Shared<World>
+) {
     // Perform the WebSocket handshake:
 
     match Connection::new(stream).await {
@@ -23,12 +22,7 @@ pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, connections:
 
             // Register this connection between threads:
 
-            connections.lock().unwrap().insert(
-                addr,
-                ConnectionRecord {
-                    current_map_key: "surface".to_string()
-                }
-            );
+            connections.lock().unwrap().insert(addr, ConnectionRecord { current_map_key: "surface".to_string() });
 
             match handle_websocket_connection(&mut ws, &addr, &connections, &world).await {
                 Ok(_) => {}
@@ -67,7 +61,9 @@ pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, connections:
     }
 }
 
-async fn handle_websocket_connection(ws: &mut Connection, addr: &SocketAddr, connections: &Shared<ConnectionRecords>, world: &Shared<World>) -> networking::Result<()> {
+async fn handle_websocket_connection(
+    ws: &mut Connection, addr: &SocketAddr, connections: &Shared<ConnectionRecords>, world: &Shared<World>
+) -> networking::Result<()> {
     // Inform the client of the server's version:
 
     let welcome_msg = messages::FromServer::Welcome { version: core::VERSION.to_string() };
@@ -87,10 +83,13 @@ async fn handle_websocket_connection(ws: &mut Connection, addr: &SocketAddr, con
     Ok(())
 }
 
-async fn handle_message(msg: messages::ToServer, addr: &SocketAddr, connections: &Shared<ConnectionRecords>, world: &Shared<World>) -> messages::FromServer {
+async fn handle_message(
+    msg: messages::ToServer, addr: &SocketAddr, connections: &Shared<ConnectionRecords>, world: &Shared<World>
+) -> messages::FromServer {
     match msg {
         messages::ToServer::RequestChunk(coords) => {
-            let loaded_chunk_option = with_current_map(connections, addr, world, |map| map.loaded_chunk_at(coords).cloned());
+            let loaded_chunk_option =
+                with_current_map(connections, addr, world, |map| map.loaded_chunk_at(coords).cloned());
 
             let chunk = {
                 if let Some(loaded_chunk) = loaded_chunk_option {
@@ -114,7 +113,6 @@ async fn handle_message(msg: messages::ToServer, addr: &SocketAddr, connections:
             };
 
             messages::FromServer::ProvideChunk(coords, chunk)
-
         }
 
         messages::ToServer::ChunkUnloadedLocally(coords) => {
@@ -123,7 +121,10 @@ async fn handle_message(msg: messages::ToServer, addr: &SocketAddr, connections:
     }
 }
 
-fn with_current_map<T>(connections: &Shared<ConnectionRecords>, addr: &SocketAddr, world: &Shared<World>, func: impl Fn(&mut maps::ServerMap) -> T) -> T {
+fn with_current_map<T>(
+    connections: &Shared<ConnectionRecords>, addr: &SocketAddr, world: &Shared<World>,
+    func: impl Fn(&mut maps::ServerMap) -> T
+) -> T {
     let connections_lock = connections.lock().unwrap();
     let map_key = &connections_lock.get(addr).unwrap().current_map_key;
 

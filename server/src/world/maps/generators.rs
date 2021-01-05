@@ -1,4 +1,4 @@
-use core::maps::{ ChunkCoords, Chunk, Tile, CHUNK_TILE_COUNT };
+use core::maps::{Chunk, ChunkCoords, Tile, CHUNK_TILE_COUNT};
 
 pub trait Generator {
     fn name(&self) -> &'static str;
@@ -14,9 +14,7 @@ impl DefaultGenerator {
 impl Generator for DefaultGenerator {
     fn name(&self) -> &'static str { DefaultGenerator::NAME }
 
-    fn generate(&self, _: ChunkCoords) -> Chunk {
-        Chunk::new([Tile::default(); CHUNK_TILE_COUNT])
-    }
+    fn generate(&self, _: ChunkCoords) -> Chunk { Chunk::new([Tile::default(); CHUNK_TILE_COUNT]) }
 }
 
 pub fn by_name(name: &str) -> Option<Box<dyn Generator + Send>> {
