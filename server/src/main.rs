@@ -1,3 +1,4 @@
+mod networking;
 mod handling;
 mod world;
 
@@ -43,7 +44,7 @@ async fn main() {
 
     // Prepare data structures that are to be shared between threads:
 
-    let connections: Shared<Connections> = Arc::new(Mutex::new(HashMap::new()));
+    let connections: Shared<ConnectionRecords> = Arc::new(Mutex::new(HashMap::new()));
 
     let world: Shared<World> = Arc::new(Mutex::new(
         World::new(options.world_directory.clone()).expect("Failed to create game world")
@@ -76,9 +77,9 @@ async fn main() {
 
 type Shared<T> = Arc<Mutex<T>>;
 
-type Connections = HashMap<SocketAddr, Connection>;
+type ConnectionRecords = HashMap<SocketAddr, ConnectionRecord>;
 
-pub struct Connection {
+pub struct ConnectionRecord {
     current_map_key: String
 }
 
