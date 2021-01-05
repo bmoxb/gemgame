@@ -1,0 +1,68 @@
+mod rendering;
+
+use core::{
+    maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
+    messages
+};
+use std::collections::{HashMap, HashSet};
+
+use crate::networking::{self, Connection, ConnectionTrait};
+
+pub struct ClientMap {
+    /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
+    loaded_chunks: Chunks,
+    /// Set of coordinate pairs for the chunks that are needed (i.e. chunks that are not already loaded but were needed
+    /// to fulfill a call to [`chunk_at`] or [`tile_at`]). When a needed chunk is requested from the sever then its
+    /// coordinates are added to the [`requested_chunks`] set. A chunks's coordinates are not removed from this set
+    /// until the chunk itself is actually recevied.
+    needed_chunks: HashSet<ChunkCoords>,
+    /// Set of coordinate pairs for chunks that have been requested from the server but have not yet been received. A
+    /// chunks's coordinates are remove from both this set and [`needed_chunks`] when the chunk itself is received from
+    /// the server.
+    requested_chunks: HashSet<ChunkCoords>
+}
+
+impl ClientMap {
+    pub fn new() -> Self {
+        ClientMap { loaded_chunks: HashMap::new(), needed_chunks: HashSet::new(), requested_chunks: HashSet::new() }
+    }
+
+    /// Attempt to get the tile at the specified tile coordinates.
+    pub fn tile_at(&mut self, coords: TileCoords) -> Option<&Tile> {
+        if self.is_tile_loaded(coords) {
+            self.needed_chunks.insert(coords.as_chunk_coords());
+        }
+
+        self.loaded_tile_at(coords)
+    }
+
+    pub fn chunk_at(&mut self, coords: ChunkCoords) -> Option<&Chunk> {
+        if self.is_chunk_loaded(coords) {
+            self.needed_chunks.insert(coords);
+        }
+
+        self.loaded_chunk_at(coords)
+    }
+
+    pub fn request_needed_chunks_from_server(&mut self, ws: &mut Connection) -> networking::Result<()> {
+        for coords in &self.needed_chunks {
+            ws.send(&messages::ToServer::RequestChunk(*coords))?;
+            self.requested_chunks.insert(*coords);
+        }
+
+        Ok(())
+    }
+}
+
+impl Map for ClientMap {
+    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> { self.loaded_chunks.get(&coords) }
+
+    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
+        // TODO: Unload chunk(s) should too many be loaded already?
+
+        self.needed_chunks.remove(&coords);
+        self.requested_chunks.remove(&coords);
+
+        self.loaded_chunks.insert(coords, chunk);
+    }
+}

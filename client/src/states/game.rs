@@ -23,7 +23,7 @@ impl GameState {
 impl GameState {
     fn handle_message_from_server(&mut self, msg: messages::FromServer) -> networking::Result<()> {
         match msg {
-            messages::FromServer::Welcome { version } => {
+            messages::FromServer::Welcome { version: _ } => {
                 log::warn!("Unexpectedly received 'welcome' message from server");
                 unimplemented!()
             }
@@ -44,10 +44,7 @@ impl State for GameState {
     fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
         quad::draw_text(self.title(), 0.0, 0.0, 32.0, quad::GREEN);
 
-        if quad::is_key_down(quad::KeyCode::X) {
-            // TODO: Temporary.
-            self.connection.send(&messages::ToServer::RequestChunk(ChunkCoords { x: 0, y: 0 })).unwrap();
-        }
+        self.map.request_needed_chunks_from_server(&mut self.connection).unwrap(); // TODO
 
         match self.connection.receive::<messages::FromServer>() {
             Ok(msg_option) => {
