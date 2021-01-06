@@ -42,7 +42,7 @@ impl super::PendingConnectionTrait<Connection> for PendingConnection {
     fn ready(&self) -> Result<Option<Connection>> {
         match self.thread_receiver.try_recv() {
             Ok(Ok(conn)) => Ok(Some(conn)),
-            Ok(Err(e)) => Err(e.into()),
+            Ok(Err(e)) => Err(e),
             Err(_) => Ok(None)
         }
     }
