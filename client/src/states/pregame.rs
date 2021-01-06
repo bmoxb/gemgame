@@ -1,6 +1,5 @@
-use core::{messages, WEBSOCKET_CONNECTION_PORT};
-
 use macroquad::prelude as quad;
+use shared::{messages, WEBSOCKET_CONNECTION_PORT};
 
 use super::State;
 use crate::networking::{self, ConnectionTrait, PendingConnectionTrait};
@@ -77,7 +76,7 @@ impl State for ConnectedState {
                         messages::FromServer::Welcome { version } => {
                             log::debug!("Server version: {}", version);
 
-                            if version == core::VERSION {
+                            if version == shared::VERSION {
                                 let taken_connection = self.connection.take().unwrap();
                                 let game_state = super::game::GameState::new(taken_connection);
 
@@ -87,7 +86,7 @@ impl State for ConnectedState {
                                 log::error!(
                                     "Version of server ({}) differs from that of this client ({})",
                                     version,
-                                    core::VERSION
+                                    shared::VERSION
                                 );
 
                                 self.text = WRONG_VERSION_TEXT;

@@ -155,14 +155,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd51eab21ab4fd6a3bf889e2d0958c0a6e3a61ad04260325e919e652a2a62826"
 
 [[package]]
-name = "core"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde-big-array",
-]
-
-[[package]]
 name = "cpuid-bool"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -891,13 +883,13 @@ name = "server"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "core",
  "flexi_logger",
  "futures-util",
  "log",
  "noise",
  "serde",
  "serde_json",
+ "shared",
  "structopt",
  "tokio",
  "tokio-tungstenite",
@@ -914,6 +906,14 @@ dependencies = [
  "cpuid-bool",
  "digest",
  "opaque-debug",
+]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde-big-array",
 ]
 
 [[package]]

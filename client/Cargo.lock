@@ -104,21 +104,13 @@ name = "client"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "core",
  "log",
  "macroquad",
  "pretty_env_logger",
  "sapp-jsutils",
  "serde",
+ "shared",
  "tungstenite",
-]
-
-[[package]]
-name = "core"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde-big-array",
 ]
 
 [[package]]
@@ -810,6 +802,14 @@ dependencies = [
  "cpuid-bool",
  "digest",
  "opaque-debug",
+]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde-big-array",
 ]
 
 [[package]]

@@ -49,7 +49,7 @@ pub struct Chunk {
 
     /// The instant at which this chunk was last used.
     #[serde(skip, default = "time::Instant::now")]
-    last_access_instant: time::Instant
+    last_access_instant: time::Instant // TODO: Not supported on browser! Interface w/ `new Date().getTime()` instead?
 }
 
 impl Chunk {

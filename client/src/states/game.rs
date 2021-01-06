@@ -1,14 +1,14 @@
-use core::{
+use macroquad::prelude as quad;
+use shared::{
     maps::{ChunkCoords, Map},
     messages
 };
 
-use macroquad::prelude as quad;
-
 use super::State;
 use crate::{
     maps,
-    networking::{self, ConnectionTrait}
+    networking::{self, ConnectionTrait},
+    TextureKey
 };
 
 pub struct GameState {
@@ -44,6 +44,8 @@ impl GameState {
 }
 
 impl State for GameState {
+    fn required_textures(&self) -> &[TextureKey] { &[TextureKey::Tiles] }
+
     fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
         quad::draw_text(self.title(), 0.0, 0.0, 32.0, quad::GREEN);
 

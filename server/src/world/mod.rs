@@ -1,7 +1,8 @@
 pub mod maps;
 
-use core::maps::ChunkCoords;
 use std::{collections::HashMap, fs, io, path::PathBuf};
+
+use shared::maps::ChunkCoords;
 
 use crate::Shared;
 

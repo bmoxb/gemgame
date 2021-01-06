@@ -1,7 +1,7 @@
-use core::messages;
 use std::convert;
 
 use futures_util::{SinkExt, StreamExt};
+use shared::messages;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{tungstenite, WebSocketStream};
 

@@ -2,7 +2,6 @@ mod handling;
 mod networking;
 mod world;
 
-use core::WEBSOCKET_CONNECTION_PORT;
 use std::{
     collections::HashMap,
     net::SocketAddr,
@@ -10,6 +9,7 @@ use std::{
     sync::{Arc, Mutex}
 };
 
+use shared::WEBSOCKET_CONNECTION_PORT;
 use structopt::StructOpt;
 use tokio::net::TcpListener;
 use world::World;

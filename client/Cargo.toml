@@ -5,7 +5,7 @@ authors = ["WiredSound <maxoblack@yahoo.com>"]
 edition = "2018"
 
 [dependencies]
-core = { version = "*", path = "../" }
+shared = { version = "*", path = "../" }
 
 macroquad = "0.3.0-alpha"
 

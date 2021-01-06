@@ -1,6 +1,5 @@
-use core::maps::{Tile, TileCoords};
-
 use macroquad::prelude as quad;
+use shared::maps::{Tile, TileCoords};
 
 /// Handles the drawing of a game map.
 pub struct Renderer {
@@ -18,6 +17,7 @@ impl Renderer {
         &mut self,
         map: &mut super::ClientMap /* , tiles_texture: &quad::Texture2D, entities_texture: &quad::Texture2D */
     ) {
+        // Begin drawing in camera space:
         quad::set_camera(self.camera);
 
         // Tiles:
@@ -28,13 +28,23 @@ impl Renderer {
             for tile_y in ((self.camera.target.y - 1.0) / self.tile_draw_size).floor() as i32
                 ..((self.camera.target.y + 1.0) / self.tile_draw_size).ceil() as i32
             {
-                if let Some(tile) = map.tile_at(TileCoords { x: tile_x, y: tile_y }) {
-                    let draw_x = tile_x as f32 * self.tile_draw_size;
-                    let draw_y = tile_y as f32 * self.tile_draw_size;
+                let draw_x = tile_x as f32 * self.tile_draw_size;
+                let draw_y = tile_y as f32 * self.tile_draw_size;
 
-                    self.draw_tile(tile, /* tiles_texture, */ draw_x, draw_y);
-                    #[cfg(debug_assertions)]
-                    self.draw_tile_debug_info(tile, draw_x, draw_y);
+                // If the tile at the specified coordinates is in a chunk that is already loaded then it will be drawn.
+                // Otherwise, a grey placeholder rectangle will be drawn in its place until the required chunk is
+                // received from the server. Note that the `super::ClientMap::tile_at` method will automatically queue
+                // the required chunk to be fetched as necessary.
+
+                if let Some(tile) = map.tile_at(TileCoords { x: tile_x, y: tile_y }) {
+                    //quad::draw_texture_rec(...)
+                    quad::draw_rectangle(draw_x, draw_y, self.tile_draw_size, self.tile_draw_size, quad::RED);
+                }
+                else {
+                    let offset = self.tile_draw_size * 0.2;
+                    let reduced_size = self.tile_draw_size - offset * 2.0;
+
+                    quad::draw_rectangle(draw_x + offset, draw_y + offset, reduced_size, reduced_size, quad::GRAY);
                 }
             }
         }
@@ -43,23 +53,7 @@ impl Renderer {
 
         // ...
 
+        // Return to drawing in screen space:
         quad::set_default_camera();
-    }
-
-    fn draw_tile(&self, tile: &Tile, /* texture: &quad::Texture2D, */ x: f32, y: f32) {
-        //quad::draw_texture_rec(...)
-        quad::draw_rectangle(x, y, self.tile_draw_size, self.tile_draw_size, quad::RED);
-    }
-
-    #[cfg(debug_assertions)]
-    fn draw_tile_debug_info(&self, tile: &Tile, x: f32, y: f32) {
-        quad::draw_rectangle_lines(
-            x,
-            y,
-            self.tile_draw_size,
-            self.tile_draw_size,
-            self.tile_draw_size * 0.025,
-            quad::GRAY
-        );
     }
 }

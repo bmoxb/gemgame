@@ -1,6 +1,6 @@
-use core::{maps::Map, messages};
 use std::net::SocketAddr;
 
+use shared::{maps::Map, messages};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite;
 
@@ -66,7 +66,7 @@ async fn handle_websocket_connection(
 ) -> networking::Result<()> {
     // Inform the client of the server's version:
 
-    let welcome_msg = messages::FromServer::Welcome { version: core::VERSION.to_string() };
+    let welcome_msg = messages::FromServer::Welcome { version: shared::VERSION.to_string() };
     ws.send(&welcome_msg).await?;
 
     // Wait for incoming messages:

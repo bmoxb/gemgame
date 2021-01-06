@@ -1,4 +1,4 @@
-use core::maps::{Chunk, ChunkCoords, Tile, CHUNK_TILE_COUNT};
+use shared::maps::{Chunk, ChunkCoords, Tile, CHUNK_TILE_COUNT};
 
 pub trait Generator {
     fn name(&self) -> &'static str;

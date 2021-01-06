@@ -1,10 +1,11 @@
 pub mod rendering;
 
-use core::{
+use std::collections::{HashMap, HashSet};
+
+use shared::{
     maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
     messages
 };
-use std::collections::{HashMap, HashSet};
 
 use crate::networking::{self, Connection, ConnectionTrait};
 

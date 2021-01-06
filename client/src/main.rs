@@ -1,3 +1,4 @@
+mod asset_management;
 mod maps;
 mod networking;
 mod states;
@@ -9,7 +10,12 @@ async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     pretty_env_logger::init(); // Only have logging when targeting desktop.
 
+    let mut assets = AssetManager::new("assets/", "textures/");
+
+    log::info!("Prepared the asset manager");
+
     let mut current_state: Box<dyn states::State> = Box::new(states::pregame::ConnectingState::new());
+    assets.required_textures(current_state.required_textures()).await;
 
     log::info!("Created initial state '{}' - beginning main loop...", current_state.title());
 
@@ -28,6 +34,7 @@ async fn main() {
         // Handle state transition (if necessary):
 
         if let Some(next_state) = potential_state_change {
+            assets.required_textures(next_state.required_textures()).await;
             log::info!("Changing state from '{}' to '{}'", current_state.title(), next_state.title());
             current_state = next_state;
         }
@@ -43,4 +50,21 @@ fn draw_debug_text(size: f32, col: quad::Color) {
         size,
         col
     );
+}
+
+pub type AssetManager = asset_management::AssetManager<TextureKey>;
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum TextureKey {
+    Tiles,
+    Entities
+}
+
+impl asset_management::AssetKey for TextureKey {
+    fn path(&self) -> &str {
+        match self {
+            TextureKey::Tiles => "tiles.png",
+            TextureKey::Entities => "entities.png"
+        }
+    }
 }

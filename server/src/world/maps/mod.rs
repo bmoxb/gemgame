@@ -1,10 +1,11 @@
 pub mod chunks;
 mod config;
 pub mod generators;
-use core::maps::{Chunk, ChunkCoords, Chunks, Map};
+
 use std::{collections::HashMap, io, path::PathBuf};
 
 use generators::Generator;
+use shared::maps::{Chunk, ChunkCoords, Chunks, Map};
 
 pub struct ServerMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
