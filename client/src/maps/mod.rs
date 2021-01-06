@@ -1,4 +1,4 @@
-mod rendering;
+pub mod rendering;
 
 use core::{
     maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
@@ -29,16 +29,29 @@ impl ClientMap {
 
     /// Attempt to get the tile at the specified tile coordinates.
     pub fn tile_at(&mut self, coords: TileCoords) -> Option<&Tile> {
-        if self.is_tile_loaded(coords) {
-            self.needed_chunks.insert(coords.as_chunk_coords());
+        if !self.is_tile_loaded(coords) {
+            let chunk_coords = coords.as_chunk_coords();
+            let was_not_present = self.needed_chunks.insert(chunk_coords);
+
+            if was_not_present {
+                log::trace!(
+                    "Added chunk at {} to list of needed chunks as it contained requested tile at {}",
+                    chunk_coords,
+                    coords
+                );
+            }
         }
 
         self.loaded_tile_at(coords)
     }
 
     pub fn chunk_at(&mut self, coords: ChunkCoords) -> Option<&Chunk> {
-        if self.is_chunk_loaded(coords) {
-            self.needed_chunks.insert(coords);
+        if !self.is_chunk_loaded(coords) {
+            let was_not_present = self.needed_chunks.insert(coords);
+
+            if was_not_present {
+                log::trace!("Added chunk at {} to list of needed chunks as it was requested", coords);
+            }
         }
 
         self.loaded_chunk_at(coords)
@@ -46,8 +59,10 @@ impl ClientMap {
 
     pub fn request_needed_chunks_from_server(&mut self, ws: &mut Connection) -> networking::Result<()> {
         for coords in &self.needed_chunks {
-            ws.send(&messages::ToServer::RequestChunk(*coords))?;
-            self.requested_chunks.insert(*coords);
+            if !self.requested_chunks.contains(coords) {
+                ws.send(&messages::ToServer::RequestChunk(*coords))?;
+                self.requested_chunks.insert(*coords);
+            }
         }
 
         Ok(())

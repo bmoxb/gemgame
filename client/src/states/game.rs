@@ -13,11 +13,14 @@ use crate::{
 
 pub struct GameState {
     connection: networking::Connection,
-    map: maps::ClientMap
+    map: maps::ClientMap,
+    map_renderer: maps::rendering::Renderer
 }
 
 impl GameState {
-    pub fn new(connection: networking::Connection) -> Self { GameState { connection, map: maps::ClientMap::new() } }
+    pub fn new(connection: networking::Connection) -> Self {
+        GameState { connection, map: maps::ClientMap::new(), map_renderer: maps::rendering::Renderer::new(0.1) }
+    }
 }
 
 impl GameState {
@@ -43,6 +46,8 @@ impl GameState {
 impl State for GameState {
     fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
         quad::draw_text(self.title(), 0.0, 0.0, 32.0, quad::GREEN);
+
+        self.map_renderer.draw(&mut self.map);
 
         self.map.request_needed_chunks_from_server(&mut self.connection).unwrap(); // TODO
 
