@@ -2,10 +2,6 @@ pub mod maps;
 
 use std::{collections::HashMap, fs, io, path::PathBuf};
 
-use shared::maps::ChunkCoords;
-
-use crate::Shared;
-
 pub struct World {
     /// Directory containing world data.
     directory: PathBuf,

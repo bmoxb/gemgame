@@ -1,6 +1,6 @@
 pub mod coords;
 
-use std::{cmp, collections::HashMap, time};
+use std::{cmp, collections::HashMap};
 
 pub use coords::*;
 use serde::{Deserialize, Serialize};

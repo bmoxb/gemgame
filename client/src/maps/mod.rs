@@ -46,18 +46,6 @@ impl ClientMap {
         self.loaded_tile_at(coords)
     }
 
-    pub fn chunk_at(&mut self, coords: ChunkCoords) -> Option<&Chunk> {
-        if !self.is_chunk_loaded(coords) {
-            let was_not_present = self.needed_chunks.insert(coords);
-
-            if was_not_present {
-                log::trace!("Added chunk at {} to list of needed chunks as it was requested", coords);
-            }
-        }
-
-        self.loaded_chunk_at(coords)
-    }
-
     pub fn request_needed_chunks_from_server(&mut self, ws: &mut Connection) -> networking::Result<()> {
         for coords in &self.needed_chunks {
             if !self.requested_chunks.contains(coords) {

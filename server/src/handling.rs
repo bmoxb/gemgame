@@ -115,7 +115,7 @@ async fn handle_message(
             messages::FromServer::ProvideChunk(coords, chunk)
         }
 
-        messages::ToServer::ChunkUnloadedLocally(coords) => {
+        messages::ToServer::ChunkUnloadedLocally(_coords) => {
             unimplemented!()
         }
     }
