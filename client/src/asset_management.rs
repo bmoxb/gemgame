@@ -29,7 +29,7 @@ impl<TextureKey: AssetKey> AssetManager<TextureKey> {
             Some(texture) => *texture,
             None => {
                 log::error!("Could not get texture by key: {:?}", key);
-                panic!() // TODO: Return error texture.
+                panic!()
             }
         }
     }
@@ -39,6 +39,8 @@ impl<TextureKey: AssetKey> AssetManager<TextureKey> {
             let path = self.textures_directory.join(key.path());
 
             let texture = quad::load_texture(path.to_str().unwrap()).await;
+            quad::set_texture_filter(texture, quad::FilterMode::Nearest);
+
             self.loaded_textures.insert(key, texture);
 
             log::info!("Loaded texture '{:?}' from path: {}", key, path.display())
