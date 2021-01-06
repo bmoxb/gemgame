@@ -1,14 +1,11 @@
 use macroquad::prelude as quad;
-use shared::{
-    maps::{ChunkCoords, Map},
-    messages
-};
+use shared::{maps::Map, messages};
 
 use super::State;
 use crate::{
     maps,
     networking::{self, ConnectionTrait},
-    TextureKey
+    AssetManager, TextureKey
 };
 
 pub struct GameState {
@@ -38,7 +35,7 @@ impl GameState {
                 Ok(())
             }
 
-            messages::FromServer::UpdateTile(coords, tile) => unimplemented!() // TODO
+            messages::FromServer::UpdateTile(_coords, _tile) => unimplemented!() // TODO
         }
     }
 }
@@ -46,10 +43,10 @@ impl GameState {
 impl State for GameState {
     fn required_textures(&self) -> &[TextureKey] { &[TextureKey::Tiles] }
 
-    fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
+    fn update_and_draw(&mut self, assets: &AssetManager, _delta: f32) -> Option<Box<dyn State>> {
         quad::draw_text(self.title(), 0.0, 0.0, 32.0, quad::GREEN);
 
-        self.map_renderer.draw(&mut self.map);
+        self.map_renderer.draw(&mut self.map, assets.texture(TextureKey::Tiles), assets.texture(TextureKey::Entities));
 
         self.map.request_needed_chunks_from_server(&mut self.connection).unwrap(); // TODO
 

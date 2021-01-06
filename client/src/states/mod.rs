@@ -4,10 +4,10 @@
 pub mod game;
 pub mod pregame;
 
-use crate::TextureKey;
+use crate::{AssetManager, TextureKey};
 
 pub trait State {
     fn required_textures(&self) -> &[TextureKey] { &[] }
     fn title(&self) -> &'static str;
-    fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>>;
+    fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>>;
 }

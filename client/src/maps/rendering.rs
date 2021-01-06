@@ -14,8 +14,7 @@ impl Renderer {
 
     /// Draws the tiles & entities than are within the bounds of the camera's viewport.
     pub fn draw(
-        &mut self,
-        map: &mut super::ClientMap /* , tiles_texture: &quad::Texture2D, entities_texture: &quad::Texture2D */
+        &mut self, map: &mut super::ClientMap, tiles_texture: &quad::Texture2D, entities_texture: &quad::Texture2D
     ) {
         // Begin drawing in camera space:
         quad::set_camera(self.camera);

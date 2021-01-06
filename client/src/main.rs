@@ -25,7 +25,7 @@ async fn main() {
         quad::clear_background(quad::BLACK);
 
         let delta = quad::get_frame_time();
-        let potential_state_change = current_state.update_and_draw(delta);
+        let potential_state_change = current_state.update_and_draw(&assets, delta);
 
         draw_debug_text(32.0, quad::RED);
 

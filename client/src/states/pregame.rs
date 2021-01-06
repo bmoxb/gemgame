@@ -2,7 +2,10 @@ use macroquad::prelude as quad;
 use shared::{messages, WEBSOCKET_CONNECTION_PORT};
 
 use super::State;
-use crate::networking::{self, ConnectionTrait, PendingConnectionTrait};
+use crate::{
+    networking::{self, ConnectionTrait, PendingConnectionTrait},
+    AssetManager
+};
 
 const SERVER_ADDRESS: &str = "localhost";
 const SECURE_CONNECTION: bool = false;
@@ -31,7 +34,7 @@ impl ConnectingState {
 }
 
 impl State for ConnectingState {
-    fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
+    fn update_and_draw(&mut self, _assets: &AssetManager, _delta: f32) -> Option<Box<dyn State>> {
         match self.pending_connection.ready() {
             Ok(connection_option) => {
                 if let Some(connection) = connection_option {
@@ -68,7 +71,7 @@ impl ConnectedState {
 }
 
 impl State for ConnectedState {
-    fn update_and_draw(&mut self, delta: f32) -> Option<Box<dyn State>> {
+    fn update_and_draw(&mut self, _assets: &AssetManager, _delta: f32) -> Option<Box<dyn State>> {
         match self.connection.as_mut().unwrap().receive() {
             Ok(msg_option) => {
                 if let Some(msg) = msg_option {
