@@ -1,20 +1,26 @@
+mod tiles;
+
 use macroquad::prelude as quad;
-use shared::maps::{Tile, TileCoords};
+use shared::maps::TileCoords;
 
 /// Handles the drawing of a game map.
 pub struct Renderer {
     /// The camera context in which the map will be rendered.
     camera: quad::Camera2D,
     /// The width and height (in camera space) that each tile will be draw as.
-    tile_draw_size: f32
+    tile_draw_size: f32,
+    /// The width and height (in pixels) that each individual tile on the tiles texture is.
+    tile_texture_rect_size: f32
 }
 
 impl Renderer {
-    pub fn new(tile_draw_size: f32) -> Self { Renderer { camera: quad::Camera2D::default(), tile_draw_size } }
+    pub fn new(tile_draw_size: f32, tile_texture_rect_size: f32) -> Self {
+        Renderer { camera: quad::Camera2D::default(), tile_draw_size, tile_texture_rect_size }
+    }
 
     /// Draws the tiles & entities than are within the bounds of the camera's viewport.
     pub fn draw(
-        &mut self, map: &mut super::ClientMap, tiles_texture: &quad::Texture2D, entities_texture: &quad::Texture2D
+        &mut self, map: &mut super::ClientMap, tiles_texture: quad::Texture2D, entities_texture: quad::Texture2D
     ) {
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
@@ -36,14 +42,10 @@ impl Renderer {
                 // the required chunk to be fetched as necessary.
 
                 if let Some(tile) = map.tile_at(TileCoords { x: tile_x, y: tile_y }) {
-                    //quad::draw_texture_rec(...)
-                    quad::draw_rectangle(draw_x, draw_y, self.tile_draw_size, self.tile_draw_size, quad::RED);
+                    tiles::draw(tile, draw_x, draw_y, self.tile_draw_size, self.tile_texture_rect_size, tiles_texture);
                 }
                 else {
-                    let offset = self.tile_draw_size * 0.2;
-                    let reduced_size = self.tile_draw_size - offset * 2.0;
-
-                    quad::draw_rectangle(draw_x + offset, draw_y + offset, reduced_size, reduced_size, quad::GRAY);
+                    tiles::draw_pending_tile(draw_x, draw_y, self.tile_draw_size);
                 }
             }
         }
