@@ -24,9 +24,9 @@ impl<TextureKey: AssetKey> AssetManager<TextureKey> {
         AssetManager { textures_directory: directory.join(textures_subdir), loaded_textures: HashMap::new() }
     }
 
-    pub fn texture(&self, key: TextureKey) -> &quad::Texture2D {
+    pub fn texture(&self, key: TextureKey) -> quad::Texture2D {
         match self.loaded_textures.get(&key) {
-            Some(texture) => texture,
+            Some(texture) => *texture,
             None => {
                 log::error!("Could not get texture by key: {:?}", key);
                 panic!() // TODO: Return error texture.
