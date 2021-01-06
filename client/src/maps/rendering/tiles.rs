@@ -20,26 +20,34 @@ pub fn draw(tile: &Tile, x: f32, y: f32, draw_size: f32, texture_rect_size: f32,
 /// fetched from the server.
 pub fn draw_pending_tile(x: f32, y: f32, draw_size: f32) {
     let offset = draw_size * 0.2;
-    let reduced_size = draw_size - offset * 2.0;
+    let reduced_size = draw_size - (offset * 2.0);
 
     quad::draw_rectangle(x + offset, y + offset, reduced_size, reduced_size, quad::DARKGRAY);
 }
 
+/// Get the rectangle for the given tile within the context of the full tiles texture.
 fn tile_texture_rect(tile: &Tile, texture_rec_size: f32) -> quad::Rect {
-    let (x, y) = tile_texture_pos_relative(tile);
+    let (relative_x, relative_y) = tile_texture_pos_relative(tile);
 
     quad::Rect {
-        x: x as f32 * texture_rec_size,
-        y: y as f32 * texture_rec_size,
+        x: relative_x as f32 * texture_rec_size,
+        y: relative_y as f32 * texture_rec_size,
         w: texture_rec_size,
         h: texture_rec_size
     }
 }
 
+/// Get the texture rectangle coordinates for the given tile relative to the size in pixels of each indivdual tile
+/// texture.
 fn tile_texture_pos_relative(tile: &Tile) -> (u16, u16) {
     match tile {
         Tile::Ground => (0, 0)
     }
 }
 
-fn tile_colour_tint(_tile: &Tile) -> quad::Color { quad::WHITE }
+/// Get the colour/tint for the given tile.
+fn tile_colour_tint(tile: &Tile) -> quad::Color {
+    match tile {
+        Tile::Ground => quad::WHITE
+    }
+}
