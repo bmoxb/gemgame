@@ -45,15 +45,11 @@ pub type Chunks = HashMap<ChunkCoords, Chunk>;
 pub struct Chunk {
     /// The tiles that this chunk is comprised of.
     #[serde(with = "BigArray")]
-    tiles: [Tile; CHUNK_TILE_COUNT],
-
-    /// The instant at which this chunk was last used.
-    #[serde(skip, default = "time::Instant::now")]
-    last_access_instant: time::Instant // TODO: Not supported on browser! Interface w/ `new Date().getTime()` instead?
+    tiles: [Tile; CHUNK_TILE_COUNT]
 }
 
 impl Chunk {
-    pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self { Chunk { tiles, last_access_instant: time::Instant::now() } }
+    pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self { Chunk { tiles } }
 
     pub fn tile_at_offset(&self, mut offset: OffsetCoords) -> &Tile {
         // Ensure offset coordinates are within the chunk's bounds:
