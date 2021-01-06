@@ -1,4 +1,3 @@
-use macroquad::prelude as quad;
 use shared::{maps::Map, messages};
 
 use super::State;
@@ -44,8 +43,6 @@ impl State for GameState {
     fn required_textures(&self) -> &[TextureKey] { &[TextureKey::Tiles, TextureKey::Entities] }
 
     fn update_and_draw(&mut self, assets: &AssetManager, _delta: f32) -> Option<Box<dyn State>> {
-        quad::draw_text(self.title(), 0.0, 0.0, 32.0, quad::GREEN);
-
         self.map_renderer.draw(&mut self.map, assets.texture(TextureKey::Tiles), assets.texture(TextureKey::Entities));
 
         self.map.request_needed_chunks_from_server(&mut self.connection).unwrap(); // TODO
