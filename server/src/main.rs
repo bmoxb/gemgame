@@ -57,6 +57,8 @@ async fn main() {
         Ok(listener) => {
             log::info!("Created TCP/IP listener bound to address: {}", host_address);
 
+            tokio::spawn(await_exit_signal());
+
             while let Ok((stream, addr)) = listener.accept().await {
                 log::info!("Incoming connection from: {}", addr);
 
@@ -68,6 +70,15 @@ async fn main() {
             log::error!("Failed to create TCP/IP listener at '{}' due to error - {}", host_address, e);
         }
     }
+}
+
+async fn await_exit_signal() {
+    tokio::signal::ctrl_c().await.expect("Failed to listen for Ctrl-C signal");
+    log::debug!("Detected Ctrl-C signal");
+
+    // TODO: Close connections.
+
+    // TODO: Save game world to disk.
 }
 
 type Shared<T> = Arc<Mutex<T>>;
