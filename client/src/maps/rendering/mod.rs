@@ -20,8 +20,18 @@ impl Renderer {
 
     /// Draws the tiles & entities than are within the bounds of the camera's viewport.
     pub fn draw(
-        &mut self, map: &mut super::ClientMap, tiles_texture: quad::Texture2D, entities_texture: quad::Texture2D
+        &mut self, map: &mut super::ClientMap, tiles_texture: quad::Texture2D, _entities_texture: quad::Texture2D
     ) {
+        // Adjust camera zoom so that textures don't become distorted when the screen is resized:
+        self.camera.zoom = {
+            if quad::screen_width() > quad::screen_height() {
+                quad::vec2(1.0, quad::screen_width() / quad::screen_height())
+            }
+            else {
+                quad::vec2(quad::screen_height() / quad::screen_width(), 1.0)
+            }
+        };
+
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
 
