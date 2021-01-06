@@ -10,11 +10,11 @@ pub struct Renderer {
     /// The width and height (in camera space) that each tile will be draw as.
     tile_draw_size: f32,
     /// The width and height (in pixels) that each individual tile on the tiles texture is.
-    tile_texture_rect_size: f32
+    tile_texture_rect_size: u16
 }
 
 impl Renderer {
-    pub fn new(tile_draw_size: f32, tile_texture_rect_size: f32) -> Self {
+    pub fn new(tile_draw_size: f32, tile_texture_rect_size: u16) -> Self {
         Renderer { camera: quad::Camera2D::default(), tile_draw_size, tile_texture_rect_size }
     }
 

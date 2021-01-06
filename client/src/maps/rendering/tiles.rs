@@ -2,7 +2,7 @@ use macroquad::prelude as quad;
 use shared::maps::Tile;
 
 /// Draw the given tile at the specified coordinates.
-pub fn draw(tile: &Tile, x: f32, y: f32, draw_size: f32, texture_rect_size: f32, texture: quad::Texture2D) {
+pub fn draw(tile: &Tile, x: f32, y: f32, draw_size: f32, texture_rect_size: u16, texture: quad::Texture2D) {
     let rect = tile_texture_rect(tile, texture_rect_size);
     let tint = tile_colour_tint(tile);
 
@@ -26,14 +26,14 @@ pub fn draw_pending_tile(x: f32, y: f32, draw_size: f32) {
 }
 
 /// Get the rectangle for the given tile within the context of the full tiles texture.
-fn tile_texture_rect(tile: &Tile, texture_rec_size: f32) -> quad::Rect {
+fn tile_texture_rect(tile: &Tile, texture_rec_size: u16) -> quad::Rect {
     let (relative_x, relative_y) = tile_texture_pos_relative(tile);
 
     quad::Rect {
-        x: relative_x as f32 * texture_rec_size,
-        y: relative_y as f32 * texture_rec_size,
-        w: texture_rec_size,
-        h: texture_rec_size
+        x: (relative_x * texture_rec_size) as f32,
+        y: (relative_y * texture_rec_size) as f32,
+        w: texture_rec_size as f32,
+        h: texture_rec_size as f32
     }
 }
 

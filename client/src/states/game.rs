@@ -16,7 +16,7 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(connection: networking::Connection) -> Self {
-        GameState { connection, map: maps::ClientMap::new(), map_renderer: maps::rendering::Renderer::new(0.1, 16.0) }
+        GameState { connection, map: maps::ClientMap::new(), map_renderer: maps::rendering::Renderer::new(0.08, 16) }
     }
 }
 
