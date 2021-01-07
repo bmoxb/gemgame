@@ -26,10 +26,7 @@ impl Connection {
         if let Some(some_result) = self.ws.next().await {
             match some_result? {
                 tungstenite::Message::Binary(bytes_vec) => Ok(Some(bincode::deserialize(bytes_vec.as_slice())?)),
-                tungstenite::Message::Close(_) => {
-                    let _ = self.ws.close(None).await;
-                    Ok(None)
-                }
+                tungstenite::Message::Close(_) => Ok(None),
                 not_binary_msg => Err(Error::MessageNotBinary(not_binary_msg))
             }
         }

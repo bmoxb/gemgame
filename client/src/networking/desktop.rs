@@ -66,13 +66,9 @@ impl super::ConnectionTrait for Connection {
                 // Return binary message:
                 ws2::Message::Binary(data) => Ok(Some(data)),
 
-                // Complete closing handshake and indicate to the caller that the connection is now closed:
-                ws2::Message::Close(_) => {
-                    log::debug!("Performing closing handshake");
-
-                    let _ = self.ws.close(None).and_then(|_| self.ws.write_pending());
-                    Err(Error::ConnectionClosed)
-                }
+                // Indicate to the caller that the connection is now closed (tungstenite should automatically complete
+                // the closing handshake):
+                ws2::Message::Close(_) => Err(Error::ConnectionClosed),
 
                 // Any other message type is ignored:
                 _ => Ok(None)
