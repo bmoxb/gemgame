@@ -24,7 +24,7 @@ impl fmt::Display for Id {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{:4X}-{:4X}-{:4X}-{:4X}",
+            "{:04X}-{:04X}-{:04X}-{:04X}",
             self.value >> 48,
             (self.value >> 32) & 0xFFFF,
             (self.value >> 16) & 0xFFFF,
@@ -52,5 +52,6 @@ mod tests {
     #[test]
     fn test_id_display() {
         assert_eq!(Id::new(0).to_string(), "0000-0000-0000-0000");
+        assert_eq!(Id::new(0x0123456789ABCDEF).to_string(), "0123-4567-89AB-CDEF");
     }
 }
