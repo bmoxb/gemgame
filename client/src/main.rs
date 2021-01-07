@@ -1,4 +1,5 @@
 mod asset_management;
+mod entities;
 mod maps;
 mod networking;
 mod states;
