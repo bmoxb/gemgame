@@ -1,3 +1,4 @@
+pub mod entities;
 pub mod maps;
 pub mod messages;
 
