@@ -69,9 +69,16 @@ async fn handle_websocket_connection(
     let welcome_msg = messages::FromServer::Welcome { version: shared::VERSION.to_string() };
     ws.send(&welcome_msg).await?;
 
-    // Wait for incoming messages:
+    // Wait for incoming messages (or close connection on Ctrl-C signal):
 
-    while let Some(msg) = ws.receive().await? {
+    while let Some(msg) = tokio::select!(
+        res = ws.receive() => res?,
+        _ = tokio::signal::ctrl_c() => {
+            log::debug!("Closing connection with client {} due to Ctrl-C signal", addr);
+            ws.close().await?;
+            None
+        }
+    ) {
         log::debug!("Message from client {} - {}", addr, msg);
 
         let response = handle_message(msg, addr, connections, world).await;

@@ -37,6 +37,8 @@ impl Connection {
             Ok(None)
         }
     }
+
+    pub async fn close(&mut self) -> tungstenite::Result<()> { self.ws.close(None).await }
 }
 
 #[derive(Debug)]

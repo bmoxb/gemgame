@@ -57,28 +57,27 @@ async fn main() {
         Ok(listener) => {
             log::info!("Created TCP/IP listener bound to address: {}", host_address);
 
-            tokio::spawn(await_exit_signal());
+            // The 'select' macro below means that connections will be continuously listened for unless Ctrl-C is
+            // pressed and the loop is exited.
 
-            while let Ok((stream, addr)) = listener.accept().await {
+            while let Some(Ok((stream, addr))) = tokio::select!(
+                res = listener.accept() => Some(res),
+                _ = tokio::signal::ctrl_c() => None
+            ) {
                 log::info!("Incoming connection from: {}", addr);
 
                 tokio::spawn(handling::handle_connection(stream, addr, Arc::clone(&connections), Arc::clone(&world)));
             }
+
+            log::info!("No longer listening for connections");
+
+            // TODO: Save game world before closing the program.
         }
 
         Err(e) => {
             log::error!("Failed to create TCP/IP listener at '{}' due to error - {}", host_address, e);
         }
     }
-}
-
-async fn await_exit_signal() {
-    tokio::signal::ctrl_c().await.expect("Failed to listen for Ctrl-C signal");
-    log::debug!("Detected Ctrl-C signal");
-
-    // TODO: Close connections.
-
-    // TODO: Save game world to disk.
 }
 
 type Shared<T> = Arc<Mutex<T>>;
