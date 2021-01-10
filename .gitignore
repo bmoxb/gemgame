@@ -1,4 +1,8 @@
+# Cargo-generated build directory:
 target/
-world/
+# Game world data:
+server/world/
+# WASM build files:
 *.wasm
+# Server log files:
 *.log
