@@ -9,7 +9,6 @@ pub struct Entity {
     id: Id,
     pos: TileCoords,
     direction: Direction
-    //inventory: Box<dyn Inventory>
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]

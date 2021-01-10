@@ -1,3 +1,4 @@
+pub mod entities;
 pub mod maps;
 
 use std::{collections::HashMap, fs, io, path::PathBuf};
