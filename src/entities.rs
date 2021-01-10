@@ -1,8 +1,9 @@
-use std::fmt;
-
 use serde::{Deserialize, Serialize};
 
+use std::fmt;
+
 use super::maps::TileCoords;
+use crate::Id;
 
 #[derive(Serialize, Deserialize)]
 pub struct Entity {
@@ -11,25 +12,9 @@ pub struct Entity {
     direction: Direction
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct Id {
-    value: u64
-}
-
-impl Id {
-    pub fn new(value: u64) -> Self { Id { value } }
-}
-
-impl fmt::Display for Id {
+impl fmt::Display for Entity {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{:04X}-{:04X}-{:04X}-{:04X}",
-            self.value >> 48,
-            (self.value >> 32) & 0xFFFF,
-            (self.value >> 16) & 0xFFFF,
-            self.value & 0xFFFF
-        )
+        write!(f, "entity {} at {} facing {}", self.id, self.pos, self.direction)
     }
 }
 
@@ -39,6 +24,17 @@ pub enum Direction {
     Down,
     Left,
     Right
+}
+
+impl fmt::Display for Direction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Direction::Up => write!(f, "^"),
+            Direction::Down => write!(f, "v"),
+            Direction::Left => write!(f, "<"),
+            Direction::Right => write!(f, ">")
+        }
+    }
 }
 
 impl Default for Direction {
