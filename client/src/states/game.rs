@@ -22,7 +22,7 @@ impl GameState {
 impl GameState {
     fn handle_message_from_server(&mut self, msg: messages::FromServer) -> networking::Result<()> {
         match msg {
-            messages::FromServer::Welcome { version: _ } => {
+            messages::FromServer::Welcome { version: _, your_client_id: _, your_entity: _ } => {
                 log::warn!("Unexpectedly received 'welcome' message from server");
                 unimplemented!()
             }

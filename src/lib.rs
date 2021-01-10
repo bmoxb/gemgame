@@ -9,7 +9,8 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const WEBSOCKET_CONNECTION_PORT: u16 = 5678;
 
 use std::fmt;
-use serde::{Serialize, Deserialize};
+
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct Id {
