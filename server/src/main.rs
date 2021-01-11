@@ -6,10 +6,12 @@ use std::{
     collections::HashMap,
     net::SocketAddr,
     path::PathBuf,
-    sync::{Arc, Mutex}
+    sync::{Arc, Mutex},
+    time
 };
 
-use shared::WEBSOCKET_CONNECTION_PORT;
+use rand::Rng;
+use shared::{Id, WEBSOCKET_CONNECTION_PORT};
 use structopt::StructOpt;
 use tokio::net::TcpListener;
 use world::World;
@@ -108,4 +110,13 @@ struct Options {
     /// Specifiy whether or not log messages should be written to a file in addition to stdout.
     #[structopt(long)]
     log_to_file: bool
+}
+
+fn generate_id() -> Id {
+    // Get Unix timestamp in milliseconds:
+    let timestamp = time::SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap().as_millis() as u64;
+    // Generate a 2 byte random number:
+    let random: u64 = rand::thread_rng().gen_range(0..0x10000);
+    // Most significant 6 bytes are the timestamp, least significant 2 bytes are the random number:
+    Id::new((timestamp << 16) + random)
 }
