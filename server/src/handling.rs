@@ -1,18 +1,19 @@
 use std::net::SocketAddr;
 
-use shared::{maps::Map, messages};
+use shared::{maps::Map, messages, Id};
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite;
 
 use crate::{
+    generate_id,
     networking::{self, Connection},
     world::{maps, World},
-    ConnectionRecord, ConnectionRecords, Shared
+    ClientRecord, ClientRecords, Shared
 };
 
 /// Handle a connection with an individual client. This function is called concurrently as a Tokio task.
 pub async fn handle_connection(
-    stream: TcpStream, addr: SocketAddr, connections: Shared<ConnectionRecords>, world: Shared<World>
+    stream: TcpStream, addr: SocketAddr, clients: Shared<ClientRecords>, world: Shared<World>
 ) {
     // Perform the WebSocket handshake:
 
@@ -20,11 +21,9 @@ pub async fn handle_connection(
         Ok(mut ws) => {
             log::debug!("Performed WebSocket handshake successfully with: {}", addr);
 
-            // Register this connection between threads:
+            // Handle the connection should the handshake complete successfully:
 
-            connections.lock().unwrap().insert(addr, ConnectionRecord { current_map_key: "surface".to_string() });
-
-            match handle_websocket_connection(&mut ws, &addr, &connections, &world).await {
+            match handle_websocket_connection(&mut ws, &addr, &clients, &world).await {
                 Ok(_) => {}
 
                 Err(e) => match e {
@@ -48,10 +47,6 @@ pub async fn handle_connection(
                 }
             }
 
-            // Remove this connection from the shared connections hash map:
-
-            connections.lock().unwrap().remove(&addr);
-
             log::info!("Client disconnected: {}", addr);
         }
 
@@ -61,28 +56,68 @@ pub async fn handle_connection(
     }
 }
 
+/// This function is to be called after the WebSocket connection handshake finishes. It is the role of this function to
+/// complete the exchange of 'hello' and 'welcome' messages between client and server before passing control onto the
+/// [`handle_established_connection`] function.
 async fn handle_websocket_connection(
-    ws: &mut Connection, addr: &SocketAddr, connections: &Shared<ConnectionRecords>, world: &Shared<World>
+    ws: &mut Connection, addr: &SocketAddr, clients: &Shared<ClientRecords>, world: &Shared<World>
 ) -> networking::Result<()> {
-    // Inform the client of the server's version:
+    // Expect a 'hello' message from the client:
 
-    let welcome_msg = messages::FromServer::Welcome { version: shared::VERSION.to_string() };
-    ws.send(&welcome_msg).await?;
+    if let Some(messages::ToServer::Hello { client_id_option }) = ws.receive().await? {
+        let (client_id, entity) = {
+            if let Some(client_id) = client_id_option {
+                log::debug!("Client {} has existing ID: {}", addr, client_id);
+                // TODO: Get the client their existing player entity (if any).
+                unimplemented!()
+            }
+            else {
+                let new_id = generate_id();
+                log::debug!("Generated new ID {} for client {}", new_id, addr);
+                // TODO: Create a new player entity for this client.
+                unimplemented!()
+            }
+        };
 
+        // Send a 'welcome' message to the client:
+        // TODO: Send the welcome message.
+
+        // Store this client such that all threads are aware of it:
+        // TODO: Keep a record of this client.
+
+        let result = handle_established_connection(ws, client_id, clients, world).await;
+
+        // TODO: Remove the client from the shared clients hash map?
+
+        result
+    }
+    else {
+        log::warn!("Client {} failed to send 'hello' message after establishing a WebSocket connection", addr);
+        ws.close().await
+    }
+}
+
+/// A connection is considered 'established' once the WebSocket handshake and the the exchange of 'hello' & 'welcome'
+/// messages have completed.
+async fn handle_established_connection(
+    ws: &mut Connection, client_id: Id, clients: &Shared<ClientRecords>, world: &Shared<World>
+) -> networking::Result<()> {
     // Wait for incoming messages (or close connection on Ctrl-C signal):
 
     while let Some(msg) = tokio::select!(
         res = ws.receive() => res?,
         _ = tokio::signal::ctrl_c() => {
-            log::debug!("Closing connection with client {} due to Ctrl-C signal", addr);
+            log::debug!("Closing connection with client {} due to Ctrl-C signal", client_id);
             ws.close().await?;
             None
         }
     ) {
-        log::debug!("Message from client {} - {}", addr, msg);
+        log::debug!("Message from client {} - {}", client_id, msg);
 
-        let response = handle_message(msg, addr, connections, world).await;
-        log::debug!("Response to client {} - {}", addr, response);
+        // Handle and respond to received message:
+
+        let response = handle_message(msg, client_id, clients, world).await;
+        log::debug!("Response to client {} - {}", client_id, response);
 
         ws.send(&response).await?;
     }
@@ -91,7 +126,7 @@ async fn handle_websocket_connection(
 }
 
 async fn handle_message(
-    msg: messages::ToServer, addr: &SocketAddr, connections: &Shared<ConnectionRecords>, world: &Shared<World>
+    msg: messages::ToServer, client_id: Id, clients: &Shared<ClientRecords>, world: &Shared<World>
 ) -> messages::FromServer {
     match msg {
         messages::ToServer::RequestChunk(coords) => {

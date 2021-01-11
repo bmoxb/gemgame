@@ -46,7 +46,7 @@ async fn main() {
 
     // Prepare data structures that are to be shared between threads:
 
-    let connections: Shared<ConnectionRecords> = Arc::new(Mutex::new(HashMap::new()));
+    let clients: Shared<ClientRecords> = Arc::new(Mutex::new(HashMap::new()));
 
     let world: Shared<World> =
         Arc::new(Mutex::new(World::new(options.world_directory.clone()).expect("Failed to create game world")));
@@ -68,7 +68,7 @@ async fn main() {
             ) {
                 log::info!("Incoming connection from: {}", addr);
 
-                tokio::spawn(handling::handle_connection(stream, addr, Arc::clone(&connections), Arc::clone(&world)));
+                tokio::spawn(handling::handle_connection(stream, addr, Arc::clone(&clients), Arc::clone(&world)));
             }
 
             log::info!("No longer listening for connections");
@@ -84,10 +84,11 @@ async fn main() {
 
 type Shared<T> = Arc<Mutex<T>>;
 
-type ConnectionRecords = HashMap<SocketAddr, ConnectionRecord>;
+type ClientRecords = HashMap<Id, ClientRecord>;
 
-pub struct ConnectionRecord {
-    current_map_key: String
+pub struct ClientRecord {
+    address: SocketAddr,
+    player_entity: world::entities::PlayerEntity
 }
 
 // TODO: When Clap version 3 is stable, use that instead?

@@ -16,7 +16,7 @@ pub enum ToServer {
         /// their pre-existing character. If this player has never played before (or have cleared their browser
         /// cookies) then this field should be `None` (but note that a 'hello' message must still be the first
         /// message sent by the client).
-        my_client_id: Option<Id>
+        client_id_option: Option<Id>
     },
 
     /// Indicate to the server that this client would like the data for the chunk at the specified chunk coordinates.
@@ -34,7 +34,7 @@ pub enum ToServer {
 impl fmt::Display for ToServer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ToServer::Hello { my_client_id } => match my_client_id {
+            ToServer::Hello { client_id_option } => match client_id_option {
                 Some(id) => write!(f, "hello as existing client {}", id),
                 None => write!(f, "hello as new client")
             },

@@ -35,7 +35,7 @@ impl Connection {
         }
     }
 
-    pub async fn close(&mut self) -> tungstenite::Result<()> { self.ws.close(None).await }
+    pub async fn close(&mut self) -> Result<()> { self.ws.close(None).await.map_err(convert::Into::into) }
 }
 
 #[derive(Debug)]
