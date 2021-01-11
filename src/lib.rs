@@ -19,6 +19,14 @@ pub struct Id {
 
 impl Id {
     pub fn new(value: u64) -> Self { Id { value } }
+
+    pub fn encode(&self) -> String {
+        format!("{:X}", self.value)
+    }
+
+    pub fn decode(s: &str) -> Option<Self> {
+        s.parse().ok().map(Id::new)
+    }
 }
 
 impl fmt::Display for Id {

@@ -1,3 +1,5 @@
+const NIL = -1;
+
 const PENDING = 0;
 const OK = 1;
 const CLOSED = 2;
@@ -35,7 +37,24 @@ function register_plugin(importObject) {
         if(received.length > 0) {
             return js_object(received.shift())
         }
-        return -1;
+        return NIL;
+    }
+
+    importObject.env.cookie_get = function(key) {
+        var pair = document.cookie.split(";")
+                           .find(pair => pair.trim().startsWith(consume_js_object(key)) );
+
+        if(pair) {
+            var value = pair.split("=")[1];
+            return js_object(value);
+        }
+        else { return NIL; }
+    }
+
+    importObject.env.cookie_set = function(key, value) {
+        document.cookie = consume_js_object(key) + "="
+                        + consume_js_object(value)
+                        + "; expires=Tue, 01 Jan 2030 00:00:00 GMT";
     }
 }
 
