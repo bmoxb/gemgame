@@ -8,13 +8,11 @@ use crate::{
     generate_id,
     networking::{self, Connection},
     world::{maps, World},
-    ClientRecord, ClientRecords, Shared
+    Shared
 };
 
 /// Handle a connection with an individual client. This function is called concurrently as a Tokio task.
-pub async fn handle_connection(
-    stream: TcpStream, addr: SocketAddr, clients: Shared<ClientRecords>, world: Shared<World>
-) {
+pub async fn handle_connection(stream: TcpStream, addr: SocketAddr, world: Shared<World>) {
     // Perform the WebSocket handshake:
 
     match Connection::new(stream).await {
@@ -23,7 +21,7 @@ pub async fn handle_connection(
 
             // Handle the connection should the handshake complete successfully:
 
-            match handle_websocket_connection(&mut ws, &addr, &clients, &world).await {
+            match handle_websocket_connection(&mut ws, &addr, &world).await {
                 Ok(_) => {}
 
                 Err(e) => match e {
@@ -60,7 +58,7 @@ pub async fn handle_connection(
 /// complete the exchange of 'hello' and 'welcome' messages between client and server before passing control onto the
 /// [`handle_established_connection`] function.
 async fn handle_websocket_connection(
-    ws: &mut Connection, addr: &SocketAddr, clients: &Shared<ClientRecords>, world: &Shared<World>
+    ws: &mut Connection, addr: &SocketAddr, world: &Shared<World>
 ) -> networking::Result<()> {
     // Expect a 'hello' message from the client:
 
@@ -82,12 +80,7 @@ async fn handle_websocket_connection(
         // Send a 'welcome' message to the client:
         // TODO: Send the welcome message.
 
-        // Store this client such that all threads are aware of it:
-        // TODO: Keep a record of this client.
-
-        let result = handle_established_connection(ws, client_id, clients, world).await;
-
-        // TODO: Remove the client from the shared clients hash map?
+        let result = handle_established_connection(ws, client_id, world).await;
 
         result
     }
@@ -100,7 +93,7 @@ async fn handle_websocket_connection(
 /// A connection is considered 'established' once the WebSocket handshake and the the exchange of 'hello' & 'welcome'
 /// messages have completed.
 async fn handle_established_connection(
-    ws: &mut Connection, client_id: Id, clients: &Shared<ClientRecords>, world: &Shared<World>
+    ws: &mut Connection, client_id: Id, world: &Shared<World>
 ) -> networking::Result<()> {
     // Wait for incoming messages (or close connection on Ctrl-C signal):
 
@@ -116,7 +109,7 @@ async fn handle_established_connection(
 
         // Handle and respond to received message:
 
-        let response = handle_message(msg, client_id, clients, world).await;
+        let response = handle_message(msg, client_id, world).await;
         log::debug!("Response to client {} - {}", client_id, response);
 
         ws.send(&response).await?;
@@ -125,11 +118,10 @@ async fn handle_established_connection(
     Ok(())
 }
 
-async fn handle_message(
-    msg: messages::ToServer, client_id: Id, clients: &Shared<ClientRecords>, world: &Shared<World>
-) -> messages::FromServer {
+async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<World>) -> messages::FromServer {
     match msg {
         messages::ToServer::RequestChunk(coords) => {
+            /*
             let loaded_chunk_option =
                 with_current_map(connections, addr, world, |map| map.loaded_chunk_at(coords).cloned());
 
@@ -154,24 +146,12 @@ async fn handle_message(
                 }
             };
 
-            messages::FromServer::ProvideChunk(coords, chunk)
+            messages::FromServer::ProvideChunk(coords, chunk)*/
+            unimplemented!()
         }
 
         messages::ToServer::ChunkUnloadedLocally(_coords) => {
             unimplemented!()
         }
     }
-}
-
-fn with_current_map<T>(
-    connections: &Shared<ConnectionRecords>, addr: &SocketAddr, world: &Shared<World>,
-    func: impl Fn(&mut maps::ServerMap) -> T
-) -> T {
-    let connections_lock = connections.lock().unwrap();
-    let map_key = &connections_lock.get(addr).unwrap().current_map_key;
-
-    let mut world_lock = world.lock().unwrap();
-    let map = world_lock.get_map_mut(map_key).unwrap(); // TODO: Key may be invalid.
-
-    func(map)
 }
