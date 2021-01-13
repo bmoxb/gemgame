@@ -76,7 +76,8 @@ impl State for ConnectedState {
             Ok(msg_option) => {
                 if let Some(msg) = msg_option {
                     match msg {
-                        messages::FromServer::Welcome { version, your_client_id, your_entity } => { // TODO!
+                        messages::FromServer::Welcome { version, your_client_id, your_entity } => {
+                            // TODO!
                             log::debug!("Server version: {}", version);
 
                             if version == shared::VERSION {

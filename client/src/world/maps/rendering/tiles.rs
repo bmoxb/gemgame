@@ -1,5 +1,5 @@
 use macroquad::prelude as quad;
-use shared::maps::Tile;
+use shared::world::maps::Tile;
 
 /// Draw the given tile at the specified coordinates.
 pub fn draw(tile: &Tile, x: f32, y: f32, draw_size: f32, texture_rect_size: u16, texture: quad::Texture2D) {

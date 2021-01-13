@@ -5,7 +5,10 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{entities::Entity, maps, Id};
+use crate::{
+    world::{entities::Entity, maps},
+    Id
+};
 
 /// Message sent from the client to the server over the WebSocket protocol.
 #[derive(Serialize, Deserialize)]

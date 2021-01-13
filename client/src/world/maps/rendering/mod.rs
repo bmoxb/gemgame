@@ -1,7 +1,7 @@
 mod tiles;
 
 use macroquad::prelude as quad;
-use shared::maps::TileCoords;
+use shared::world::maps::TileCoords;
 
 /// Handles the drawing of a game map.
 pub struct Renderer {

@@ -3,8 +3,8 @@ pub mod rendering;
 use std::collections::{HashMap, HashSet};
 
 use shared::{
-    maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
-    messages
+    messages,
+    world::maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords}
 };
 
 use crate::networking::{self, Connection, ConnectionTrait};

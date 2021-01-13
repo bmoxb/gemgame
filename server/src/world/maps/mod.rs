@@ -5,7 +5,7 @@ pub mod generators;
 use std::{collections::HashMap, io, path::PathBuf};
 
 use generators::Generator;
-use shared::maps::{Chunk, ChunkCoords, Chunks, Map};
+use shared::world::maps::{Chunk, ChunkCoords, Chunks, Map};
 
 pub struct ServerMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).

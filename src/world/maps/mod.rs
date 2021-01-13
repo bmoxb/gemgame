@@ -61,7 +61,6 @@ impl Chunk {
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
-
 pub enum Tile {
     Ground
 }

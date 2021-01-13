@@ -3,8 +3,6 @@ mod networking;
 mod world;
 
 use std::{
-    collections::HashMap,
-    net::SocketAddr,
     path::PathBuf,
     sync::{Arc, Mutex},
     time
@@ -13,7 +11,7 @@ use std::{
 use rand::Rng;
 use shared::{Id, WEBSOCKET_CONNECTION_PORT};
 use structopt::StructOpt;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::broadcast};
 use world::World;
 
 #[tokio::main]
@@ -44,10 +42,15 @@ async fn main() {
     }
     logger.start().expect("Failed to initialise logger");
 
-    // Prepare data structures that are to be shared between threads:
+    // Load/create game world that is to be shared between threads:
 
     let world: Shared<World> =
         Arc::new(Mutex::new(World::new(options.world_directory.clone()).expect("Failed to create game world")));
+
+    // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes made to
+    // the game world:
+
+    let (world_changes_sender, world_changes_receiver) = broadcast::channel(5);
 
     // Bind socket and handle connections:
 
@@ -62,11 +65,17 @@ async fn main() {
 
             while let Some(Ok((stream, addr))) = tokio::select!(
                 res = listener.accept() => Some(res),
-                _ = tokio::signal::ctrl_c() => None
+                _ = tokio::signal::ctrl_c() => None,
+                _ = world_changes_receiver.try_recv() => None // TODO: continue loop
             ) {
                 log::info!("Incoming connection from: {}", addr);
 
-                tokio::spawn(handling::handle_connection(stream, addr, Arc::clone(&world)));
+                tokio::spawn(handling::handle_connection(
+                    stream,
+                    addr,
+                    Arc::clone(&world),
+                    world_changes_sender.subscribe()
+                ));
             }
 
             log::info!("No longer listening for connections");

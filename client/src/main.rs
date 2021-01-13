@@ -1,9 +1,8 @@
 mod asset_management;
-mod entities;
-mod maps;
 mod networking;
 mod sessions;
 mod states;
+mod world;
 
 use macroquad::prelude as quad;
 

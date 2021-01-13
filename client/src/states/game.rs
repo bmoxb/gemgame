@@ -1,9 +1,9 @@
-use shared::{maps::Map, messages};
+use shared::{messages, world::maps::Map};
 
 use super::State;
 use crate::{
-    maps,
     networking::{self, ConnectionTrait},
+    world::maps,
     AssetManager, TextureKey
 };
 

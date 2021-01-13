@@ -1,6 +1,5 @@
-pub mod entities;
-pub mod maps;
 pub mod messages;
+pub mod world;
 
 /// Version of this client/server build.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -20,13 +19,9 @@ pub struct Id {
 impl Id {
     pub fn new(value: u64) -> Self { Id { value } }
 
-    pub fn encode(&self) -> String {
-        format!("{:X}", self.value)
-    }
+    pub fn encode(&self) -> String { format!("{:X}", self.value) }
 
-    pub fn decode(s: &str) -> Option<Self> {
-        s.parse().ok().map(Id::new)
-    }
+    pub fn decode(s: &str) -> Option<Self> { s.parse().ok().map(Id::new) }
 }
 
 impl fmt::Display for Id {

@@ -1,4 +1,4 @@
-pub use shared::entities::Entity;
+pub use shared::world::entities::Entity;
 
 /// Represents an entity controlled by a player (i.e. controlled remotedly by a specific client).
 pub struct PlayerEntity {

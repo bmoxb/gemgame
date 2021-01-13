@@ -3,12 +3,19 @@ pub mod maps;
 
 use std::{collections::HashMap, fs, io, path::PathBuf};
 
+use shared::{
+    world::maps::{Tile, TileCoords},
+    Id
+};
+
+use crate::generate_id;
+
 pub struct World {
     /// Directory containing world data.
     directory: PathBuf,
 
     /// Currently-loaded maps.
-    loaded_maps: HashMap<String, maps::ServerMap> //players: Vec<entities::Entity>
+    loaded_maps: HashMap<Id, maps::ServerMap>
 }
 
 impl World {
@@ -22,12 +29,21 @@ impl World {
 
         // TODO: Temporary:
         x.loaded_maps.insert(
-            "surface".to_string(),
+            generate_id(),
             maps::ServerMap::new(x.directory.join("surface"), Box::new(maps::generators::DefaultGenerator), 0).unwrap()
         );
 
         Ok(x)
     }
+}
 
-    pub fn get_map_mut(&mut self, title: &str) -> Option<&mut maps::ServerMap> { self.loaded_maps.get_mut(title) }
+/// Structure indicating a change made to the game world.
+#[derive(Copy, Clone)]
+pub struct Modification {
+    /// The ID of the map to be modified.
+    map_id: Id,
+    /// Position of the tile tile to be modified.
+    pos: TileCoords,
+    /// What the tile at the specified coordinates should be changed to.
+    change_to: Tile
 }
