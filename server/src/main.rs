@@ -14,8 +14,6 @@ use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
 use world::World;
 
-const DATABASE_FILE: &str = "clients.db";
-
 #[tokio::main]
 async fn main() {
     // Command-line arguments:
@@ -59,10 +57,12 @@ async fn main() {
 
     // Connect to database:
 
-    let _ = fs::OpenOptions::new().append(true).create(true).open(DATABASE_FILE); // Create file if not exists.
+    let _ = fs::OpenOptions::new().append(true).create(true).open(&options.database_file); // Create file if not exists.
+
+    let connection_string = format!("sqlite://{}", &options.database_file);
 
     let db_options = sqlx::sqlite::SqlitePoolOptions::new().max_connections(5);
-    let db = db_options.connect(&format!("sqlite://{}", DATABASE_FILE)).await.expect("Failed to connect to database");
+    let db = db_options.connect(&connection_string).await.expect("Failed to connect to database");
 
     let create_tables_query = sqlx::query(
         "CREATE TABLE IF NOT EXISTS entities (
@@ -77,7 +77,7 @@ async fn main() {
     );
     create_tables_query.execute(&db).await.expect("Failed to ensure database contains the required tables");
 
-    log::info!("Connected to database: {}", DATABASE_FILE);
+    log::info!("Connected to database: {}", connection_string);
 
     // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes
     // made to the game world:
@@ -138,6 +138,10 @@ struct Options {
     /// Directory containing game world data.
     #[structopt(long, default_value = "world/", parse(from_os_str))]
     world_directory: PathBuf,
+
+    /// The database file in which to store client/player data.
+    #[structopt(long, default_value = "clients.db")]
+    database_file: String,
 
     /// Specify the logging level (trace, debug, info, warn, error).
     #[structopt(short, long, default_value = "info")]
