@@ -13,6 +13,7 @@ pub fn generate_with_timestamp() -> Id {
     Id::new((timestamp << 80) + random)
 }
 
+/// Generate a new ID using a 16-byte random number.
 pub fn generate_random() -> Id {
     let random: u128 = rand::thread_rng().gen();
     Id::new(random)

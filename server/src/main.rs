@@ -9,7 +9,6 @@ use std::{
 };
 
 use shared::WEBSOCKET_CONNECTION_PORT;
-use sqlx::sqlite::SqlitePoolOptions;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
 use world::World;
@@ -57,13 +56,13 @@ async fn main() {
 
     // Connection to database:
 
-    let clients_db = SqlitePoolOptions::new()
+    /*let clients_db = sqlx::SqlitePoolOptions::new()
         .max_connections(5)
         .connect("sqlite://clients.db")
         .await
         .expect("Failed to connect to database");
     // TODO: Ensure necessary table exist.
-    log::info!("Connected to database of clients");
+    log::info!("Connected to database of clients");*/
 
     // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes
     // made to the game world:

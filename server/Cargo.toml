@@ -12,11 +12,9 @@ flexi_logger = { version = "0.16", features = ["colors"] }
 
 structopt = "0.3"
 
-tokio = { version = "0.3", features = ["rt-multi-thread", "macros", "fs", "signal", "sync"] }
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "fs", "signal", "sync"] }
 futures-util = "0.3"
-tokio-tungstenite = "0.12"
-
-sqlx = { version = "0.4", features = ["runtime-tokio-native-tls", "sqlite"] }
+tokio-tungstenite = "0.13"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
