@@ -4,6 +4,7 @@ mod networking;
 mod world;
 
 use std::{
+    fs,
     path::PathBuf,
     sync::{Arc, Mutex}
 };
@@ -12,6 +13,8 @@ use shared::WEBSOCKET_CONNECTION_PORT;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
 use world::World;
+
+const DATABASE_FILE: &str = "clients.db";
 
 #[tokio::main]
 async fn main() {
@@ -54,15 +57,27 @@ async fn main() {
         Arc::new(Mutex::new(World::new(options.world_directory.clone()).expect("Failed to load/create game world")));
     log::info!("Loaded/created game world from directory: {}", options.world_directory.display());
 
-    // Connection to database:
+    // Connect to database:
 
-    /*let clients_db = sqlx::SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect("sqlite://clients.db")
-        .await
-        .expect("Failed to connect to database");
-    // TODO: Ensure necessary table exist.
-    log::info!("Connected to database of clients");*/
+    let _ = fs::OpenOptions::new().append(true).create(true).open(DATABASE_FILE); // Create file if not exists.
+
+    let db_options = sqlx::sqlite::SqlitePoolOptions::new().max_connections(5);
+    let db = db_options.connect(&format!("sqlite://{}", DATABASE_FILE)).await.expect("Failed to connect to database");
+
+    let create_tables_query = sqlx::query(
+        "CREATE TABLE IF NOT EXISTS entities (
+            entity_id TEXT NOT NULL UNIQUE
+        );
+
+        CREATE TABLE IF NOT EXISTS clients (
+            client_id TEXT NOT NULL UNIQUE,
+            entity_id TEXT NOT NULL UNIQUE,
+            FOREIGN KEY (entity_id) REFERENCES entities (entity_id)
+        )"
+    );
+    create_tables_query.execute(&db).await.expect("Failed to ensure database contains the required tables");
+
+    log::info!("Connected to database: {}", DATABASE_FILE);
 
     // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes
     // made to the game world:
@@ -73,6 +88,8 @@ async fn main() {
     // pressed and the loop is exited. Messages on the world modifcation channel are also listened for and
     // immediately discarded. This is done as the main task must maintain access to the channel in order to
     // clone and pass it to new connection tasks while also not blocking the broadcasted message queue.
+
+    log::info!("Listening for connections...");
 
     while let Some(src) = tokio::select!(
         res = listener.accept() => Some(ReceivedOn::NetworkConnection(res)),
