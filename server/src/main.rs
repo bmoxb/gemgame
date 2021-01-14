@@ -1,15 +1,15 @@
 mod handling;
+mod id;
 mod networking;
 mod world;
 
 use std::{
     path::PathBuf,
-    sync::{Arc, Mutex},
-    time
+    sync::{Arc, Mutex}
 };
 
-use rand::Rng;
-use shared::{Id, WEBSOCKET_CONNECTION_PORT};
+use shared::WEBSOCKET_CONNECTION_PORT;
+use sqlx::sqlite::SqlitePoolOptions;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
 use world::World;
@@ -42,61 +42,65 @@ async fn main() {
     }
     logger.start().expect("Failed to initialise logger");
 
-    // Load/create game world that is to be shared between threads:
-
-    let world: Shared<World> =
-        Arc::new(Mutex::new(World::new(options.world_directory.clone()).expect("Failed to create game world")));
-
-    // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes made to
-    // the game world:
-
-    let (world_changes_sender, mut world_changes_receiver) = broadcast::channel(5);
-
     // Bind socket and handle connections:
 
     let host_address = format!("127.0.0.1:{}", options.port);
 
-    match TcpListener::bind(&host_address).await {
-        Ok(listener) => {
-            log::info!("Created TCP/IP listener bound to address: {}", host_address);
+    let listener = TcpListener::bind(&host_address).await.expect("Failed to create TCP/IP listener");
+    log::info!("Created TCP/IP listener bound to address: {}", host_address);
 
-            // The 'select' macro below means that connections will be continuously listened for unless Ctrl-C is
-            // pressed and the loop is exited. Messages on the world modifcation channel are also listened for and
-            // immediately discarded. This is done as the main task must maintain access to the channel in order to
-            // clone and pass it to new connection tasks while also not blocking the broadcasted message queue.
+    // Load/create game world that is to be shared between threads:
 
-            while let Some(src) = tokio::select!(
-                res = listener.accept() => Some(ReceivedOn::NetworkConnection(res)),
-                res = world_changes_receiver.recv() => Some(ReceivedOn::TokioBroadcast(res)),
-                _ = tokio::signal::ctrl_c() => None
-            ) {
-                match src {
-                    ReceivedOn::NetworkConnection(res) => {
-                        let (stream, addr) = res.unwrap();
+    let world: Shared<World> =
+        Arc::new(Mutex::new(World::new(options.world_directory.clone()).expect("Failed to load/create game world")));
+    log::info!("Loaded/created game world from directory: {}", options.world_directory.display());
 
-                        log::info!("Incoming connection from: {}", addr);
+    // Connection to database:
 
-                        tokio::spawn(handling::handle_connection(
-                            stream,
-                            addr,
-                            Arc::clone(&world),
-                            world_changes_sender.subscribe()
-                        ));
-                    }
+    let clients_db = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect("sqlite://clients.db")
+        .await
+        .expect("Failed to connect to database");
+    // TODO: Ensure necessary table exist.
+    log::info!("Connected to database of clients");
 
-                    ReceivedOn::TokioBroadcast(_) => {} // Discard the broadcasted world modification message.
-                }
+    // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes
+    // made to the game world:
+
+    let (world_changes_sender, mut world_changes_receiver) = broadcast::channel(5);
+
+    // The 'select' macro below means that connections will be continuously listened for unless Ctrl-C is
+    // pressed and the loop is exited. Messages on the world modifcation channel are also listened for and
+    // immediately discarded. This is done as the main task must maintain access to the channel in order to
+    // clone and pass it to new connection tasks while also not blocking the broadcasted message queue.
+
+    while let Some(src) = tokio::select!(
+        res = listener.accept() => Some(ReceivedOn::NetworkConnection(res)),
+        res = world_changes_receiver.recv() => Some(ReceivedOn::TokioBroadcast(res)),
+        _ = tokio::signal::ctrl_c() => None
+    ) {
+        match src {
+            ReceivedOn::NetworkConnection(res) => {
+                let (stream, addr) = res.unwrap();
+
+                log::info!("Incoming connection from: {}", addr);
+
+                tokio::spawn(handling::handle_connection(
+                    stream,
+                    addr,
+                    Arc::clone(&world),
+                    world_changes_sender.subscribe()
+                ));
             }
 
-            log::info!("No longer listening for connections");
-
-            // TODO: Save game world before closing the program.
-        }
-
-        Err(e) => {
-            log::error!("Failed to create TCP/IP listener at '{}' due to error - {}", host_address, e);
+            ReceivedOn::TokioBroadcast(_) => {} // Discard the broadcasted world modification message.
         }
     }
+
+    log::info!("No longer listening for connections");
+
+    // TODO: Save game world before closing the program.
 }
 
 enum ReceivedOn<T> {
@@ -127,16 +131,3 @@ struct Options {
     #[structopt(long)]
     log_to_file: bool
 }
-
-/// Generate a new ID using the current Unix timestamp (in milliseconds) combined with a random number.
-fn generate_id() -> Id {
-    // Get Unix timestamp in milliseconds:
-    let timestamp = time::SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap().as_millis() as u64;
-    // Generate a 2 byte random number:
-    let random: u64 = rand::thread_rng().gen_range(0..0x10000);
-    // Most significant 6 bytes are the timestamp, least significant 2 bytes are the random number:
-    Id::new((timestamp << 16) + random)
-}
-
-// TODO: Cryptographically-secure random number for client IDs...
-fn generate_secure_id() -> Id { unimplemented!() }

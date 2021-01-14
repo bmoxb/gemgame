@@ -1,13 +1,12 @@
 use std::net::SocketAddr;
 
-use shared::{messages, world::maps::Map, Id};
+use shared::{messages, Id};
 use tokio::{net::TcpStream, sync::broadcast};
 use tokio_tungstenite::tungstenite;
 
 use crate::{
-    generate_id,
     networking::{self, Connection},
-    world::{self, maps, World},
+    world::{self, World},
     ReceivedOn, Shared
 };
 

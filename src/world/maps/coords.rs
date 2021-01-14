@@ -63,7 +63,7 @@ impl fmt::Display for OffsetCoords {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::{ChunkCoords, OffsetCoords, TileCoords};
 
     #[test]

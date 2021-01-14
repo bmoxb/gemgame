@@ -8,8 +8,6 @@ use shared::{
     Id
 };
 
-use crate::generate_id;
-
 pub struct World {
     /// Directory containing world data.
     directory: PathBuf,
@@ -29,7 +27,7 @@ impl World {
 
         // TODO: Temporary:
         x.loaded_maps.insert(
-            generate_id(),
+            crate::id::generate_with_timestamp(),
             maps::ServerMap::new(x.directory.join("surface"), Box::new(maps::generators::DefaultGenerator), 0).unwrap()
         );
 
