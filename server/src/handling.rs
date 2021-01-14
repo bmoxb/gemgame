@@ -8,7 +8,7 @@ use crate::{
     generate_id,
     networking::{self, Connection},
     world::{self, maps, World},
-    Shared
+    ReceivedOn, Shared
 };
 
 /// Handle a connection with an individual client. This function is called concurrently as a Tokio task.
@@ -97,26 +97,36 @@ async fn handle_websocket_connection(
 /// messages have completed.
 async fn handle_established_connection(
     ws: &mut Connection, client_id: Id, world: Shared<World>,
-    world_changes_receiver: broadcast::Receiver<world::Modification>
+    mut world_changes_receiver: broadcast::Receiver<world::Modification>
 ) -> networking::Result<()> {
-    // Wait for incoming messages (or close connection on Ctrl-C signal):
+    // Wait for incoming messages on both the WebSocket connection and the world modifications channel (or close
+    // connection on Ctrl-C signal):
 
-    while let Some(msg) = tokio::select!(
-        res = ws.receive() => res?,
+    while let Some(src) = tokio::select!(
+        res = ws.receive() => res?.map(ReceivedOn::NetworkConnection),
+        res = world_changes_receiver.recv() => Some(ReceivedOn::TokioBroadcast(res)),
         _ = tokio::signal::ctrl_c() => {
             log::debug!("Closing connection with client {} due to Ctrl-C signal", client_id);
             ws.close().await?;
             None
         }
     ) {
-        log::debug!("Message from client {} - {}", client_id, msg);
+        match src {
+            ReceivedOn::NetworkConnection(msg) => {
+                log::debug!("Message from client {} - {}", client_id, msg);
 
-        // Handle and respond to received message:
+                // Handle and respond to received message:
 
-        let response = handle_message(msg, client_id, &world).await;
-        log::debug!("Response to client {} - {}", client_id, response);
+                let response = handle_message(msg, client_id, &world).await;
+                log::debug!("Response to client {} - {}", client_id, response);
 
-        ws.send(&response).await?;
+                ws.send(&response).await?;
+            }
+
+            ReceivedOn::TokioBroadcast(modification) => {
+                // TODO: Inform client of changes made to the world if affecting chunks that client has loaded.
+            }
+        }
     }
 
     Ok(())
@@ -124,6 +134,10 @@ async fn handle_established_connection(
 
 async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<World>) -> messages::FromServer {
     match msg {
+        messages::ToServer::Hello { .. } => {
+            log::warn!("Client {} received unexpected 'hello' message: {}", client_id, msg);
+            unimplemented!()
+        }
         messages::ToServer::RequestChunk(coords) => {
             /*
             let loaded_chunk_option =

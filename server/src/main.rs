@@ -50,7 +50,7 @@ async fn main() {
     // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes made to
     // the game world:
 
-    let (world_changes_sender, world_changes_receiver) = broadcast::channel(5);
+    let (world_changes_sender, mut world_changes_receiver) = broadcast::channel(5);
 
     // Bind socket and handle connections:
 
@@ -61,21 +61,31 @@ async fn main() {
             log::info!("Created TCP/IP listener bound to address: {}", host_address);
 
             // The 'select' macro below means that connections will be continuously listened for unless Ctrl-C is
-            // pressed and the loop is exited.
+            // pressed and the loop is exited. Messages on the world modifcation channel are also listened for and
+            // immediately discarded. This is done as the main task must maintain access to the channel in order to
+            // clone and pass it to new connection tasks while also not blocking the broadcasted message queue.
 
-            while let Some(Ok((stream, addr))) = tokio::select!(
-                res = listener.accept() => Some(res),
-                _ = tokio::signal::ctrl_c() => None,
-                _ = world_changes_receiver.try_recv() => None // TODO: continue loop
+            while let Some(src) = tokio::select!(
+                res = listener.accept() => Some(ReceivedOn::NetworkConnection(res)),
+                res = world_changes_receiver.recv() => Some(ReceivedOn::TokioBroadcast(res)),
+                _ = tokio::signal::ctrl_c() => None
             ) {
-                log::info!("Incoming connection from: {}", addr);
+                match src {
+                    ReceivedOn::NetworkConnection(res) => {
+                        let (stream, addr) = res.unwrap();
 
-                tokio::spawn(handling::handle_connection(
-                    stream,
-                    addr,
-                    Arc::clone(&world),
-                    world_changes_sender.subscribe()
-                ));
+                        log::info!("Incoming connection from: {}", addr);
+
+                        tokio::spawn(handling::handle_connection(
+                            stream,
+                            addr,
+                            Arc::clone(&world),
+                            world_changes_sender.subscribe()
+                        ));
+                    }
+
+                    ReceivedOn::TokioBroadcast(_) => {} // Discard the broadcasted world modification message.
+                }
             }
 
             log::info!("No longer listening for connections");
@@ -87,6 +97,11 @@ async fn main() {
             log::error!("Failed to create TCP/IP listener at '{}' due to error - {}", host_address, e);
         }
     }
+}
+
+enum ReceivedOn<T> {
+    NetworkConnection(T),
+    TokioBroadcast(Result<world::Modification, broadcast::error::RecvError>)
 }
 
 type Shared<T> = Arc<Mutex<T>>;
@@ -113,6 +128,7 @@ struct Options {
     log_to_file: bool
 }
 
+/// Generate a new ID using the current Unix timestamp (in milliseconds) combined with a random number.
 fn generate_id() -> Id {
     // Get Unix timestamp in milliseconds:
     let timestamp = time::SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap().as_millis() as u64;
@@ -121,3 +137,6 @@ fn generate_id() -> Id {
     // Most significant 6 bytes are the timestamp, least significant 2 bytes are the random number:
     Id::new((timestamp << 16) + random)
 }
+
+// TODO: Cryptographically-secure random number for client IDs...
+fn generate_secure_id() -> Id { unimplemented!() }
