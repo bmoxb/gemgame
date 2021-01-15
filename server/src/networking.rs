@@ -4,6 +4,7 @@ use futures_util::{SinkExt, StreamExt};
 use shared::messages;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{tungstenite, WebSocketStream};
+use thiserror::Error;
 
 /// Manages a WebSocket connection and simplifies the process of sending and receiving bincode messages.
 pub struct Connection {
@@ -38,19 +39,14 @@ impl Connection {
     pub async fn close(&mut self) -> Result<()> { self.ws.close(None).await.map_err(convert::Into::into) }
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
-    EncodingFailure(bincode::Error),
+    #[error("Encoding failed")]
+    EncodingFailure(#[from] bincode::Error),
+    #[error("Message is not binary")]
     MessageNotBinary(tungstenite::Message),
-    NetworkError(tungstenite::Error)
-}
-
-impl convert::From<bincode::Error> for Error {
-    fn from(e: bincode::Error) -> Error { Error::EncodingFailure(e) }
-}
-
-impl convert::From<tungstenite::Error> for Error {
-    fn from(e: tungstenite::Error) -> Error { Error::NetworkError(e) }
+    #[error("Internal networking error")]
+    NetworkError(#[from] tungstenite::Error)
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
