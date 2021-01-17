@@ -1,18 +1,19 @@
-use std::net::SocketAddr;
+use std::{convert::Into, net::SocketAddr};
 
 use shared::{messages, Id};
+use thiserror::Error;
 use tokio::{net::TcpStream, sync::broadcast};
 use tokio_tungstenite::tungstenite;
 
 use crate::{
     networking::{self, Connection},
-    world::{self, World},
+    world::{self, entities::PlayerEntity, World},
     ReceivedOn, Shared
 };
 
 /// Handle a connection with an individual client. This function is called concurrently as a Tokio task.
 pub async fn handle_connection(
-    stream: TcpStream, addr: SocketAddr, world: Shared<World>,
+    stream: TcpStream, addr: SocketAddr, world: Shared<World>, db_pool: sqlx::SqlitePool,
     world_changes_receiver: broadcast::Receiver<world::Modification>
 ) {
     // Perform the WebSocket handshake:
@@ -23,16 +24,20 @@ pub async fn handle_connection(
 
             // Handle the connection should the handshake complete successfully:
 
-            match handle_websocket_connection(ws, &addr, world, world_changes_receiver).await {
+            match handle_websocket_connection(ws, &addr, world, db_pool, world_changes_receiver).await {
                 Ok(_) => {}
 
-                Err(e) => match e {
+                Err(Error::NetworkError(e)) => match e {
                     networking::Error::MessageNotBinary(msg) => {
-                        log::warn!("Message from {} is not binary: {}", addr, msg);
+                        log::error!("Message from {} is not binary: {}", addr, msg);
                     }
 
                     networking::Error::EncodingFailure(bincode_err) => {
-                        log::warn!("Failed to communicate with client {} due to encoding error: {}", addr, bincode_err);
+                        log::error!(
+                            "Failed to communicate with client {} due to encoding error: {}",
+                            addr,
+                            bincode_err
+                        );
                     }
 
                     networking::Error::NetworkError(network_err) => match network_err {
@@ -41,9 +46,13 @@ pub async fn handle_connection(
                         }
 
                         other => {
-                            log::warn!("Failed to communicate with client {} due to network error: {}", addr, other);
+                            log::error!("Failed to communicate with client {} due to network error: {}", addr, other);
                         }
                     }
+                },
+
+                Err(Error::DatabaseError(e)) => {
+                    log::error!("Handling client {} resulted in database error: {}", addr, e);
                 }
             }
 
@@ -60,35 +69,63 @@ pub async fn handle_connection(
 /// complete the exchange of 'hello' and 'welcome' messages between client and server before passing control onto the
 /// [`handle_established_connection`] function.
 async fn handle_websocket_connection(
-    mut ws: Connection, addr: &SocketAddr, world: Shared<World>,
+    mut ws: Connection, addr: &SocketAddr, world: Shared<World>, db_pool: sqlx::SqlitePool,
     world_changes_receiver: broadcast::Receiver<world::Modification>
-) -> networking::Result<()> {
+) -> Result<()> {
     // Expect a 'hello' message from the client:
 
     if let Some(messages::ToServer::Hello { client_id_option }) = ws.receive().await? {
-        /*let (client_id, entity) = {
+        let (client_id, player_entity) = {
+            let mut db = db_pool.acquire().await.unwrap();
+
             if let Some(client_id) = client_id_option {
                 log::debug!("Client {} has existing ID: {}", addr, client_id);
-                // TODO: Get the client their existing player entity (if any) from database.
+
+                // Get the client their existing player entity (if any) from database:
+
+                if let Some(entity) = PlayerEntity::from_database(client_id, &mut db).await? {
+                    (client_id, entity)
+                }
+                else {
+                    log::warn!(
+                        "Client {} provided {} for which an associate entity could not be found in the database",
+                        addr,
+                        client_id
+                    );
+                    (client_id, PlayerEntity::new_to_database(client_id, &mut db).await?)
+                }
             }
             else {
-                let new_id = generate_id();
+                let new_id = crate::id::generate_random();
                 log::debug!("Generated new ID {} for client {}", new_id, addr);
-                // TODO: Create a new player entity for this client and insert into database.
+
+                // Create a new entity for this client and insert into the database:
+
+                (new_id, PlayerEntity::new_to_database(new_id, &mut db).await?)
             }
-        };*/
-        let client_id = Id::new(0);
+        };
 
         // Send a 'welcome' message to the client:
-        // TODO: Send the welcome message.
+
+        ws.send(&messages::FromServer::Welcome {
+            version: shared::VERSION.to_string(),
+            your_client_id: client_id,
+            your_entity: player_entity.inner_entity_cloned()
+        })
+        .await?;
 
         let result = handle_established_connection(&mut ws, client_id, world, world_changes_receiver).await;
+
+        // Update database with changes to user's entity:
+
+        let mut db = db_pool.acquire().await.unwrap();
+        player_entity.update_database(client_id, &mut db).await?;
 
         result
     }
     else {
         log::warn!("Client {} failed to send 'hello' message after establishing a WebSocket connection", addr);
-        ws.close().await
+        ws.close().await.map_err(Into::into)
     }
 }
 
@@ -97,7 +134,7 @@ async fn handle_websocket_connection(
 async fn handle_established_connection(
     ws: &mut Connection, client_id: Id, world: Shared<World>,
     mut world_changes_receiver: broadcast::Receiver<world::Modification>
-) -> networking::Result<()> {
+) -> Result<()> {
     // Wait for incoming messages on both the WebSocket connection and the world modifications channel (or close
     // connection on Ctrl-C signal):
 
@@ -172,3 +209,13 @@ async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<W
         }
     }
 }
+
+#[derive(Error, Debug)]
+enum Error {
+    #[error("Networking error")]
+    NetworkError(#[from] networking::Error),
+    #[error("Database error")]
+    DatabaseError(#[from] sqlx::Error)
+}
+
+type Result<T> = std::result::Result<T, Error>;

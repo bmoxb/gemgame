@@ -61,12 +61,21 @@ async fn main() {
 
     let connection_string = format!("sqlite://{}", &options.database_file);
 
-    let db_options = sqlx::sqlite::SqlitePoolOptions::new().max_connections(5);
-    let db = db_options.connect(&connection_string).await.expect("Failed to connect to database");
+    let db_pool_options = sqlx::sqlite::SqlitePoolOptions::new().max_connections(options.max_database_connections);
+    let db_pool = db_pool_options.connect(&connection_string).await.expect("Failed to connect to database");
+
+    log::info!(
+        "Created connection pool with maximum of {} simultaneous connections to database: {}",
+        options.max_database_connections,
+        connection_string
+    );
 
     let create_tables_query = sqlx::query(
         "CREATE TABLE IF NOT EXISTS entities (
-            entity_id TEXT NOT NULL UNIQUE
+            entity_id TEXT NOT NULL UNIQUE,
+            current_map_id TEXT NOT NULL,
+            tile_x INTEGER NOT NULL,
+            tile_y INTEGER NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS clients (
@@ -75,9 +84,9 @@ async fn main() {
             FOREIGN KEY (entity_id) REFERENCES entities (entity_id)
         )"
     );
-    create_tables_query.execute(&db).await.expect("Failed to ensure database contains the required tables");
+    create_tables_query.execute(&db_pool).await.expect("Failed to create required tables in database");
 
-    log::info!("Connected to database: {}", connection_string);
+    log::info!("Prepared necessary database tables");
 
     // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes
     // made to the game world:
@@ -89,7 +98,7 @@ async fn main() {
     // immediately discarded. This is done as the main task must maintain access to the channel in order to
     // clone and pass it to new connection tasks while also not blocking the broadcasted message queue.
 
-    log::info!("Listening for connections...");
+    log::info!("Listening for incoming TCP/IP connections...");
 
     while let Some(src) = tokio::select!(
         res = listener.accept() => Some(ReceivedOn::NetworkConnection(res)),
@@ -106,6 +115,7 @@ async fn main() {
                     stream,
                     addr,
                     Arc::clone(&world),
+                    db_pool.clone(),
                     world_changes_sender.subscribe()
                 ));
             }
@@ -142,6 +152,11 @@ struct Options {
     /// The database file in which to store client/player data.
     #[structopt(long, default_value = "clients.db")]
     database_file: String,
+
+    /// Specify the maximum number of connections that the database connection pool is able to have open
+    /// simultaneously.
+    #[structopt(long, default_value = "25")]
+    max_database_connections: u32,
 
     /// Specify the logging level (trace, debug, info, warn, error).
     #[structopt(short, long, default_value = "info")]

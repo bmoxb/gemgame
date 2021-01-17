@@ -2,9 +2,9 @@ use std::convert;
 
 use futures_util::{SinkExt, StreamExt};
 use shared::messages;
+use thiserror::Error;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{tungstenite, WebSocketStream};
-use thiserror::Error;
 
 /// Manages a WebSocket connection and simplifies the process of sending and receiving bincode messages.
 pub struct Connection {
