@@ -153,10 +153,10 @@ async fn handle_established_connection(
 
                 // Handle and respond to received message:
 
-                let response = handle_message(msg, client_id, &world).await;
-                log::debug!("Response to client {} - {}", client_id, response);
-
-                ws.send(&response).await?;
+                if let Some(response) = handle_message(msg, client_id, &world).await {
+                    log::debug!("Response to client {} - {}", client_id, response);
+                    ws.send(&response).await?;
+                }
             }
 
             ReceivedOn::TokioBroadcast(modification) => {
@@ -168,11 +168,11 @@ async fn handle_established_connection(
     Ok(())
 }
 
-async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<World>) -> messages::FromServer {
+async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<World>) -> Option<messages::FromServer> {
     match msg {
         messages::ToServer::Hello { .. } => {
-            log::warn!("Client {} received unexpected 'hello' message: {}", client_id, msg);
-            unimplemented!()
+            log::warn!("Client {} sent unexpected 'hello' message: {}", client_id, msg);
+            None
         }
         messages::ToServer::RequestChunk(coords) => {
             /*
