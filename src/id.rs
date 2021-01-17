@@ -24,7 +24,7 @@ impl Id {
 
 impl fmt::Display for Id {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "0x{:032X} : {}", self.value, self.encode())
+        write!(f, "{} (0x{:032X})", self.encode(), self.value)
     }
 }
 
