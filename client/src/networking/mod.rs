@@ -6,10 +6,10 @@ pub use browser::*;
 #[cfg(not(target_arch = "wasm32"))]
 mod desktop;
 
+use std::{convert, fmt};
+
 #[cfg(not(target_arch = "wasm32"))]
 pub use desktop::*;
-
-use std::{convert, fmt};
 use serde::{de::DeserializeOwned, Serialize};
 
 pub fn connect(addr: &str, port: u16, secure: bool) -> PendingConnection {

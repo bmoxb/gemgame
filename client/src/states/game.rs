@@ -3,7 +3,7 @@ use shared::{messages, world::maps::Map};
 use super::State;
 use crate::{
     networking::{self, ConnectionTrait},
-    world::maps,
+    world::{entities::LocalEntity, maps},
     AssetManager, TextureKey
 };
 
@@ -14,7 +14,8 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(connection: networking::Connection) -> Self {
+    pub fn new(connection: networking::Connection, player_entity: LocalEntity) -> Self {
+        // TODO: Do something with the player entity!
         GameState { connection, map: maps::ClientMap::new(), map_renderer: maps::rendering::Renderer::new(0.08, 16) }
     }
 }
