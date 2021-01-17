@@ -16,18 +16,20 @@ impl PlayerEntity {
     ) -> sqlx::Result<Self> {
         let contained = Entity {
             id: crate::id::generate_with_timestamp(),
+            name: "unnamed".to_string(),
             pos: TileCoords::default(),
             direction: Default::default()
         };
         let current_map_id = Id::new(0); // TODO
 
         sqlx::query(
-            "INSERT INTO client_entities (client_id, entity_id, current_map_id, tile_x, tile_y)
+            "INSERT INTO client_entities (client_id, entity_id, current_map_id, name, tile_x, tile_y)
             VALUES (?, ?, ?, ?, ?)"
         )
         .bind(client_id.encode())
         .bind(contained.id.encode())
         .bind(current_map_id.encode())
+        .bind(&contained.name)
         .bind(contained.pos.x)
         .bind(contained.pos.y)
         .execute(db)
@@ -40,7 +42,7 @@ impl PlayerEntity {
         client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Sqlite>
     ) -> sqlx::Result<Option<Self>> {
         let res = sqlx::query(
-            "SELECT entity_id, current_map_id, tile_x, tile_y
+            "SELECT entity_id, current_map_id, name, tile_x, tile_y
             FROM client_entities
             WHERE client_id = ?"
         )
@@ -49,6 +51,7 @@ impl PlayerEntity {
             sqlx::Result::Ok((
                 Entity {
                     id: Id::decode(row.try_get("entity_id")?).unwrap(), // TODO
+                    name: row.try_get("name")?,
                     pos: TileCoords { x: row.try_get("tile_x")?, y: row.try_get("tile_y")? },
                     direction: Default::default() // TODO
                 },
@@ -67,9 +70,10 @@ impl PlayerEntity {
     ) -> sqlx::Result<()> {
         sqlx::query(
             "UPDATE client_entities
-            SET tile_x = ?, tile_y = ?, current_map_id = ?
+            SET name, tile_x = ?, tile_y = ?, current_map_id = ?
             WHERE client_id = ?"
         )
+        .bind(&self.contained.name)
         .bind(self.contained.pos.x)
         .bind(self.contained.pos.y)
         .bind(self.current_map_id.encode())
@@ -89,7 +93,7 @@ pub struct NonPlayerEntity {
 }
 
 impl NonPlayerEntity {
-    fn update(&mut self) { self.controller.update(&mut self.contained); }
+    pub fn update(&mut self) { self.controller.update(&mut self.contained); }
 }
 
 pub trait Controller {
