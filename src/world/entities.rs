@@ -29,10 +29,10 @@ pub enum Direction {
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Direction::Up => write!(f, "^"),
-            Direction::Down => write!(f, "v"),
-            Direction::Left => write!(f, "<"),
-            Direction::Right => write!(f, ">")
+            Direction::Up => write!(f, "🡑"),
+            Direction::Down => write!(f, "🡓"),
+            Direction::Left => write!(f, "🡐"),
+            Direction::Right => write!(f, "🡒")
         }
     }
 }
