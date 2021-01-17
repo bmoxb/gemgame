@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 use super::maps::TileCoords;
 use crate::Id;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Entity {
-    id: Id,
-    pos: TileCoords,
-    direction: Direction
+    pub id: Id,
+    pub pos: TileCoords,
+    pub direction: Direction
 }
 
 impl fmt::Display for Entity {
