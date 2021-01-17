@@ -23,7 +23,7 @@ impl PlayerEntity {
 
         sqlx::query(
             "INSERT INTO entities (entity_id, current_map_id, tile_x, tile_y) VALUES (?, ?, ?, ?);
-            INSERT INTO clients (client_id, entity_id)"
+            INSERT INTO clients (client_id, entity_id) VALUES (?, ?)"
         )
         .bind(contained.id.encode())
         .bind(current_map_id.encode())
