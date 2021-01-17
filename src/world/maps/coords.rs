@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{CHUNK_HEIGHT, CHUNK_WIDTH};
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct TileCoords {
     pub x: i32,
     pub y: i32
@@ -40,7 +40,7 @@ impl fmt::Display for TileCoords {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "tile coordinates ({}, {})", self.x, self.y) }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ChunkCoords {
     pub x: i32,
     pub y: i32
@@ -50,7 +50,7 @@ impl fmt::Display for ChunkCoords {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "chunk coordinates ({}, {})", self.x, self.y) }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct OffsetCoords {
     pub x: u8,
     pub y: u8
