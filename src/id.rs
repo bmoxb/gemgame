@@ -18,7 +18,7 @@ impl Id {
 
     pub fn encode(&self) -> String {
         let bytes = u128::to_be_bytes(self.value);
-        base64::encode_config(bytes, base64::STANDARD_NO_PAD).to_string()
+        base64::encode_config(bytes, base64::STANDARD_NO_PAD)
     }
 }
 
