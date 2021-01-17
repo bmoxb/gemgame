@@ -3,3 +3,5 @@ world/
 *.wasm
 *.log
 *.db
+*.db-wal
+*.db-shm
