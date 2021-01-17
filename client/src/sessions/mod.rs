@@ -1,22 +1,28 @@
 #[cfg(target_arch = "wasm32")]
-mod cookies;
+mod browser;
 
-const CLIENT_ID_KEY: &str = "client_id";
+#[cfg(not(target_arch = "wasm32"))]
+mod desktop;
+
+const KEY: &str = "client_id";
+const FILE_PATH: &str = "client id.txt";
 
 use shared::Id;
 
 pub fn store_client_id(id: Id) {
+    let encoded = id.encode();
+
     #[cfg(target_arch = "wasm32")]
-    cookies::set(CLIENT_ID_KEY, id.encode());
+    browser::set(KEY, &encoded);
 
     #[cfg(not(target_arch = "wasm32"))]
-    unimplemented!()
+    desktop::set(FILE_PATH, &encoded).unwrap(); // TODO: Don't just unwrap!
 }
 
 pub fn retrieve_client_id() -> Option<Id> {
     #[cfg(target_arch = "wasm32")]
-    return Id::decode(cookies::get(CLIENT_ID_KEY));
+    return Id::decode(&browser::get(KEY)?);
 
     #[cfg(not(target_arch = "wasm32"))]
-    unimplemented!()
+    Id::decode(&desktop::get(FILE_PATH).ok()?)
 }

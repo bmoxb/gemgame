@@ -40,21 +40,15 @@ function register_plugin(importObject) {
         return NIL;
     }
 
-    importObject.env.cookie_get = function(key) {
-        var pair = document.cookie.split(";")
-                           .find(pair => pair.trim().startsWith(consume_js_object(key)) );
+    importObject.env.local_storage_get = function(key) {
+        var value = window.localStorage.getItem(consume_js_object(key));
 
-        if(pair) {
-            var value = pair.split("=")[1];
-            return js_object(value);
-        }
+        if(value) { return js_object(value); }
         else { return NIL; }
     }
 
-    importObject.env.cookie_set = function(key, value) {
-        document.cookie = consume_js_object(key) + "="
-                        + consume_js_object(value)
-                        + "; expires=Tue, 01 Jan 2030 00:00:00 GMT";
+    importObject.env.local_storage_set = function(key, value) {
+        window.localStorage.setItem(consume_js_object(key), consume_js_object(value));
     }
 }
 
