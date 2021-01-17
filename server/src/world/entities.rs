@@ -22,15 +22,14 @@ impl PlayerEntity {
         let current_map_id = Id::new(0); // TODO
 
         sqlx::query(
-            "INSERT INTO entities (entity_id, current_map_id, tile_x, tile_y) VALUES (?, ?, ?, ?);
-            INSERT INTO clients (client_id, entity_id) VALUES (?, ?)"
+            "INSERT INTO client_entities (client_id, entity_id, current_map_id, tile_x, tile_y)
+            VALUES (?, ?, ?, ?, ?)"
         )
+        .bind(client_id.encode())
         .bind(contained.id.encode())
         .bind(current_map_id.encode())
         .bind(contained.pos.x)
         .bind(contained.pos.y)
-        .bind(client_id.encode())
-        .bind(contained.id.encode())
         .execute(db)
         .await?;
 
@@ -41,9 +40,9 @@ impl PlayerEntity {
         client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Sqlite>
     ) -> sqlx::Result<Option<Self>> {
         let res = sqlx::query(
-            "SELECT entities.entity_id, current_map_id, tile_x, tile_y
-            FROM entities INNER JOIN clients ON entities.entity_id = clients.entity_id
-            WHERE clients.client_id = ?"
+            "SELECT entity_id, current_map_id, tile_x, tile_y
+            FROM client_entities
+            WHERE client_id = ?"
         )
         .bind(client_id.encode())
         .map(|row| {
@@ -67,8 +66,9 @@ impl PlayerEntity {
         &self, client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Sqlite>
     ) -> sqlx::Result<()> {
         sqlx::query(
-            "UPDATE entities SET tile_x = ?, tile_y = ?, current_map_id = ?
-            WHERE entity_id = (SELECT entity_id FROM clients WHERE client_id = ?)"
+            "UPDATE client_entities
+            SET tile_x = ?, tile_y = ?, current_map_id = ?
+            WHERE client_id = ?"
         )
         .bind(self.contained.pos.x)
         .bind(self.contained.pos.y)

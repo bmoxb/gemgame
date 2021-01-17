@@ -70,23 +70,18 @@ async fn main() {
         connection_string
     );
 
-    let create_tables_query = sqlx::query(
-        "CREATE TABLE IF NOT EXISTS entities (
+    let create_table_query = sqlx::query(
+        "CREATE TABLE IF NOT EXISTS client_entities (
+            client_id TEXT PRIMARY KEY,
             entity_id TEXT NOT NULL UNIQUE,
             current_map_id TEXT NOT NULL,
             tile_x INTEGER NOT NULL,
             tile_y INTEGER NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS clients (
-            client_id TEXT NOT NULL UNIQUE,
-            entity_id TEXT NOT NULL UNIQUE,
-            FOREIGN KEY (entity_id) REFERENCES entities (entity_id)
         )"
     );
-    create_tables_query.execute(&db_pool).await.expect("Failed to create required tables in database");
+    create_table_query.execute(&db_pool).await.expect("Failed to create required table in database");
 
-    log::info!("Prepared necessary database tables");
+    log::info!("Prepared necessary database table");
 
     // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes
     // made to the game world:
