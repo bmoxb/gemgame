@@ -5,7 +5,7 @@ use super::State;
 use crate::{
     networking::{self, ConnectionTrait, PendingConnectionTrait},
     sessions,
-    world::entities::LocalEntity,
+    world::entities::PlayerEntity,
     AssetManager
 };
 
@@ -92,7 +92,11 @@ impl State for ConnectedState {
             Ok(msg_option) => {
                 if let Some(msg) = msg_option {
                     match msg {
-                        messages::FromServer::Welcome { version, your_client_id, your_entity } => {
+                        messages::FromServer::Welcome {
+                            version,
+                            your_client_id,
+                            your_entity_with_id: (entity_id, entity)
+                        } => {
                             log::debug!("Server version: {}", version);
 
                             // Check version aligns with that of the version:
@@ -106,9 +110,9 @@ impl State for ConnectedState {
 
                                 // Enter the main game state:
 
-                                log::debug!("Given player entity: {}", your_entity);
+                                log::debug!("Given player entity: {} - {}", entity, entity_id);
 
-                                let player_entity = LocalEntity::new(your_entity);
+                                let player_entity = PlayerEntity::new(entity_id, entity);
                                 let taken_connection = self.connection.take().unwrap();
                                 let game_state = super::game::GameState::new(taken_connection, player_entity);
 

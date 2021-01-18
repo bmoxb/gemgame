@@ -3,27 +3,36 @@ use shared::{messages, world::maps::Map};
 use super::State;
 use crate::{
     networking::{self, ConnectionTrait},
-    world::{entities::LocalEntity, maps},
+    world::{entities::PlayerEntity, maps},
     AssetManager, TextureKey
 };
 
 pub struct GameState {
+    /// Connection with the remote server.
     connection: networking::Connection,
+    /// The player character entity.
+    player_entity: PlayerEntity,
+    /// The current world map that the player entity is in.
     map: maps::ClientMap,
+    /// The rendering system used to draw the current world map to the screen.
     map_renderer: maps::rendering::Renderer
 }
 
 impl GameState {
-    pub fn new(connection: networking::Connection, player_entity: LocalEntity) -> Self {
-        // TODO: Do something with the player entity!
-        GameState { connection, map: maps::ClientMap::new(), map_renderer: maps::rendering::Renderer::new(0.08, 16) }
+    pub fn new(connection: networking::Connection, player_entity: PlayerEntity) -> Self {
+        GameState {
+            connection,
+            map: maps::ClientMap::new(),
+            map_renderer: maps::rendering::Renderer::new(0.08, 16),
+            player_entity
+        }
     }
 }
 
 impl GameState {
     fn handle_message_from_server(&mut self, msg: messages::FromServer) -> networking::Result<()> {
         match msg {
-            messages::FromServer::Welcome { version: _, your_client_id: _, your_entity: _ } => {
+            messages::FromServer::Welcome { .. } => {
                 log::warn!("Unexpectedly received 'welcome' message from server");
                 unimplemented!()
             }
@@ -35,7 +44,21 @@ impl GameState {
                 Ok(())
             }
 
-            messages::FromServer::UpdateTile(_coords, _tile) => unimplemented!() // TODO
+            messages::FromServer::UpdateTile(_coords, _tile) => {
+                unimplemented!() // TODO
+            }
+
+            messages::FromServer::YourEntityMoved(_coords) => {
+                unimplemented!() // TODO
+            }
+
+            messages::FromServer::EntityMoved(_entity_id, _coords) => {
+                unimplemented!() // TODO
+            }
+
+            messages::FromServer::ProvideEntity(_entity_id, _entity) => {
+                unimplemented!() // TODO
+            }
         }
     }
 }

@@ -64,8 +64,10 @@ pub enum FromServer {
         /// The version of the game that the server is running. If this does not match the client's version then the
         /// client should close the connection.
         version: String,
+        /// The ID assigned to the client.
         your_client_id: Id,
-        your_entity: Entity
+        /// The entity ID and player entity that the client controls.
+        your_entity_with_id: (Id, Entity)
     },
 
     /// Provide chunk data to a client so it may store it locally. Chunks are provided when requested by the client.
@@ -79,31 +81,31 @@ pub enum FromServer {
     /// a client sending a [`ToServer::MoveMyEntity`] message.
     YourEntityMoved(maps::TileCoords),
 
-    /// Provide a client with some entity. This is done when the client's player entity comes to be in close proximity
-    /// to another entity that the server believes is not already loaded by the client.
-    ProvideEntity(Entity),
-
-    /// Inform the client that the entity with the specified ID has moved to the specified coordinates. This message is
+        /// Inform the client that the entity with the specified ID has moved to the specified coordinates. This message is
     /// only sent to clients with a player entity on the same map as and in close proximity (i.e. chunk loaded) to the
     /// moved entity.
     /// TODO: Remember to consider that clients must be informed of entities that are crossing chunk borders out of
     /// TODO: the client's currently loaded chunks in addition to entities moving within the bounds of loaded chunks.
-    EntityMoved(Id, maps::TileCoords)
+    EntityMoved(Id, maps::TileCoords),
+
+    /// Provide a client with some entity. This is done when the client's player entity comes to be in close proximity
+    /// to another entity that the server believes is not already loaded by the client.
+    ProvideEntity(Id, Entity)
 }
 
 impl fmt::Display for FromServer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            FromServer::Welcome { version, your_client_id, your_entity } => {
+            FromServer::Welcome { version, your_client_id, your_entity_with_id: (entity_id, entity) } => {
                 write!(
                     f,
-                    "welcome client {} to server running version '{}' and provide entity {}",
-                    your_client_id, version, your_entity
+                    "welcome client {} to server running version '{}' and provide entity {} - {}",
+                    your_client_id, version, entity, entity_id
                 )
             }
             FromServer::ProvideChunk(coords, _) => write!(f, "provide chunk at {}", coords),
             FromServer::UpdateTile(coords, _) => write!(f, "update tile at {}", coords),
-            FromServer::ProvideEntity(entity) => write!(f, "provide entity {}", entity),
+            FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id),
             FromServer::YourEntityMoved(coords) => write!(f, "your entity has moved to {}", coords),
             FromServer::EntityMoved(id, coords) => write!(f, "entity with ID {} moved to {}", id, coords)
         }

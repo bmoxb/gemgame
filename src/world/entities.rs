@@ -1,14 +1,15 @@
-use std::fmt;
+use std::{fmt, collections::HashMap};
 
 use serde::{Deserialize, Serialize};
 
 use super::maps::TileCoords;
 use crate::Id;
 
+/// Type alias for a hash map of entity IDs to entities.
+pub type Entities = HashMap<Id, Entity>;
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Entity {
-    /// The ID used to refer to this entity over the network.
-    pub id: Id,
     /// The name of this entity.
     pub name: String,
     /// The position of the entity within its current map.
@@ -19,7 +20,7 @@ pub struct Entity {
 
 impl fmt::Display for Entity {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "'{}' {} at {} is a {}", self.name, self.id, self.pos, self.variety)
+        write!(f, "'{}' at {} is a {}", self.name, self.pos, self.variety)
     }
 }
 

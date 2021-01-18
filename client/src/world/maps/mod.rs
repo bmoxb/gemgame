@@ -4,7 +4,10 @@ use std::collections::{HashMap, HashSet};
 
 use shared::{
     messages,
-    world::maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords}
+    world::{
+        entities::Entities,
+        maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords}
+    }
 };
 
 use crate::networking::{self, Connection, ConnectionTrait};
@@ -20,12 +23,19 @@ pub struct ClientMap {
     /// Set of coordinate pairs for chunks that have been requested from the server but have not yet been received. A
     /// chunks's coordinates are remove from both this set and [`needed_chunks`] when the chunk itself is received from
     /// the server.
-    requested_chunks: HashSet<ChunkCoords>
+    requested_chunks: HashSet<ChunkCoords>,
+    /// All entities (except this client's player entity) that are on this map and within currently loaded chunks.
+    entities: Entities
 }
 
 impl ClientMap {
     pub fn new() -> Self {
-        ClientMap { loaded_chunks: HashMap::new(), needed_chunks: HashSet::new(), requested_chunks: HashSet::new() }
+        ClientMap {
+            loaded_chunks: HashMap::new(),
+            needed_chunks: HashSet::new(),
+            requested_chunks: HashSet::new(),
+            entities: HashMap::new()
+        }
     }
 
     /// Attempt to get the tile at the specified tile coordinates.
