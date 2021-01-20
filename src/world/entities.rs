@@ -29,8 +29,9 @@ pub enum Variety {
     Human {
         /// Direction that this human entity is facing. Defaults to 'down'.
         direction: Direction,
-        /// Emotional expression of this entity (angry, shocked, etc.) Defaults to 'neutral'.
+        /// Emotional expression of this human entity (angry, shocked, etc.) Defaults to a neutral expression.
         facial_expression: FacialExpression,
+        /// Style of this human entity's hair. Defaults to a quiff.
         hair_style: HairStyle
     }
 }

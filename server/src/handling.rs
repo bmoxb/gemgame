@@ -110,7 +110,7 @@ async fn handle_websocket_connection(
         ws.send(&messages::FromServer::Welcome {
             version: shared::VERSION.to_string(),
             your_client_id: client_id,
-            your_entity: player_entity.inner_entity_cloned()
+            your_entity_with_id: player_entity.inner_entity_with_id()
         })
         .await?;
 
@@ -159,7 +159,7 @@ async fn handle_established_connection(
                 }
             }
 
-            ReceivedOn::TokioBroadcast(modification) => {
+            ReceivedOn::TokioBroadcast(_modification) => {
                 // TODO: Inform client of changes made to the world if affecting chunks that client has loaded.
             }
         }
@@ -174,7 +174,7 @@ async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<W
             log::warn!("Client {} sent unexpected 'hello' message: {}", client_id, msg);
             None
         }
-        messages::ToServer::RequestChunk(coords) => {
+        messages::ToServer::RequestChunk(_coords) => {
             /*
             let loaded_chunk_option =
                 with_current_map(connections, addr, world, |map| map.loaded_chunk_at(coords).cloned());
@@ -205,6 +205,10 @@ async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<W
         }
 
         messages::ToServer::ChunkUnloadedLocally(_coords) => {
+            unimplemented!()
+        }
+
+        messages::ToServer::MoveMyEntity(_direction) => {
             unimplemented!()
         }
     }
