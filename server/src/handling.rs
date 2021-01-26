@@ -75,7 +75,7 @@ async fn handle_websocket_connection(
     // Expect a 'hello' message from the client:
 
     if let Some(messages::ToServer::Hello { client_id_option }) = ws.receive().await? {
-        let (client_id, player_entity) = {
+        let (client_id, player_id, player_entity) = {
             let mut db = db_pool.acquire().await.unwrap();
 
             if let Some(client_id) = client_id_option {
@@ -83,8 +83,8 @@ async fn handle_websocket_connection(
 
                 // Get the client their existing player entity (if any) from database:
 
-                if let Some(entity) = PlayerEntity::from_database(client_id, &mut db).await? {
-                    (client_id, entity)
+                if let Some((entity_id, entity)) = PlayerEntity::from_database(client_id, &mut db).await? {
+                    (client_id, entity_id, entity)
                 }
                 else {
                     log::warn!(
@@ -92,7 +92,9 @@ async fn handle_websocket_connection(
                         addr,
                         client_id
                     );
-                    (client_id, PlayerEntity::new_to_database(client_id, &mut db).await?)
+
+                    let (entity_id, entity) = PlayerEntity::new_to_database(client_id, &mut db).await?;
+                    (client_id, entity_id, entity)
                 }
             }
             else {
@@ -101,7 +103,8 @@ async fn handle_websocket_connection(
 
                 // Create a new entity for this client and insert into the database:
 
-                (new_id, PlayerEntity::new_to_database(new_id, &mut db).await?)
+                let (new_entity_id, new_entity) = PlayerEntity::new_to_database(new_id, &mut db).await?;
+                (new_id, new_entity_id, new_entity)
             }
         };
 
@@ -110,11 +113,13 @@ async fn handle_websocket_connection(
         ws.send(&messages::FromServer::Welcome {
             version: shared::VERSION.to_string(),
             your_client_id: client_id,
-            your_entity_with_id: player_entity.inner_entity_with_id()
+            your_entity_with_id: (player_id, player_entity.inner_entity_cloned())
         })
         .await?;
+        
+        // TODO: Insert player entity into game world.
 
-        let result = handle_established_connection(&mut ws, client_id, world, world_changes_receiver).await;
+        let result = handle_established_connection(&mut ws, client_id, entity_id, world, world_changes_receiver).await;
 
         // Update database with changes to user's entity:
 
@@ -132,7 +137,7 @@ async fn handle_websocket_connection(
 /// A connection is considered 'established' once the WebSocket handshake and the the exchange of 'hello' & 'welcome'
 /// messages have completed.
 async fn handle_established_connection(
-    ws: &mut Connection, client_id: Id, world: Shared<World>,
+    ws: &mut Connection, client_id: Id, entity_id: Id, world: Shared<World>,
     mut world_changes_receiver: broadcast::Receiver<world::Modification>
 ) -> Result<()> {
     // Wait for incoming messages on both the WebSocket connection and the world modifications channel (or close

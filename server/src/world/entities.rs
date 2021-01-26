@@ -9,7 +9,6 @@ use sqlx::Row;
 
 /// Represents an entity controlled by a player (i.e. controlled remotedly by a specific client).
 pub struct PlayerEntity {
-    id: Id,
     contained: Entity,
     current_map_id: Id
 }
@@ -17,7 +16,7 @@ pub struct PlayerEntity {
 impl PlayerEntity {
     pub async fn new_to_database(
         client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Sqlite>
-    ) -> sqlx::Result<Self> {
+    ) -> sqlx::Result<(Id, Self)> {
         let entity_id = crate::id::generate_with_timestamp();
 
         let contained = Entity {
@@ -45,12 +44,12 @@ impl PlayerEntity {
         .execute(db)
         .await?;
 
-        Ok(PlayerEntity { id: entity_id, contained, current_map_id })
+        Ok((entity_id, PlayerEntity { contained, current_map_id }))
     }
 
     pub async fn from_database(
         client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Sqlite>
-    ) -> sqlx::Result<Option<Self>> {
+    ) -> sqlx::Result<Option<(Id, Self)>> {
         let res = sqlx::query(
             "SELECT entity_id, current_map_id, name, tile_x, tile_y
             FROM client_entities
@@ -76,7 +75,7 @@ impl PlayerEntity {
         .await?
         .transpose();
 
-        res.map(|opt| opt.map(|(id, contained, current_map_id)| PlayerEntity { id, contained, current_map_id }))
+        res.map(|opt| opt.map(|(id, contained, current_map_id)| (id, PlayerEntity { contained, current_map_id })))
     }
 
     pub async fn update_database(
@@ -97,7 +96,7 @@ impl PlayerEntity {
         .map(|_| ())
     }
 
-    pub fn inner_entity_with_id(&self) -> (Id, Entity) { (self.id, self.contained.clone()) }
+    pub fn inner_entity_cloned(&self) -> Entity { self.contained.clone() }
 }
 
 /// Represents an entity controlled by the server.

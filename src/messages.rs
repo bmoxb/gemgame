@@ -81,7 +81,7 @@ pub enum FromServer {
     /// a client sending a [`ToServer::MoveMyEntity`] message.
     YourEntityMoved(maps::TileCoords),
 
-        /// Inform the client that the entity with the specified ID has moved to the specified coordinates. This message is
+    /// Inform the client that the entity with the specified ID has moved to the specified coordinates. This message is
     /// only sent to clients with a player entity on the same map as and in close proximity (i.e. chunk loaded) to the
     /// moved entity.
     /// TODO: Remember to consider that clients must be informed of entities that are crossing chunk borders out of

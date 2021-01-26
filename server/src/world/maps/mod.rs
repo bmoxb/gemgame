@@ -1,5 +1,3 @@
-pub mod chunks;
-mod config;
 pub mod generators;
 
 use std::{collections::HashMap, io, path::PathBuf};

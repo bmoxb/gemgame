@@ -4,7 +4,10 @@ pub mod maps;
 use std::{collections::HashMap, fs, io, path::PathBuf};
 
 use shared::{
-    world::maps::{Tile, TileCoords},
+    world::{
+        entities::Entities,
+        maps::{Tile, TileCoords}
+    },
     Id
 };
 
@@ -13,7 +16,10 @@ pub struct World {
     directory: PathBuf,
 
     /// Currently-loaded maps.
-    loaded_maps: HashMap<Id, maps::ServerMap>
+    loaded_maps: HashMap<Id, maps::ServerMap>,
+
+    /// Player-controlled entities mapped to entity IDs.
+    player_entities: Entities
 }
 
 impl World {
@@ -23,7 +29,7 @@ impl World {
     pub fn new(directory: PathBuf) -> io::Result<Self> {
         fs::create_dir_all(&directory)?;
 
-        let mut x = World { directory, loaded_maps: HashMap::new() };
+        let mut x = World { directory, loaded_maps: HashMap::new(), player_entities: HashMap::new() };
 
         // TODO: Temporary:
         x.loaded_maps.insert(
@@ -33,6 +39,12 @@ impl World {
 
         Ok(x)
     }
+
+    pub fn add_player_entity(&mut self) {}
+
+    pub fn player_entity_by_id(&mut self) {}
+
+    pub fn remove_player_entity(&mut self) {}
 }
 
 /// Structure indicating a change made to the game world.
