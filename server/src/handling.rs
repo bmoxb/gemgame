@@ -116,15 +116,22 @@ async fn handle_websocket_connection(
             your_entity_with_id: (player_id, player_entity.inner_entity_cloned())
         })
         .await?;
+
+        // Place this client's player entity in the game world:
         
-        // TODO: Insert player entity into game world.
+        world.lock().unwrap().add_player_entity(player_id, player_entity);
 
-        let result = handle_established_connection(&mut ws, client_id, entity_id, world, world_changes_receiver).await;
+        // Begin main connection loop:
 
-        // Update database with changes to user's entity:
+        let result = handle_established_connection(&mut ws, client_id, player_id, &world, world_changes_receiver).await;
 
-        let mut db = db_pool.acquire().await.unwrap();
-        player_entity.update_database(client_id, &mut db).await?;
+        // Remove this client's player entity from the game world and update database with changes to said entity:
+
+        let entity_option = world.lock().unwrap().remove_player_entity(player_id);
+        if let Some(player_entity) = entity_option {
+            let mut db = db_pool.acquire().await.unwrap();
+            player_entity.update_database(client_id, &mut db).await?;
+        }
 
         result
     }
@@ -137,7 +144,7 @@ async fn handle_websocket_connection(
 /// A connection is considered 'established' once the WebSocket handshake and the the exchange of 'hello' & 'welcome'
 /// messages have completed.
 async fn handle_established_connection(
-    ws: &mut Connection, client_id: Id, entity_id: Id, world: Shared<World>,
+    ws: &mut Connection, client_id: Id, entity_id: Id, world: &Shared<World>,
     mut world_changes_receiver: broadcast::Receiver<world::Modification>
 ) -> Result<()> {
     // Wait for incoming messages on both the WebSocket connection and the world modifications channel (or close
@@ -177,7 +184,7 @@ async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<W
     match msg {
         messages::ToServer::Hello { .. } => {
             log::warn!("Client {} sent unexpected 'hello' message: {}", client_id, msg);
-            None
+            //None // TODO
         }
         messages::ToServer::RequestChunk(_coords) => {
             /*
@@ -206,17 +213,17 @@ async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<W
             };
 
             messages::FromServer::ProvideChunk(coords, chunk)*/
-            unimplemented!()
         }
 
         messages::ToServer::ChunkUnloadedLocally(_coords) => {
-            unimplemented!()
+            //unimplemented!()
         }
 
         messages::ToServer::MoveMyEntity(_direction) => {
-            unimplemented!()
+            //unimplemented!()
         }
     }
+    None // TODO
 }
 
 #[derive(Error, Debug)]

@@ -33,7 +33,7 @@ impl PlayerEntity {
 
         sqlx::query(
             "INSERT INTO client_entities (client_id, entity_id, current_map_id, name, tile_x, tile_y)
-            VALUES (?, ?, ?, ?, ?)"
+            VALUES (?, ?, ?, ?, ?, ?)"
         )
         .bind(client_id.encode())
         .bind(entity_id.encode())
@@ -83,7 +83,7 @@ impl PlayerEntity {
     ) -> sqlx::Result<()> {
         sqlx::query(
             "UPDATE client_entities
-            SET name, tile_x = ?, tile_y = ?, current_map_id = ?
+            SET name = ?, tile_x = ?, tile_y = ?, current_map_id = ?
             WHERE client_id = ?"
         )
         .bind(&self.contained.name)

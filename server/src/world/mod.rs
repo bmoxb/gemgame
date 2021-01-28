@@ -1,13 +1,12 @@
 pub mod entities;
 pub mod maps;
 
+use entities::PlayerEntity;
+
 use std::{collections::HashMap, fs, io, path::PathBuf};
 
 use shared::{
-    world::{
-        entities::Entities,
-        maps::{Tile, TileCoords}
-    },
+    world::maps::{Tile, TileCoords},
     Id
 };
 
@@ -19,7 +18,7 @@ pub struct World {
     loaded_maps: HashMap<Id, maps::ServerMap>,
 
     /// Player-controlled entities mapped to entity IDs.
-    player_entities: Entities
+    player_entities: HashMap<Id, PlayerEntity>
 }
 
 impl World {
@@ -40,20 +39,40 @@ impl World {
         Ok(x)
     }
 
-    pub fn add_player_entity(&mut self) {}
+    pub fn add_player_entity(&mut self, id: Id, entity: PlayerEntity) {
+        log::debug!("Player entity with ID {} added to game world", id);
+        self.player_entities.insert(id, entity);
+    }
 
-    pub fn player_entity_by_id(&mut self) {}
+    pub fn player_entity_by_id(&mut self, id: Id) -> Option<&mut PlayerEntity> {
+        self.player_entities.get_mut(&id)
+    }
 
-    pub fn remove_player_entity(&mut self) {}
+    pub fn remove_player_entity(&mut self, id: Id) -> Option<PlayerEntity> {
+        let entity = self.player_entities.remove(&id);
+        if entity.is_some() {
+            log::debug!("Player entity with ID {} removed from game world", id);
+        }
+        entity
+    }
 }
 
 /// Structure indicating a change made to the game world.
 #[derive(Copy, Clone)]
 pub struct Modification {
-    /// The ID of the map to be modified.
+    /// The ID of the map affected by this modification.
     map_id: Id,
-    /// Position of the tile tile to be modified.
-    pos: TileCoords,
-    /// What the tile at the specified coordinates should be changed to.
-    change_to: Tile
+    mod_type: ModificationType
+}
+
+#[derive(Copy, Clone)]
+pub enum ModificationType {
+    TileChanged {
+        /// Position of the tile tile to be modified.
+        pos: TileCoords,
+        /// What the tile at the specified coordinates should be changed to.
+        change_to: Tile
+    },
+
+    EntityMoved
 }
