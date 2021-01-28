@@ -25,7 +25,22 @@ async fn main() {
 
     // Logger initialisation:
 
-    let mut logger = flexi_logger::Logger::with_str(options.log_level)
+    let log_level = {
+        if options.log_debug { flexi_logger::Level::Debug }
+        else if options.log_trace { flexi_logger::Level::Trace }
+        else { flexi_logger::Level::Info }
+    }.to_level_filter();
+
+    let mut log_spec_builder = flexi_logger::LogSpecBuilder::new();
+    log_spec_builder.default(log_level);
+
+    for module in &["sqlx", "tungstenite", "tokio_tungstenite", "mio"] {
+        log_spec_builder.module(module, flexi_logger::LevelFilter::Warn);
+    }
+
+    let log_spec = log_spec_builder.finalize();
+
+    let mut logger = flexi_logger::Logger::with(log_spec)
         .log_target(flexi_logger::LogTarget::StdOut)
         .format_for_stdout(flexi_logger::colored_detailed_format);
 
@@ -154,9 +169,13 @@ struct Options {
     #[structopt(long, default_value = "25")]
     max_database_connections: u32,
 
-    /// Specify the logging level (trace, debug, info, warn, error).
-    #[structopt(short, long, default_value = "info")]
-    log_level: String,
+    /// Display all debugging logger messages.
+    #[structopt(long, conflicts_with = "log-trace")]
+    log_debug: bool,
+
+    /// Display all tracing and debugging logger messages.
+    #[structopt(long)]
+    log_trace: bool,
 
     /// Specifiy whether or not log messages should be written to a file in addition to stdout.
     #[structopt(long)]
