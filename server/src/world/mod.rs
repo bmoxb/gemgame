@@ -1,10 +1,9 @@
 pub mod entities;
 pub mod maps;
 
-use entities::PlayerEntity;
-
 use std::{collections::HashMap, fs, io, path::PathBuf};
 
+use entities::PlayerEntity;
 use shared::{
     world::maps::{Tile, TileCoords},
     Id
@@ -44,9 +43,7 @@ impl World {
         self.player_entities.insert(id, entity);
     }
 
-    pub fn player_entity_by_id(&mut self, id: Id) -> Option<&mut PlayerEntity> {
-        self.player_entities.get_mut(&id)
-    }
+    pub fn player_entity_by_id(&mut self, id: Id) -> Option<&mut PlayerEntity> { self.player_entities.get_mut(&id) }
 
     pub fn remove_player_entity(&mut self, id: Id) -> Option<PlayerEntity> {
         let entity = self.player_entities.remove(&id);

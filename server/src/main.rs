@@ -26,10 +26,17 @@ async fn main() {
     // Logger initialisation:
 
     let log_level = {
-        if options.log_debug { flexi_logger::Level::Debug }
-        else if options.log_trace { flexi_logger::Level::Trace }
-        else { flexi_logger::Level::Info }
-    }.to_level_filter();
+        if options.log_debug {
+            flexi_logger::Level::Debug
+        }
+        else if options.log_trace {
+            flexi_logger::Level::Trace
+        }
+        else {
+            flexi_logger::Level::Info
+        }
+    }
+    .to_level_filter();
 
     let mut log_spec_builder = flexi_logger::LogSpecBuilder::new();
     log_spec_builder.default(log_level);

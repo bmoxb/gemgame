@@ -118,7 +118,7 @@ async fn handle_websocket_connection(
         .await?;
 
         // Place this client's player entity in the game world:
-        
+
         world.lock().unwrap().add_player_entity(player_id, player_entity);
 
         // Begin main connection loop:

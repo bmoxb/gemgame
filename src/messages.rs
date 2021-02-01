@@ -56,7 +56,9 @@ impl fmt::Display for ToServer {
             },
             ToServer::RequestChunk(coords) => write!(f, "request chunk at {}", coords),
             ToServer::ChunkUnloadedLocally(coords) => write!(f, "chunk at {} has been unloaded locally", coords),
-            ToServer::MoveMyEntity { request_number, direction } => write!(f, "move my player entity {} (request #{})", direction, request_number)
+            ToServer::MoveMyEntity { request_number, direction } => {
+                write!(f, "move my player entity {} (request #{})", direction, request_number)
+            }
         }
     }
 }
@@ -84,10 +86,7 @@ pub enum FromServer {
 
     /// Inform a client that their player entity's position has changed. This is most frequently sent as a response to
     /// a client sending a [`ToServer::MoveMyEntity`] message.
-    YourEntityMoved {
-        request_number: u32,
-        new_position: maps::TileCoords
-    },
+    YourEntityMoved { request_number: u32, new_position: maps::TileCoords },
 
     /// Inform the client that the entity with the specified ID has moved to the specified coordinates. This message is
     /// only sent to clients with a player entity on the same map as and in close proximity (i.e. chunk loaded) to the
@@ -114,7 +113,9 @@ impl fmt::Display for FromServer {
             FromServer::ProvideChunk(coords, _) => write!(f, "provide chunk at {}", coords),
             FromServer::UpdateTile(coords, _) => write!(f, "update tile at {}", coords),
             FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id),
-            FromServer::YourEntityMoved { request_number, new_position } => write!(f, "your entity has moved to {} (request #{})", new_position, request_number),
+            FromServer::YourEntityMoved { request_number, new_position } => {
+                write!(f, "your entity has moved to {} (request #{})", new_position, request_number)
+            }
             FromServer::EntityMoved(id, coords) => write!(f, "entity with ID {} moved to {}", id, coords)
         }
     }
