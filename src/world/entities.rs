@@ -18,6 +18,17 @@ pub struct Entity {
     pub variety: Variety
 }
 
+impl Entity {
+    /// An entity's movement speed is the amount of time in seconds taken for that entity to move to an adjacent tile.
+    /// Currently, this is determined solely by the entity's variety but in the future certain modifiers may influence
+    /// movement speed.
+    pub fn movement_speed(&self) -> f32 {
+        match self.variety {
+            Variety::Human { .. } => 0.1
+        }
+    }
+}
+
 impl fmt::Display for Entity {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "'{}' at {} is a {}", self.name, self.pos, self.variety)
