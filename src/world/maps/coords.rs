@@ -2,7 +2,7 @@ use std::{fmt, hash::Hash};
 
 use serde::{Deserialize, Serialize};
 
-use super::{CHUNK_HEIGHT, CHUNK_WIDTH};
+use super::{super::entities::Direction, CHUNK_HEIGHT, CHUNK_WIDTH};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct TileCoords {
@@ -32,6 +32,15 @@ impl TileCoords {
         OffsetCoords {
             x: (if self.x >= 0 || offset_x == 0 { offset_x } else { CHUNK_WIDTH + offset_x }) as u8,
             y: (if self.y >= 0 || offset_y == 0 { offset_y } else { CHUNK_HEIGHT + offset_y }) as u8
+        }
+    }
+
+    pub fn move_towards(&mut self, d: Direction) {
+        match d {
+            Direction::Down => self.y -= 1,
+            Direction::Up => self.y += 1,
+            Direction::Left => self.x -= 1,
+            Direction::Right => self.x += 1
         }
     }
 }

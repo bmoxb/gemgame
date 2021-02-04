@@ -1,6 +1,6 @@
 use shared::{
     world::{
-        entities::{Entity, Variety},
+        entities::{Direction, Entity, Variety},
         maps::TileCoords
     },
     Id
@@ -95,6 +95,11 @@ impl PlayerEntity {
         .await
         .map(|_| ())
     }
+
+    pub fn position(&self) -> TileCoords { self.contained.pos }
+
+    /// Modify entity position without performing any sort of checks.
+    pub fn move_towards(&mut self, d: Direction) { self.contained.pos.move_towards(d); }
 
     pub fn inner_entity_cloned(&self) -> Entity { self.contained.clone() }
 }

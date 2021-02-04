@@ -42,7 +42,7 @@ impl PlayerEntity {
     pub fn update(&mut self, delta: f32) { self.time_since_last_movement += delta; }
 
     ///
-    pub fn move_in_direction(
+    pub fn move_towards(
         &mut self, direction: Direction, map: &ClientMap, connection: &mut networking::Connection
     ) -> networking::Result<()> {
         // First check if required amount of time has paced since last movement (i.e. don't exceed maximum movement
@@ -53,12 +53,7 @@ impl PlayerEntity {
             log::trace!("Moving player entity in direction {}", direction);
 
             // Locally modify player entity's coordinates:
-            match direction {
-                Direction::Down => self.contained.pos.y -= 1,
-                Direction::Up => self.contained.pos.y += 1,
-                Direction::Left => self.contained.pos.x -= 1,
-                Direction::Right => self.contained.pos.x += 1
-            }
+            self.contained.pos.move_towards(direction);
 
             // Inform server that this client's player entity wants to move in a given direction:
             let msg = messages::ToServer::MoveMyEntity { request_number: self.next_request_number, direction };

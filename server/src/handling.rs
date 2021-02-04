@@ -144,7 +144,7 @@ async fn handle_websocket_connection(
 /// A connection is considered 'established' once the WebSocket handshake and the the exchange of 'hello' & 'welcome'
 /// messages have completed.
 async fn handle_established_connection(
-    ws: &mut Connection, client_id: Id, entity_id: Id, world: &Shared<World>,
+    ws: &mut Connection, client_id: Id, player_id: Id, world: &Shared<World>,
     mut world_changes_receiver: broadcast::Receiver<world::Modification>
 ) -> Result<()> {
     loop {
@@ -157,7 +157,7 @@ async fn handle_established_connection(
 
                     // Handle and respond to received message:
 
-                    if let Some(response) = handle_message(msg, client_id, &world).await {
+                    if let Some(response) = handle_message(msg, client_id, player_id, &world).await {
                         log::debug!("Response to client {} - {}", client_id, response);
                         ws.send(&response).await?;
                     }
@@ -183,7 +183,9 @@ async fn handle_established_connection(
     Ok(())
 }
 
-async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<World>) -> Option<messages::FromServer> {
+async fn handle_message(
+    msg: messages::ToServer, client_id: Id, player_id: Id, world: &Shared<World>
+) -> Option<messages::FromServer> {
     match msg {
         messages::ToServer::Hello { .. } => {
             log::warn!("Client {} sent unexpected 'hello' message: {}", client_id, msg);
@@ -223,7 +225,17 @@ async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<W
         }
 
         messages::ToServer::MoveMyEntity { request_number, direction } => {
-            //unimplemented!()
+            if let Some(player) = world.lock().unwrap().player_entity_by_id(player_id) {
+                // TODO: Check for blocking tiles/entities...
+                // TODO: Prevent player exceeding movement rate...
+
+                // Modify player coordinates:
+                player.move_towards(direction);
+
+                // TODO: Broadcast change on world modification channel...
+
+                return Some(messages::FromServer::YourEntityMoved { request_number, new_position: player.position() });
+            }
         }
     }
     None // TODO

@@ -1,6 +1,8 @@
-use shared::{messages, world::maps::Map};
-
 use macroquad::prelude as quad;
+use shared::{
+    messages,
+    world::{entities::Direction, maps::Map}
+};
 
 use super::State;
 use crate::{
@@ -8,8 +10,6 @@ use crate::{
     world::{entities::PlayerEntity, maps},
     AssetManager, TextureKey
 };
-
-use shared::world::entities::Direction;
 
 pub struct GameState {
     /// Connection with the remote server.
@@ -83,15 +83,25 @@ impl State for GameState {
         self.player_entity.update(delta);
 
         let direction_option = {
-            if quad::is_key_down(quad::KeyCode::W) { Some(Direction::Up) }
-            else if quad::is_key_down(quad::KeyCode::A) { Some(Direction::Left) }
-            else if quad::is_key_down(quad::KeyCode::S) { Some(Direction::Down) }
-            else if quad::is_key_down(quad::KeyCode::D) { Some(Direction::Right) }
-            else { None }
+            if quad::is_key_down(quad::KeyCode::W) {
+                Some(Direction::Up)
+            }
+            else if quad::is_key_down(quad::KeyCode::A) {
+                Some(Direction::Left)
+            }
+            else if quad::is_key_down(quad::KeyCode::S) {
+                Some(Direction::Down)
+            }
+            else if quad::is_key_down(quad::KeyCode::D) {
+                Some(Direction::Right)
+            }
+            else {
+                None
+            }
         };
 
         if let Some(direction) = direction_option {
-            self.player_entity.move_in_direction(direction, &self.map, &mut self.connection).unwrap(); // TODO
+            self.player_entity.move_towards(direction, &self.map, &mut self.connection).unwrap(); // TODO
         }
 
         // Networking:
