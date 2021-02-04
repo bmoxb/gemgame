@@ -222,7 +222,7 @@ async fn handle_message(msg: messages::ToServer, client_id: Id, world: &Shared<W
             //unimplemented!()
         }
 
-        messages::ToServer::MoveMyEntity(_direction) => {
+        messages::ToServer::MoveMyEntity { request_number, direction } => {
             //unimplemented!()
         }
     }
