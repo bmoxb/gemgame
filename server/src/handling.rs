@@ -8,7 +8,7 @@ use tokio_tungstenite::tungstenite;
 use crate::{
     networking::{self, Connection},
     world::{self, entities::PlayerEntity, World},
-    ReceivedOn, Shared
+    Shared
 };
 
 /// Handle a connection with an individual client. This function is called concurrently as a Tokio task.
@@ -147,34 +147,37 @@ async fn handle_established_connection(
     ws: &mut Connection, client_id: Id, entity_id: Id, world: &Shared<World>,
     mut world_changes_receiver: broadcast::Receiver<world::Modification>
 ) -> Result<()> {
-    // Wait for incoming messages on both the WebSocket connection and the world modifications channel (or close
-    // connection on Ctrl-C signal):
+    loop {
+        // Wait for incoming messages on both the WebSocket connection and the world modifications channel (or close
+        // connection on Ctrl-C signal):
+        tokio::select!(
+            res = ws.receive() => {
+                if let Some(msg) = res? {
+                    log::debug!("Message from client {} - {}", client_id, msg);
 
-    while let Some(src) = tokio::select!(
-        res = ws.receive() => res?.map(ReceivedOn::NetworkConnection),
-        res = world_changes_receiver.recv() => Some(ReceivedOn::TokioBroadcast(res)),
-        _ = tokio::signal::ctrl_c() => {
-            log::debug!("Closing connection with client {} due to Ctrl-C signal", client_id);
-            ws.close().await?;
-            None
-        }
-    ) {
-        match src {
-            ReceivedOn::NetworkConnection(msg) => {
-                log::debug!("Message from client {} - {}", client_id, msg);
+                    // Handle and respond to received message:
 
-                // Handle and respond to received message:
-
-                if let Some(response) = handle_message(msg, client_id, &world).await {
-                    log::debug!("Response to client {} - {}", client_id, response);
-                    ws.send(&response).await?;
+                    if let Some(response) = handle_message(msg, client_id, &world).await {
+                        log::debug!("Response to client {} - {}", client_id, response);
+                        ws.send(&response).await?;
+                    }
+                }
+                else {
+                    log::debug!("Connection closed by client {}", client_id);
+                    break;
                 }
             }
 
-            ReceivedOn::TokioBroadcast(_modification) => {
+            _modification = world_changes_receiver.recv() => {
                 // TODO: Inform client of changes made to the world if affecting chunks that client has loaded.
             }
-        }
+
+            _ = tokio::signal::ctrl_c() => {
+                log::debug!("Closing connection with client {} due to Ctrl-C signal", client_id);
+                ws.close().await?;
+                break;
+            }
+        );
     }
 
     Ok(())

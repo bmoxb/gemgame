@@ -111,20 +111,15 @@ async fn main() {
 
     let (world_changes_sender, mut world_changes_receiver) = broadcast::channel(5);
 
-    // The 'select' macro below means that connections will be continuously listened for unless Ctrl-C is
-    // pressed and the loop is exited. Messages on the world modifcation channel are also listened for and
-    // immediately discarded. This is done as the main task must maintain access to the channel in order to
-    // clone and pass it to new connection tasks while also not blocking the broadcasted message queue.
-
     log::info!("Listening for incoming TCP/IP connections...");
 
-    while let Some(src) = tokio::select!(
-        res = listener.accept() => Some(ReceivedOn::NetworkConnection(res)),
-        res = world_changes_receiver.recv() => Some(ReceivedOn::TokioBroadcast(res)),
-        _ = tokio::signal::ctrl_c() => None
-    ) {
-        match src {
-            ReceivedOn::NetworkConnection(res) => {
+    loop {
+        // Connections will be continuously listened for unless Ctrl-C is pressed and the loop is exited. Messages on
+        // the world modifcation channel are also listened for and immediately discarded. This is done as the main task
+        // must maintain access to the channel in order to clone and pass it to new connection tasks while also not
+        // blocking the broadcasted message queue.
+        tokio::select!(
+            res = listener.accept() => {
                 let (stream, addr) = res.unwrap();
 
                 log::info!("Incoming connection from: {}", addr);
@@ -137,19 +132,14 @@ async fn main() {
                     world_changes_sender.subscribe()
                 ));
             }
-
-            ReceivedOn::TokioBroadcast(_) => {} // Discard the broadcasted world modification message.
-        }
+            _ = world_changes_receiver.recv() => {} // Discard the broadcasted world modification message.
+            _ = tokio::signal::ctrl_c() => break // Break on Ctrl-C.
+        );
     }
 
     log::info!("No longer listening for connections");
 
     // TODO: Save game world before closing the program.
-}
-
-enum ReceivedOn<T> {
-    NetworkConnection(T),
-    TokioBroadcast(Result<world::Modification, broadcast::error::RecvError>)
 }
 
 type Shared<T> = Arc<Mutex<T>>;
