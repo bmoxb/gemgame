@@ -65,6 +65,14 @@ pub enum Tile {
     Ground
 }
 
+impl Tile {
+    pub fn is_blocking(&self) -> bool {
+        match self {
+            Tile::Ground => true
+        }
+    }
+}
+
 impl Default for Tile {
     fn default() -> Self { Tile::Ground }
 }

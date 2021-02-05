@@ -99,7 +99,10 @@ impl PlayerEntity {
     pub fn position(&self) -> TileCoords { self.contained.pos }
 
     /// Modify entity position without performing any sort of checks.
-    pub fn move_towards(&mut self, d: Direction) { self.contained.pos.move_towards(d); }
+    pub fn move_towards_unchecked(&mut self, direction: Direction) { 
+        let new_pos = direction.apply(self.contained.pos);
+        self.contained.pos = new_pos;
+    }
 
     pub fn inner_entity_cloned(&self) -> Entity { self.contained.clone() }
 }

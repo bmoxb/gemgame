@@ -66,6 +66,13 @@ impl ClientMap {
 
         Ok(())
     }
+
+    pub fn is_position_free(&mut self, coords: TileCoords) -> bool {
+        let tile_blocking = self.tile_at(coords).map_or(true, |tile| tile.is_blocking());
+        let entity_blocking = false; // TODO
+
+        !tile_blocking && !entity_blocking
+    }
 }
 
 impl Map for ClientMap {

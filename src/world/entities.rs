@@ -69,6 +69,18 @@ pub enum Direction {
     Right
 }
 
+impl Direction {
+    pub fn apply(&self, mut coords: TileCoords) -> TileCoords {
+        match self {
+            Direction::Down => coords.y -= 1,
+            Direction::Up => coords.y += 1,
+            Direction::Left => coords.x -= 1,
+            Direction::Right => coords.x += 1
+        }
+        coords
+    }
+}
+
 impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

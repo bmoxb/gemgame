@@ -43,28 +43,36 @@ impl PlayerEntity {
 
     ///
     pub fn move_towards(
-        &mut self, direction: Direction, map: &ClientMap, connection: &mut networking::Connection
+        &mut self, direction: Direction, map: &mut ClientMap, connection: &mut networking::Connection
     ) -> networking::Result<()> {
         // First check if required amount of time has paced since last movement (i.e. don't exceed maximum movement
         // speed:
         if self.time_since_last_movement >= self.contained.movement_speed() {
-            // TODO: Check for blocking tiles and entities on map...
+            let new_pos = direction.apply(self.contained.pos);
 
-            log::trace!("Moving player entity in direction {}", direction);
+            // Check if the position the player wants to move to is free (i.e. not a blocking tile and no other
+            // entities persent at that position):
+            if map.is_position_free(new_pos) {
+                log::trace!("Moving player entity in direction {} to {}", direction, new_pos);
 
-            // Locally modify player entity's coordinates:
-            self.contained.pos.move_towards(direction);
+                // Locally modify player entity's coordinates:
+                self.contained.pos = new_pos;
 
-            // Inform server that this client's player entity wants to move in a given direction:
-            let msg = messages::ToServer::MoveMyEntity { request_number: self.next_request_number, direction };
-            connection.send(&msg)?;
+                // Inform server that this client's player entity wants to move in a given direction:
+                let msg = messages::ToServer::MoveMyEntity { request_number: self.next_request_number, direction };
+                connection.send(&msg)?;
 
-            // Add to collection of movement predictions awaiting confirmation from the server:
-            self.unverified_movements.insert(self.next_request_number, self.contained.pos);
+                // Add to collection of movement predictions awaiting confirmation from the server:
+                self.unverified_movements.insert(self.next_request_number, self.contained.pos);
 
-            self.next_request_number += 1;
-            self.time_since_last_movement = 0.0;
+                self.next_request_number += 1;
+                self.time_since_last_movement = 0.0;
+            }
+            else {
+                log::trace!("Cannot move player entity in direction {} to {} as that position is not free", direction, new_pos);
+            }
         }
+
         Ok(())
     }
 

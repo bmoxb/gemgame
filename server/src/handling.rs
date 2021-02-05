@@ -230,7 +230,7 @@ async fn handle_message(
                 // TODO: Prevent player exceeding movement rate...
 
                 // Modify player coordinates:
-                player.move_towards(direction);
+                player.move_towards_unchecked(direction);
 
                 // TODO: Broadcast change on world modification channel...
 
