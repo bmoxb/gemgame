@@ -1,0 +1,151 @@
+pub mod entities;
+pub mod generators;
+
+use std::{collections::HashMap, io, path::PathBuf};
+
+use entities::PlayerEntity;
+use generators::Generator;
+use serde::{Deserialize, Serialize};
+use shared::{
+    maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
+    Id
+};
+use tokio::io::AsyncReadExt;
+
+const CONFIG_FILE_NAME: &str = "map.json";
+
+pub struct ServerMap {
+    /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
+    loaded_chunks: Chunks,
+
+    /// Path to the directory containing map data.
+    directory: PathBuf,
+
+    /// The generator to be used when new chunks must be made.
+    generator: Box<dyn Generator + Send>,
+
+    /// Seed used by the generator.
+    seed: u32,
+
+    /// Player-controlled entities mapped to entity IDs.
+    player_entities: HashMap<Id, PlayerEntity>
+}
+
+impl ServerMap {
+    /// Create a new map instance at a specified directory path. If a JSON configuration file is found in said
+    /// directory then it willl be loaded, otherwise sensible default values are assumed.
+    pub async fn new(directory: PathBuf) -> Result<Self> {
+        // Ensure the map directory actually exists (create it if it does not):
+        tokio::fs::create_dir_all(&directory).await.unwrap();
+
+        let config_file_path = directory.join(CONFIG_FILE_NAME);
+
+        log::debug!("Attempting to load map configuration file: {}", config_file_path.display());
+
+        if let Ok(mut file) = tokio::fs::File::open(&config_file_path).await {
+            let mut buffer = Vec::new();
+
+            match file.read_to_end(&mut buffer).await {
+                Ok(_) => match serde_json::from_slice::<MapConfig>(buffer.as_slice()) {
+                    Ok(config) => {
+                        log::trace!("Map configuration struct: {:?}", config);
+
+                        if let Some(generator) = generators::by_name(&config.generator_name) {
+                            log::debug!("Loaded map configuration from file: {}", config_file_path.display());
+
+                            Ok(ServerMap {
+                                loaded_chunks: HashMap::new(),
+                                directory,
+                                generator,
+                                seed: config.seed,
+                                player_entities: HashMap::new()
+                            })
+                        }
+                        else {
+                            log::warn!(
+                                "Generator specified in map configuration file '{}' does not exist: {}",
+                                config_file_path.display(),
+                                config.generator_name
+                            );
+                            Err(Error::InvalidGenerator(config.generator_name))
+                        }
+                    }
+
+                    Err(json_error) => {
+                        log::warn!(
+                            "Failed decode JSON map configuration from file '{}' - {}",
+                            config_file_path.display(),
+                            json_error
+                        );
+                        Err(Error::EncodingFailure(Box::new(json_error)))
+                    }
+                },
+
+                Err(io_error) => {
+                    log::warn!(
+                        "Failed to read map configuration from file '{}' - {}",
+                        config_file_path.display(),
+                        io_error
+                    );
+                    Err(Error::AccessFailure(io_error))
+                }
+            }
+        }
+        else {
+            Err(Error::DoesNotExist(config_file_path))
+        }
+    }
+
+    pub fn save(&self) { unimplemented!() }
+
+    pub fn add_player_entity(&mut self, id: Id, entity: PlayerEntity) {
+        log::debug!("Player entity with ID {} added to game world", id);
+        self.player_entities.insert(id, entity);
+    }
+
+    pub fn player_entity_by_id(&mut self, id: Id) -> Option<&mut PlayerEntity> { self.player_entities.get_mut(&id) }
+
+    pub fn remove_player_entity(&mut self, id: Id) -> Option<PlayerEntity> {
+        let entity = self.player_entities.remove(&id);
+        if entity.is_some() {
+            log::debug!("Player entity with ID {} removed from game world", id);
+        }
+        entity
+    }
+}
+
+impl Map for ServerMap {
+    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> { self.loaded_chunks.get(&coords) }
+
+    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) { self.loaded_chunks.insert(coords, chunk); }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MapConfig {
+    #[serde(rename = "generator")]
+    generator_name: String,
+    seed: u32
+}
+
+/// Structure representing a change made to the game map.
+#[derive(Copy, Clone)]
+pub enum Modification {
+    TileChanged {
+        /// Position of the tile tile to be modified.
+        pos: TileCoords,
+        /// What the tile at the specified coordinates should be changed to.
+        change_to: Tile
+    },
+
+    EntityMoved /* { ... } */
+}
+
+#[derive(Debug)]
+pub enum Error {
+    DoesNotExist(PathBuf),
+    AccessFailure(io::Error),
+    EncodingFailure(Box<dyn std::error::Error>),
+    InvalidGenerator(String)
+}
+
+pub type Result<T> = std::result::Result<T, Error>;

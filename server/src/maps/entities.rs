@@ -1,7 +1,7 @@
 use shared::{
-    world::{
+    maps::{
         entities::{Direction, Entity, Variety},
-        maps::TileCoords
+        TileCoords
     },
     Id
 };
@@ -99,7 +99,7 @@ impl PlayerEntity {
     pub fn position(&self) -> TileCoords { self.contained.pos }
 
     /// Modify entity position without performing any sort of checks.
-    pub fn move_towards_unchecked(&mut self, direction: Direction) { 
+    pub fn move_towards_unchecked(&mut self, direction: Direction) {
         let new_pos = direction.apply(self.contained.pos);
         self.contained.pos = new_pos;
     }

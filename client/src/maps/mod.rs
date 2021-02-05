@@ -1,13 +1,11 @@
+pub mod entities;
 pub mod rendering;
 
 use std::collections::{HashMap, HashSet};
 
 use shared::{
-    messages,
-    world::{
-        entities::Entities,
-        maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords}
-    }
+    maps::{entities::Entities, Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
+    messages
 };
 
 use crate::networking::{self, Connection, ConnectionTrait};

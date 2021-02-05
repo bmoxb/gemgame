@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 
 use shared::{
-    messages,
-    world::{
+    maps::{
         entities::{Direction, Entity},
-        maps::TileCoords
+        TileCoords
     },
-    Id
+    messages, Id
 };
 
-use super::maps::ClientMap;
+use super::ClientMap;
 use crate::networking::{self, ConnectionTrait};
 
 pub struct PlayerEntity {
@@ -69,7 +68,11 @@ impl PlayerEntity {
                 self.time_since_last_movement = 0.0;
             }
             else {
-                log::trace!("Cannot move player entity in direction {} to {} as that position is not free", direction, new_pos);
+                log::trace!(
+                    "Cannot move player entity in direction {} to {} as that position is not free",
+                    direction,
+                    new_pos
+                );
             }
         }
 

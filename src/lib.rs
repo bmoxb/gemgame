@@ -1,6 +1,6 @@
 pub mod id;
+pub mod maps;
 pub mod messages;
-pub mod world;
 
 pub use id::Id;
 

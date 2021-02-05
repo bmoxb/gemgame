@@ -6,9 +6,9 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    world::{
-        entities::{self, Entity},
-        maps
+    maps::{
+        self,
+        entities::{self, Entity}
     },
     Id
 };

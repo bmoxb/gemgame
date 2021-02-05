@@ -3,10 +3,9 @@ use shared::{messages, WEBSOCKET_CONNECTION_PORT};
 
 use super::State;
 use crate::{
+    maps::entities::PlayerEntity,
     networking::{self, ConnectionTrait, PendingConnectionTrait},
-    sessions,
-    world::entities::PlayerEntity,
-    AssetManager
+    sessions, AssetManager
 };
 
 const SERVER_ADDRESS: &str = "localhost";

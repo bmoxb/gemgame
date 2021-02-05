@@ -1,13 +1,13 @@
 use macroquad::prelude as quad;
 use shared::{
-    messages,
-    world::{entities::Direction, maps::Map}
+    maps::{entities::Direction, Map},
+    messages
 };
 
 use super::State;
 use crate::{
+    maps::{self, entities::PlayerEntity},
     networking::{self, ConnectionTrait},
-    world::{entities::PlayerEntity, maps},
     AssetManager, TextureKey
 };
 

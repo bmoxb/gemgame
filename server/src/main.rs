@@ -1,7 +1,7 @@
 mod handling;
 mod id;
+mod maps;
 mod networking;
-mod world;
 
 use std::{
     fs,
@@ -9,10 +9,10 @@ use std::{
     sync::{Arc, Mutex}
 };
 
+use maps::ServerMap;
 use shared::WEBSOCKET_CONNECTION_PORT;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
-use world::World;
 
 #[tokio::main]
 async fn main() {
@@ -71,11 +71,11 @@ async fn main() {
     let listener = TcpListener::bind(&host_address).await.expect("Failed to create TCP/IP listener");
     log::info!("Created TCP/IP listener bound to address: {}", host_address);
 
-    // Load/create game world that is to be shared between threads:
+    // Load/create game map that is to be shared between threads:
 
-    let world: Shared<World> =
-        Arc::new(Mutex::new(World::new(options.world_directory.clone()).expect("Failed to load/create game world")));
-    log::info!("Loaded/created game world from directory: {}", options.world_directory.display());
+    let contained_map = ServerMap::new(options.map_directory.clone()).await.expect("Failed to load/create game world");
+    let map: Shared<ServerMap> = Arc::new(Mutex::new(contained_map));
+    log::info!("Loaded/created game map from directory: {}", options.map_directory.display());
 
     // Connect to database:
 
@@ -109,7 +109,7 @@ async fn main() {
     // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes
     // made to the game world:
 
-    let (world_changes_sender, mut world_changes_receiver) = broadcast::channel(5);
+    let (map_changes_sender, mut map_changes_receiver) = broadcast::channel(5);
 
     log::info!("Listening for incoming TCP/IP connections...");
 
@@ -127,19 +127,19 @@ async fn main() {
                 tokio::spawn(handling::handle_connection(
                     stream,
                     addr,
-                    Arc::clone(&world),
+                    Arc::clone(&map),
                     db_pool.clone(),
-                    world_changes_sender.subscribe()
+                    map_changes_sender.subscribe()
                 ));
             }
-            _ = world_changes_receiver.recv() => {} // Discard the broadcasted world modification message.
+            _ = map_changes_receiver.recv() => {} // Discard the broadcasted world modification message.
             _ = tokio::signal::ctrl_c() => break // Break on Ctrl-C.
         );
     }
 
     log::info!("No longer listening for connections");
 
-    // TODO: Save game world before closing the program.
+    map.lock().unwrap().save();
 }
 
 type Shared<T> = Arc<Mutex<T>>;
@@ -153,9 +153,9 @@ struct Options {
     #[structopt(short, long, default_value = "0")]
     port: u16,
 
-    /// Directory containing game world data.
-    #[structopt(long, default_value = "world/", parse(from_os_str))]
-    world_directory: PathBuf,
+    /// Directory containing game map data.
+    #[structopt(long, default_value = "map/", parse(from_os_str))]
+    map_directory: PathBuf,
 
     /// The database file in which to store client/player data.
     #[structopt(long, default_value = "clients.db")]

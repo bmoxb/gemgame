@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt};
 
 use serde::{Deserialize, Serialize};
 
-use super::maps::TileCoords;
+use super::TileCoords;
 use crate::Id;
 
 /// Type alias for a hash map of entity IDs to entities.

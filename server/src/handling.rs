@@ -6,15 +6,15 @@ use tokio::{net::TcpStream, sync::broadcast};
 use tokio_tungstenite::tungstenite;
 
 use crate::{
+    maps::{self, entities::PlayerEntity, ServerMap},
     networking::{self, Connection},
-    world::{self, entities::PlayerEntity, World},
     Shared
 };
 
 /// Handle a connection with an individual client. This function is called concurrently as a Tokio task.
 pub async fn handle_connection(
-    stream: TcpStream, addr: SocketAddr, world: Shared<World>, db_pool: sqlx::SqlitePool,
-    world_changes_receiver: broadcast::Receiver<world::Modification>
+    stream: TcpStream, addr: SocketAddr, map: Shared<ServerMap>, db_pool: sqlx::SqlitePool,
+    map_changes_receiver: broadcast::Receiver<maps::Modification>
 ) {
     // Perform the WebSocket handshake:
 
@@ -24,7 +24,7 @@ pub async fn handle_connection(
 
             // Handle the connection should the handshake complete successfully:
 
-            match handle_websocket_connection(ws, &addr, world, db_pool, world_changes_receiver).await {
+            match handle_websocket_connection(ws, &addr, map, db_pool, map_changes_receiver).await {
                 Ok(_) => {}
 
                 Err(Error::NetworkError(e)) => match e {
@@ -69,8 +69,8 @@ pub async fn handle_connection(
 /// complete the exchange of 'hello' and 'welcome' messages between client and server before passing control onto the
 /// [`handle_established_connection`] function.
 async fn handle_websocket_connection(
-    mut ws: Connection, addr: &SocketAddr, world: Shared<World>, db_pool: sqlx::SqlitePool,
-    world_changes_receiver: broadcast::Receiver<world::Modification>
+    mut ws: Connection, addr: &SocketAddr, map: Shared<ServerMap>, db_pool: sqlx::SqlitePool,
+    map_changes_receiver: broadcast::Receiver<maps::Modification>
 ) -> Result<()> {
     // Expect a 'hello' message from the client:
 
@@ -119,15 +119,15 @@ async fn handle_websocket_connection(
 
         // Place this client's player entity in the game world:
 
-        world.lock().unwrap().add_player_entity(player_id, player_entity);
+        map.lock().unwrap().add_player_entity(player_id, player_entity);
 
         // Begin main connection loop:
 
-        let result = handle_established_connection(&mut ws, client_id, player_id, &world, world_changes_receiver).await;
+        let result = handle_established_connection(&mut ws, client_id, player_id, &map, map_changes_receiver).await;
 
         // Remove this client's player entity from the game world and update database with changes to said entity:
 
-        let entity_option = world.lock().unwrap().remove_player_entity(player_id);
+        let entity_option = map.lock().unwrap().remove_player_entity(player_id);
         if let Some(player_entity) = entity_option {
             let mut db = db_pool.acquire().await.unwrap();
             player_entity.update_database(client_id, &mut db).await?;
@@ -144,8 +144,8 @@ async fn handle_websocket_connection(
 /// A connection is considered 'established' once the WebSocket handshake and the the exchange of 'hello' & 'welcome'
 /// messages have completed.
 async fn handle_established_connection(
-    ws: &mut Connection, client_id: Id, player_id: Id, world: &Shared<World>,
-    mut world_changes_receiver: broadcast::Receiver<world::Modification>
+    ws: &mut Connection, client_id: Id, player_id: Id, map: &Shared<ServerMap>,
+    mut map_changes_receiver: broadcast::Receiver<maps::Modification>
 ) -> Result<()> {
     loop {
         // Wait for incoming messages on both the WebSocket connection and the world modifications channel (or close
@@ -157,7 +157,7 @@ async fn handle_established_connection(
 
                     // Handle and respond to received message:
 
-                    if let Some(response) = handle_message(msg, client_id, player_id, &world).await {
+                    if let Some(response) = handle_message(msg, client_id, player_id, &map).await {
                         log::debug!("Response to client {} - {}", client_id, response);
                         ws.send(&response).await?;
                     }
@@ -168,7 +168,7 @@ async fn handle_established_connection(
                 }
             }
 
-            _modification = world_changes_receiver.recv() => {
+            _modification = map_changes_receiver.recv() => {
                 // TODO: Inform client of changes made to the world if affecting chunks that client has loaded.
             }
 
@@ -184,7 +184,7 @@ async fn handle_established_connection(
 }
 
 async fn handle_message(
-    msg: messages::ToServer, client_id: Id, player_id: Id, world: &Shared<World>
+    msg: messages::ToServer, client_id: Id, player_id: Id, map: &Shared<ServerMap>
 ) -> Option<messages::FromServer> {
     match msg {
         messages::ToServer::Hello { .. } => {
@@ -225,7 +225,7 @@ async fn handle_message(
         }
 
         messages::ToServer::MoveMyEntity { request_number, direction } => {
-            if let Some(player) = world.lock().unwrap().player_entity_by_id(player_id) {
+            if let Some(player) = map.lock().unwrap().player_entity_by_id(player_id) {
                 // TODO: Check for blocking tiles/entities...
                 // TODO: Prevent player exceeding movement rate...
 

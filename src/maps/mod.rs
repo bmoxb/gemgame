@@ -1,4 +1,5 @@
 pub mod coords;
+pub mod entities;
 
 use std::{cmp, collections::HashMap};
 
