@@ -32,12 +32,24 @@ pub struct ServerMap {
 }
 
 impl ServerMap {
-    /// Create a new map instance at a specified directory path. If a JSON configuration file is found in said
-    /// directory then it willl be loaded, otherwise sensible default values are assumed.
-    pub async fn new(directory: PathBuf) -> Result<Self> {
-        // Ensure the map directory actually exists (create it if it does not):
-        tokio::fs::create_dir_all(&directory).await.unwrap();
+    pub fn new(directory: PathBuf, generator: Box<dyn Generator + Send>, seed: u32) -> Self {
+        ServerMap { loaded_chunks: HashMap::new(), directory, generator, seed, player_entities: HashMap::new() }
+    }
 
+    /// Attempt to load a map from the specified directory. If unsuccessful, create a new map with appropriate defaults
+    /// set.
+    pub async fn try_load(directory: PathBuf) -> Self {
+        // TODO: Use timestamp as seed.
+        ServerMap::load(directory.clone())
+        .await
+        .unwrap_or_else(|e| {
+            log::debug!("Could not load existing map from directory '{}' due to error: {:?}", directory.display(), e);
+            ServerMap::new(directory, Box::new(generators::DefaultGenerator), 0)
+        })
+    }
+
+    /// Load an existing map from the specified directory.
+    pub async fn load(directory: PathBuf) -> Result<Self> {
         let config_file_path = directory.join(CONFIG_FILE_NAME);
 
         log::debug!("Attempting to load map configuration file: {}", config_file_path.display());
@@ -53,13 +65,7 @@ impl ServerMap {
                         if let Some(generator) = generators::by_name(&config.generator_name) {
                             log::debug!("Loaded map configuration from file: {}", config_file_path.display());
 
-                            Ok(ServerMap {
-                                loaded_chunks: HashMap::new(),
-                                directory,
-                                generator,
-                                seed: config.seed,
-                                player_entities: HashMap::new()
-                            })
+                            Ok(ServerMap::new(directory, generator, config.seed))
                         }
                         else {
                             log::warn!(

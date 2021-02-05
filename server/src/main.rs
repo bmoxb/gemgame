@@ -73,7 +73,7 @@ async fn main() {
 
     // Load/create game map that is to be shared between threads:
 
-    let contained_map = ServerMap::new(options.map_directory.clone()).await.expect("Failed to load/create game world");
+    let contained_map = ServerMap::try_load(options.map_directory.clone()).await;
     let map: Shared<ServerMap> = Arc::new(Mutex::new(contained_map));
     log::info!("Loaded/created game map from directory: {}", options.map_directory.display());
 
