@@ -42,7 +42,7 @@ impl ServerMap {
     pub async fn try_load(directory: PathBuf) -> Self {
         // TODO: Use timestamp as seed.
         ServerMap::load(directory.clone()).await.unwrap_or_else(|e| {
-            log::debug!("Could not load existing map from directory '{}' due to error: {:?}", directory.display(), e);
+            log::debug!("Could not load existing map from directory '{}' due to error: {}", directory.display(), e);
             ServerMap::new(directory, Box::new(generators::DefaultGenerator), 0)
         })
     }
@@ -159,11 +159,15 @@ pub enum Modification {
 }
 
 // TODO: Derive error macro...
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("file/directory '{0}' does not exist")]
     DoesNotExist(PathBuf),
+    #[error("failed to access file/directory due to IO error - {0}")]
     AccessFailure(io::Error),
+    #[error("failed due to bincode (de)serialisation error - {0}")]
     EncodingFailure(Box<dyn std::error::Error>),
+    #[error("generator string '{0}' is invalid")]
     InvalidGenerator(String)
 }
 
