@@ -139,7 +139,7 @@ async fn main() {
 
     log::info!("No longer listening for connections");
 
-    map.lock().unwrap().save();
+    Arc::try_unwrap(map).ok().unwrap().into_inner().unwrap().save_all().await;
 }
 
 type Shared<T> = Arc<Mutex<T>>;

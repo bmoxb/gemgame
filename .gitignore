@@ -1,5 +1,5 @@
 target/
-world/
+map/
 *.wasm
 *.log
 *.db

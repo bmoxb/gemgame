@@ -1,6 +1,6 @@
 use std::{convert::Into, net::SocketAddr};
 
-use shared::{messages, Id};
+use shared::{maps::Map, messages, Id};
 use thiserror::Error;
 use tokio::{net::TcpStream, sync::broadcast};
 use tokio_tungstenite::tungstenite;
@@ -191,10 +191,8 @@ async fn handle_message(
             log::warn!("Client {} sent unexpected 'hello' message: {}", client_id, msg);
             //None // TODO
         }
-        messages::ToServer::RequestChunk(_coords) => {
-            /*
-            let loaded_chunk_option =
-                with_current_map(connections, addr, world, |map| map.loaded_chunk_at(coords).cloned());
+        messages::ToServer::RequestChunk(coords) => {
+            let loaded_chunk_option = map.lock().unwrap().loaded_chunk_at(coords).cloned();
 
             let chunk = {
                 if let Some(loaded_chunk) = loaded_chunk_option {
@@ -203,21 +201,31 @@ async fn handle_message(
                     loaded_chunk
                 }
                 else {
-                    let directory = with_current_map(connections, addr, world, |map| map.directory.clone());
+                    // Chunk is not already in memory so needs to either be read from disk or newly generated before
+                    // being loaded into the map.
+
+                    let directory = map.lock().unwrap().directory.clone();
 
                     let new_chunk = maps::chunks::load_chunk(&directory, coords).await.unwrap_or_else(|_| {
-                        log::debug!("Generated chunk at {}", coords);
+                        let generator = &map.lock().unwrap().generator;
 
-                        with_current_map(connections, addr, world, |map| map.generator.generate(coords))
+                        log::debug!(
+                            "Chunk at {} could not be found on disk so will be newly generated using generator '{}'",
+                            coords,
+                            generator.name()
+                        );
+
+                        generator.generate(coords)
                     });
 
-                    with_current_map(connections, addr, world, |map| map.provide_chunk(coords, new_chunk.clone()));
+                    // Add the new chunk to map's loaded chunks:
+                    map.lock().unwrap().provide_chunk(coords, new_chunk.clone());
 
                     new_chunk
                 }
             };
 
-            messages::FromServer::ProvideChunk(coords, chunk)*/
+            return Some(messages::FromServer::ProvideChunk(coords, chunk));
         }
 
         messages::ToServer::ChunkUnloadedLocally(_coords) => {

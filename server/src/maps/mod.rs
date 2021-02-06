@@ -1,3 +1,4 @@
+pub mod chunks;
 pub mod entities;
 pub mod generators;
 
@@ -19,10 +20,10 @@ pub struct ServerMap {
     loaded_chunks: Chunks,
 
     /// Path to the directory containing map data.
-    directory: PathBuf,
+    pub directory: PathBuf,
 
     /// The generator to be used when new chunks must be made.
-    generator: Box<dyn Generator + Send>,
+    pub generator: Box<dyn Generator + Send>,
 
     /// Seed used by the generator.
     seed: u32,
@@ -40,9 +41,7 @@ impl ServerMap {
     /// set.
     pub async fn try_load(directory: PathBuf) -> Self {
         // TODO: Use timestamp as seed.
-        ServerMap::load(directory.clone())
-        .await
-        .unwrap_or_else(|e| {
+        ServerMap::load(directory.clone()).await.unwrap_or_else(|e| {
             log::debug!("Could not load existing map from directory '{}' due to error: {:?}", directory.display(), e);
             ServerMap::new(directory, Box::new(generators::DefaultGenerator), 0)
         })
@@ -102,7 +101,20 @@ impl ServerMap {
         }
     }
 
-    pub fn save(&self) { unimplemented!() }
+    pub async fn save_all(&self) -> Result<()> {
+        // TODO: Save map config as well.
+        self.save_loaded_chunks().await
+    }
+
+    pub async fn save_loaded_chunks(&self) -> Result<()> {
+        let mut success = Ok(());
+
+        for (coords, chunk) in &self.loaded_chunks {
+            success = success.and(chunks::save_chunk(&self.directory, *coords, chunk).await);
+        }
+
+        success
+    }
 
     pub fn add_player_entity(&mut self, id: Id, entity: PlayerEntity) {
         log::debug!("Player entity with ID {} added to game world", id);
@@ -146,6 +158,7 @@ pub enum Modification {
     EntityMoved /* { ... } */
 }
 
+// TODO: Derive error macro...
 #[derive(Debug)]
 pub enum Error {
     DoesNotExist(PathBuf),
