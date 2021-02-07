@@ -69,7 +69,7 @@ pub enum Tile {
 impl Tile {
     pub fn is_blocking(&self) -> bool {
         match self {
-            Tile::Ground => true
+            Tile::Ground => false
         }
     }
 }
