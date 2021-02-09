@@ -1,6 +1,9 @@
-use std::{convert::Into, net::SocketAddr};
+use std::{collections::HashSet, convert::Into, net::SocketAddr};
 
-use shared::{maps::Map, messages, Id};
+use shared::{
+    maps::{ChunkCoords, Map},
+    messages, Id
+};
 use thiserror::Error;
 use tokio::{net::TcpStream, sync::broadcast};
 use tokio_tungstenite::tungstenite;
@@ -141,12 +144,16 @@ async fn handle_websocket_connection(
     }
 }
 
-/// A connection is considered 'established' once the WebSocket handshake and the the exchange of 'hello' & 'welcome'
+/// A connection is considered 'established' once the WebSocket handshake and the exchange of 'hello' & 'welcome'
 /// messages have completed.
 async fn handle_established_connection(
     ws: &mut Connection, client_id: Id, player_id: Id, map: &Shared<ServerMap>,
     mut map_changes_receiver: broadcast::Receiver<maps::Modification>
 ) -> Result<()> {
+    // The server keeps track of the  coordinates of chunks that it believes each remote client has loaded using a hash
+    // set:
+    let mut remote_loaded_chunk_coords = HashSet::new();
+
     loop {
         // Wait for incoming messages on both the WebSocket connection and the world modifications channel (or close
         // connection on Ctrl-C signal):
@@ -157,7 +164,7 @@ async fn handle_established_connection(
 
                     // Handle and respond to received message:
 
-                    if let Some(response) = handle_message(msg, client_id, player_id, &map).await {
+                    if let Some(response) = handle_message(msg, client_id, player_id, &map, &mut remote_loaded_chunk_coords).await {
                         log::debug!("Response to client {} - {}", client_id, response);
                         ws.send(&response).await?;
                     }
@@ -168,8 +175,24 @@ async fn handle_established_connection(
                 }
             }
 
-            _modification = map_changes_receiver.recv() => {
-                // TODO: Inform client of changes made to the world if affecting chunks that client has loaded.
+            res = map_changes_receiver.recv() => {
+                match res {
+                    Ok(modification) => {
+                        let response = handle_map_change(modification, &remote_loaded_chunk_coords).await;
+
+                        log::debug!("Informing client {} of change to game world - todo", client_id);
+                        // TODO: ws.send(...).await?;
+                    }
+
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
+                        log::warn!("Task for client {} skipped {} messages on the map modification channel", client_id, skipped);
+                    }
+
+                    Err(channel_err) => {
+                        log::warn!("Failed to receive on map modification channel: {}", channel_err);
+                        break;
+                    }
+                }
             }
 
             _ = tokio::signal::ctrl_c() => {
@@ -184,12 +207,13 @@ async fn handle_established_connection(
 }
 
 async fn handle_message(
-    msg: messages::ToServer, client_id: Id, player_id: Id, map: &Shared<ServerMap>
+    msg: messages::ToServer, client_id: Id, player_id: Id, map: &Shared<ServerMap>,
+    remote_loaded_chunk_coords: &mut HashSet<ChunkCoords>
 ) -> Option<messages::FromServer> {
     match msg {
         messages::ToServer::Hello { .. } => {
             log::warn!("Client {} sent unexpected 'hello' message: {}", client_id, msg);
-            //None // TODO
+            None
         }
         messages::ToServer::RequestChunk(coords) => {
             let loaded_chunk_option = map.lock().unwrap().loaded_chunk_at(coords).cloned();
@@ -225,11 +249,16 @@ async fn handle_message(
                 }
             };
 
-            return Some(messages::FromServer::ProvideChunk(coords, chunk));
+            // Keep track of which chunks the remote client has loaded:
+            remote_loaded_chunk_coords.insert(coords);
+
+            Some(messages::FromServer::ProvideChunk(coords, chunk))
         }
 
-        messages::ToServer::ChunkUnloadedLocally(_coords) => {
-            //unimplemented!()
+        messages::ToServer::ChunkUnloadedLocally(coords) => {
+            log::debug!("Client has locally unloaded chunk at {}", coords);
+            remote_loaded_chunk_coords.remove(&coords);
+            None
         }
 
         messages::ToServer::MoveMyEntity { request_number, direction } => {
@@ -242,11 +271,19 @@ async fn handle_message(
 
                 // TODO: Broadcast change on world modification channel...
 
-                return Some(messages::FromServer::YourEntityMoved { request_number, new_position: player.position() });
+                Some(messages::FromServer::YourEntityMoved { request_number, new_position: player.position() })
+            }
+            else {
+                None
             }
         }
     }
-    None // TODO
+}
+
+async fn handle_map_change(
+    modification: maps::Modification, remote_loaded_chunk_coords: &HashSet<ChunkCoords>
+) -> messages::FromServer {
+    unimplemented!()
 }
 
 #[derive(Error, Debug)]
