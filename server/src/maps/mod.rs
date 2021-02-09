@@ -61,7 +61,7 @@ impl ServerMap {
                     Ok(config) => {
                         log::trace!("Map configuration struct: {:?}", config);
 
-                        if let Some(generator) = generators::by_name(&config.generator_name) {
+                        if let Some(generator) = generators::by_name(&config.generator_name, config.seed) {
                             log::debug!("Loaded map configuration from file: {}", config_file_path.display());
 
                             Ok(ServerMap::new(directory, generator, config.seed))
@@ -102,11 +102,12 @@ impl ServerMap {
     }
 
     pub async fn save_all(&self) -> Result<()> {
+        tokio::fs::create_dir_all(&self.directory).await?;
         // TODO: Save map config as well.
         self.save_loaded_chunks().await
     }
 
-    pub async fn save_loaded_chunks(&self) -> Result<()> {
+    async fn save_loaded_chunks(&self) -> Result<()> {
         let mut success = Ok(());
 
         for (coords, chunk) in &self.loaded_chunks {
@@ -164,7 +165,7 @@ pub enum Error {
     #[error("file/directory '{0}' does not exist")]
     DoesNotExist(PathBuf),
     #[error("failed to access file/directory due to IO error - {0}")]
-    AccessFailure(io::Error),
+    AccessFailure(#[from] io::Error),
     #[error("failed due to bincode (de)serialisation error - {0}")]
     EncodingFailure(Box<dyn std::error::Error>),
     #[error("generator string '{0}' is invalid")]

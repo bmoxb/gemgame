@@ -7,10 +7,9 @@ use shared::{
 };
 use sqlx::Row;
 
-/// Represents an entity controlled by a player (i.e. controlled remotedly by a specific client).
+/// Represents an entity controlled by a player (i.e. controlled remotely by a specific client).
 pub struct PlayerEntity {
-    contained: Entity,
-    current_map_id: Id
+    contained: Entity
 }
 
 impl PlayerEntity {
@@ -29,29 +28,26 @@ impl PlayerEntity {
             }
         };
 
-        let current_map_id = Id::new(0); // TODO
-
         sqlx::query(
-            "INSERT INTO client_entities (client_id, entity_id, current_map_id, name, tile_x, tile_y)
-            VALUES (?, ?, ?, ?, ?, ?)"
+            "INSERT INTO client_entities (client_id, entity_id, name, tile_x, tile_y)
+            VALUES (?, ?, ?, ?, ?)"
         )
         .bind(client_id.encode())
         .bind(entity_id.encode())
-        .bind(current_map_id.encode())
         .bind(&contained.name)
         .bind(contained.pos.x)
         .bind(contained.pos.y)
         .execute(db)
         .await?;
 
-        Ok((entity_id, PlayerEntity { contained, current_map_id }))
+        Ok((entity_id, PlayerEntity { contained }))
     }
 
     pub async fn from_database(
         client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Sqlite>
     ) -> sqlx::Result<Option<(Id, Self)>> {
         let res = sqlx::query(
-            "SELECT entity_id, current_map_id, name, tile_x, tile_y
+            "SELECT entity_id, name, tile_x, tile_y
             FROM client_entities
             WHERE client_id = ?"
         )
@@ -67,15 +63,14 @@ impl PlayerEntity {
                         facial_expression: Default::default(),
                         hair_style: Default::default() // TODO: From database.
                     }
-                },
-                Id::decode(row.try_get("current_map_id")?).unwrap() // TODO: Don't just unwrap.
+                }
             ))
         })
         .fetch_optional(db)
         .await?
         .transpose();
 
-        res.map(|opt| opt.map(|(id, contained, current_map_id)| (id, PlayerEntity { contained, current_map_id })))
+        res.map(|opt| opt.map(|(id, contained)| (id, PlayerEntity { contained })))
     }
 
     pub async fn update_database(
@@ -83,13 +78,12 @@ impl PlayerEntity {
     ) -> sqlx::Result<()> {
         sqlx::query(
             "UPDATE client_entities
-            SET name = ?, tile_x = ?, tile_y = ?, current_map_id = ?
+            SET name = ?, tile_x = ?, tile_y = ?
             WHERE client_id = ?"
         )
         .bind(&self.contained.name)
         .bind(self.contained.pos.x)
         .bind(self.contained.pos.y)
-        .bind(self.current_map_id.encode())
         .bind(client_id.encode())
         .execute(db)
         .await
@@ -107,6 +101,7 @@ impl PlayerEntity {
     pub fn inner_entity_cloned(&self) -> Entity { self.contained.clone() }
 }
 
+/*
 /// Represents an entity controlled by the server.
 pub struct NonPlayerEntity {
     contained: Entity,
@@ -120,3 +115,4 @@ impl NonPlayerEntity {
 pub trait Controller {
     fn update(&mut self, e: &mut Entity);
 }
+*/

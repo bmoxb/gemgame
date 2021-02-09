@@ -5,21 +5,19 @@ pub trait Generator {
     fn generate(&self, coords: ChunkCoords) -> Chunk;
 }
 
+const DEFAULT_GENERATOR: &str = "default";
+
 pub struct DefaultGenerator;
 
-impl DefaultGenerator {
-    const NAME: &'static str = "default";
-}
-
 impl Generator for DefaultGenerator {
-    fn name(&self) -> &'static str { DefaultGenerator::NAME }
+    fn name(&self) -> &'static str { DEFAULT_GENERATOR }
 
-    fn generate(&self, _: ChunkCoords) -> Chunk { Chunk::new([Tile::default(); CHUNK_TILE_COUNT]) }
+    fn generate(&self, _coords: ChunkCoords) -> Chunk { Chunk::new([Tile::default(); CHUNK_TILE_COUNT]) }
 }
 
-pub fn by_name(name: &str) -> Option<Box<dyn Generator + Send>> {
+pub fn by_name(name: &str, _seed: u32) -> Option<Box<dyn Generator + Send>> {
     match name {
-        DefaultGenerator::NAME => Some(Box::new(DefaultGenerator)),
+        DEFAULT_GENERATOR => Some(Box::new(DefaultGenerator)),
         _ => None
     }
 }

@@ -96,7 +96,6 @@ async fn main() {
         "CREATE TABLE IF NOT EXISTS client_entities (
             client_id TEXT PRIMARY KEY,
             entity_id TEXT NOT NULL UNIQUE,
-            current_map_id TEXT NOT NULL,
             name TEXT NOT NULL,
             tile_x INTEGER NOT NULL,
             tile_y INTEGER NOT NULL
