@@ -80,20 +80,13 @@ pub enum FromServer {
     /// Provide chunk data to a client so it may store it locally. Chunks are provided when requested by the client.
     ProvideChunk(maps::ChunkCoords, maps::Chunk),
 
-    /// Whenever a tile in a chunk is modified, the server sends a message about the changed to each client that it
-    /// believes has the chunk in question loaded.
-    UpdateTile(maps::TileCoords, maps::Tile),
+    /// Whenever a tile is modified or an entity moves in a chunk, the server sends a message about the changed to each
+    /// client that it believes has the chunk in question loaded.
+    MapModified(MapModification),
 
     /// Inform a client that their player entity's position has changed. This is most frequently sent as a response to
     /// a client sending a [`ToServer::MoveMyEntity`] message.
     YourEntityMoved { request_number: u32, new_position: maps::TileCoords },
-
-    /// Inform the client that the entity with the specified ID has moved to the specified coordinates. This message is
-    /// only sent to clients with a player entity on the same map as and in close proximity (i.e. chunk loaded) to the
-    /// moved entity.
-    /// TODO: Remember to consider that clients must be informed of entities that are crossing chunk borders out of
-    /// TODO: the client's currently loaded chunks in addition to entities moving within the bounds of loaded chunks.
-    EntityMoved(Id, maps::TileCoords),
 
     /// Provide a client with some entity. This is done when the client's player entity comes to be in close proximity
     /// to another entity that the server believes is not already loaded by the client.
@@ -119,4 +112,17 @@ impl fmt::Display for FromServer {
             FromServer::EntityMoved(id, coords) => write!(f, "entity with ID {} moved to {}", id, coords)
         }
     }
+}
+
+/// Structure representing a change made to the game map.
+#[derive(Serialize, Deserialize, Copy, Clone)]
+pub enum MapModification {
+    TileChanged {
+        /// Position of the tile tile to be modified.
+        pos: TileCoords,
+        /// What the tile at the specified coordinates should be changed to.
+        change_to: Tile
+    },
+
+    EntityMoved /* { ... } */
 }

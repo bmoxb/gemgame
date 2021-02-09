@@ -146,20 +146,6 @@ struct MapConfig {
     seed: u32
 }
 
-/// Structure representing a change made to the game map.
-#[derive(Copy, Clone)]
-pub enum Modification {
-    TileChanged {
-        /// Position of the tile tile to be modified.
-        pos: TileCoords,
-        /// What the tile at the specified coordinates should be changed to.
-        change_to: Tile
-    },
-
-    EntityMoved /* { ... } */
-}
-
-// TODO: Derive error macro...
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("file/directory '{0}' does not exist")]
