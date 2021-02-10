@@ -71,6 +71,18 @@ impl ClientMap {
 
         !tile_blocking && !entity_blocking
     }
+
+    pub fn apply_modification(&mut self, modification: messages::MapModification) {
+        match modification {
+            messages::MapModification::TileChanged { pos, change_to } => {
+                // TODO
+            }
+
+            messages::MapModification::EntityMoved => {
+                unimplemented!()
+            }
+        }
+    }
 }
 
 impl Map for ClientMap {

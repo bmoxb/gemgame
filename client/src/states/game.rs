@@ -43,28 +43,29 @@ impl GameState {
 
             messages::FromServer::ProvideChunk(coords, chunk) => {
                 log::debug!("Chunk loaded from server: {}", coords);
-
                 self.map.provide_chunk(coords, chunk);
-                Ok(())
             }
 
-            messages::FromServer::UpdateTile(_coords, _tile) => {
-                unimplemented!() // TODO
+            messages::FromServer::MapModified(modification) => {
+                log::trace!("Notified of a modification to the map affecting loaded chunks: {}", modification);
+                self.map.apply_modification(modification);
             }
 
             messages::FromServer::YourEntityMoved { request_number, new_position } => {
+                log::trace!(
+                    "Received player movement reconciliation for request {} to position {}",
+                    request_number,
+                    new_position
+                );
                 self.player_entity.received_movement_reconciliation(request_number, new_position);
-                Ok(())
-            }
-
-            messages::FromServer::EntityMoved(_entity_id, _coords) => {
-                unimplemented!() // TODO
             }
 
             messages::FromServer::ProvideEntity(_entity_id, _entity) => {
                 unimplemented!() // TODO
             }
         }
+
+        Ok(())
     }
 }
 

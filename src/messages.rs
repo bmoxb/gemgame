@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     maps::{
         self,
-        entities::{self, Entity}
+        entities::{self, Entity},
+        Tile, TileCoords
     },
     Id
 };
@@ -103,18 +104,17 @@ impl fmt::Display for FromServer {
                     your_client_id, version, entity, entity_id
                 )
             }
-            FromServer::ProvideChunk(coords, _) => write!(f, "provide chunk at {}", coords),
-            FromServer::UpdateTile(coords, _) => write!(f, "update tile at {}", coords),
-            FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id),
+            FromServer::ProvideChunk(coords, _chunk) => write!(f, "provide chunk at {}", coords),
+            FromServer::MapModified(modification) => write!(f, "map modified - {}", modification),
             FromServer::YourEntityMoved { request_number, new_position } => {
                 write!(f, "your entity has moved to {} (request #{})", new_position, request_number)
             }
-            FromServer::EntityMoved(id, coords) => write!(f, "entity with ID {} moved to {}", id, coords)
+            FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id)
         }
     }
 }
 
-/// Structure representing a change made to the game map.
+/// Represents a change made to the game map (tiles and entities).
 #[derive(Serialize, Deserialize, Copy, Clone)]
 pub enum MapModification {
     TileChanged {
@@ -124,5 +124,14 @@ pub enum MapModification {
         change_to: Tile
     },
 
-    EntityMoved /* { ... } */
+    EntityMoved /* { ... } TODO */
+}
+
+impl fmt::Display for MapModification {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MapModification::TileChanged { pos, change_to } => write!(f, "tile changed at {} to {:?}", pos, change_to),
+            MapModification::EntityMoved => write!(f, "entity moved")
+        }
+    }
 }
