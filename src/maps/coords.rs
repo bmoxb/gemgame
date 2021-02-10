@@ -1,8 +1,8 @@
-use std::{fmt, cmp, hash::Hash};
+use std::{cmp, fmt, hash::Hash};
 
 use serde::{Deserialize, Serialize};
 
-use super::{CHUNK_HEIGHT, CHUNK_WIDTH, CHUNK_TILE_COUNT};
+use super::{CHUNK_HEIGHT, CHUNK_TILE_COUNT, CHUNK_WIDTH};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct TileCoords {

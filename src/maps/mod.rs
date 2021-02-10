@@ -32,11 +32,13 @@ pub trait Map {
             chunk.set_tile_at_offset(coords.as_chunk_offset_coords(), tile);
             true
         }
-        else { false }
+        else {
+            false
+        }
     }
 
     fn is_tile_loaded(&self, coords: TileCoords) -> bool { self.loaded_chunk_at(coords.as_chunk_coords()).is_some() }
-    
+
     fn is_chunk_loaded(&self, coords: ChunkCoords) -> bool { self.loaded_chunk_at(coords).is_some() }
 
     /// Return the loaded chunk at the given chunk coordinates as an optional immutable reference.
@@ -63,9 +65,7 @@ pub struct Chunk {
 impl Chunk {
     pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self { Chunk { tiles } }
 
-    pub fn tile_at_offset(&self, offset: OffsetCoords) -> &Tile {
-        &self.tiles[offset.calculate_index()]
-    }
+    pub fn tile_at_offset(&self, offset: OffsetCoords) -> &Tile { &self.tiles[offset.calculate_index()] }
 
     pub fn set_tile_at_offset(&mut self, offset: OffsetCoords, tile: Tile) {
         self.tiles[offset.calculate_index()] = tile;

@@ -8,8 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     maps::{
         self,
-        entities::{self, Entity},
-        Tile, TileCoords
+        entities::{self, Entity}
     },
     Id
 };
@@ -119,19 +118,26 @@ impl fmt::Display for FromServer {
 pub enum MapModification {
     TileChanged {
         /// Position of the tile tile to be modified.
-        pos: TileCoords,
+        pos: maps::TileCoords,
         /// What the tile at the specified coordinates should be changed to.
-        change_to: Tile
+        change_to: maps::Tile
     },
 
-    EntityMoved /* { ... } TODO */
+    EntityMoved {
+        /// The ID of the entity that moved.
+        entity_id: Id,
+        /// The new position of the entity that moved.
+        new_position: maps::TileCoords
+    }
 }
 
 impl fmt::Display for MapModification {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             MapModification::TileChanged { pos, change_to } => write!(f, "tile changed at {} to {:?}", pos, change_to),
-            MapModification::EntityMoved => write!(f, "entity moved")
+            MapModification::EntityMoved { entity_id, new_position } => {
+                write!(f, "entity {} moved to {}", entity_id, new_position)
+            }
         }
     }
 }
