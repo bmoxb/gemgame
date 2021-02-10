@@ -1,7 +1,7 @@
 pub mod coords;
 pub mod entities;
 
-use std::{cmp, collections::HashMap};
+use std::collections::HashMap;
 
 pub use coords::*;
 use serde::{Deserialize, Serialize};
@@ -23,16 +23,27 @@ pub trait Map {
     /// Fetch the tile at the given tile coordinates assuming it is in a chunk that is already loaded.
     fn loaded_tile_at(&self, coords: TileCoords) -> Option<&Tile> {
         let chunk = self.loaded_chunk_at(coords.as_chunk_coords())?;
-
         Some(chunk.tile_at_offset(coords.as_chunk_offset_coords()))
     }
 
-    fn is_tile_loaded(&self, coords: TileCoords) -> bool { self.loaded_chunk_at(coords.as_chunk_coords()).is_some() }
+    /// Change the tile at the specified tile coordinates assuming it is in a chunk that is already loaded.
+    fn set_loaded_tile_at(&mut self, coords: TileCoords, tile: Tile) -> bool {
+        if let Some(chunk) = self.loaded_chunk_at_mut(coords.as_chunk_coords()) {
+            chunk.set_tile_at_offset(coords.as_chunk_offset_coords(), tile);
+            true
+        }
+        else { false }
+    }
 
-    /// Returns the chunk at the given chunk coordinates assuming it is already loaded.
+    fn is_tile_loaded(&self, coords: TileCoords) -> bool { self.loaded_chunk_at(coords.as_chunk_coords()).is_some() }
+    
+    fn is_chunk_loaded(&self, coords: ChunkCoords) -> bool { self.loaded_chunk_at(coords).is_some() }
+
+    /// Return the loaded chunk at the given chunk coordinates as an optional immutable reference.
     fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk>;
 
-    fn is_chunk_loaded(&self, coords: ChunkCoords) -> bool { self.loaded_chunk_at(coords).is_some() }
+    /// Return the loaded chunk at the given chunk coordinates as a optional mutable reference.
+    fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk>;
 
     /// Have this map include the given chunk in its collection of loaded chunks.
     fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk);
@@ -52,12 +63,12 @@ pub struct Chunk {
 impl Chunk {
     pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self { Chunk { tiles } }
 
-    pub fn tile_at_offset(&self, mut offset: OffsetCoords) -> &Tile {
-        // Ensure offset coordinates are within the chunk's bounds:
-        offset.x = cmp::max(0, cmp::min(offset.x, CHUNK_WIDTH as u8 - 1));
-        offset.y = cmp::max(0, cmp::min(offset.y, CHUNK_HEIGHT as u8 - 1));
+    pub fn tile_at_offset(&self, offset: OffsetCoords) -> &Tile {
+        &self.tiles[offset.calculate_index()]
+    }
 
-        &self.tiles[(offset.y as i32 * CHUNK_WIDTH + offset.x as i32) as usize]
+    pub fn set_tile_at_offset(&mut self, offset: OffsetCoords, tile: Tile) {
+        self.tiles[offset.calculate_index()] = tile;
     }
 }
 

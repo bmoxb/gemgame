@@ -75,7 +75,12 @@ impl ClientMap {
     pub fn apply_modification(&mut self, modification: messages::MapModification) {
         match modification {
             messages::MapModification::TileChanged { pos, change_to } => {
-                // TODO
+                if self.is_tile_loaded(pos) {
+                    self.set_loaded_tile_at(pos, change_to);
+                }
+                else {
+                    log::warn!("Told by server to change tile at {} to {:?} yet the chunk that tile is contained in is not loaded", pos, change_to);
+                }
             }
 
             messages::MapModification::EntityMoved => {
@@ -87,6 +92,8 @@ impl ClientMap {
 
 impl Map for ClientMap {
     fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> { self.loaded_chunks.get(&coords) }
+
+    fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk> { self.loaded_chunks.get_mut(&coords) }
 
     fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
         // TODO: Unload chunk(s) should too many be loaded already?
