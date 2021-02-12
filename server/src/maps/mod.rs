@@ -136,6 +136,8 @@ impl ServerMap {
 impl Map for ServerMap {
     fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> { self.loaded_chunks.get(&coords) }
 
+    fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk> { self.loaded_chunks.get_mut(&coords) }
+
     fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) { self.loaded_chunks.insert(coords, chunk); }
 }
 

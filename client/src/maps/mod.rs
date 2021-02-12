@@ -74,16 +74,16 @@ impl ClientMap {
 
     pub fn apply_modification(&mut self, modification: messages::MapModification) {
         match modification {
-            messages::MapModification::TileChanged { pos, change_to } => {
-                if self.is_tile_loaded(pos) {
-                    self.set_loaded_tile_at(pos, change_to);
+            messages::MapModification::TileChanged { position, change_to } => {
+                if self.is_tile_loaded(position) {
+                    self.set_loaded_tile_at(position, change_to);
                 }
                 else {
-                    log::warn!("Told by server to change tile at {} to {:?} yet the chunk that tile is contained in is not loaded", pos, change_to);
+                    log::warn!("Told by server to change tile at {} to {:?} yet the chunk that tile is contained in is not loaded", position, change_to);
                 }
             }
 
-            messages::MapModification::EntityMoved => {
+            messages::MapModification::EntityMoved { entity_id, new_position } => {
                 unimplemented!()
             }
         }

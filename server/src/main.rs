@@ -128,6 +128,7 @@ async fn main() {
                     addr,
                     Arc::clone(&map),
                     db_pool.clone(),
+                    map_changes_sender.clone(),
                     map_changes_sender.subscribe()
                 ));
             }

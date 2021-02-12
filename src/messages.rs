@@ -114,11 +114,11 @@ impl fmt::Display for FromServer {
 }
 
 /// Represents a change made to the game map (tiles and entities).
-#[derive(Serialize, Deserialize, Copy, Clone)]
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 pub enum MapModification {
     TileChanged {
         /// Position of the tile tile to be modified.
-        pos: maps::TileCoords,
+        position: maps::TileCoords,
         /// What the tile at the specified coordinates should be changed to.
         change_to: maps::Tile
     },
@@ -134,7 +134,9 @@ pub enum MapModification {
 impl fmt::Display for MapModification {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            MapModification::TileChanged { pos, change_to } => write!(f, "tile changed at {} to {:?}", pos, change_to),
+            MapModification::TileChanged { position, change_to } => {
+                write!(f, "tile changed at {} to {:?}", position, change_to)
+            }
             MapModification::EntityMoved { entity_id, new_position } => {
                 write!(f, "entity {} moved to {}", entity_id, new_position)
             }

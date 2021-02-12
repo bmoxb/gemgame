@@ -102,7 +102,8 @@ impl State for GameState {
         };
 
         if let Some(direction) = direction_option {
-            self.player_entity.move_towards(direction, &mut self.map, &mut self.connection).unwrap(); // TODO
+            self.player_entity.move_towards(direction, &mut self.map, &mut self.connection).unwrap();
+            // TODO
         }
 
         // Networking:

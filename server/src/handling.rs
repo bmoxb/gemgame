@@ -17,7 +17,8 @@ use crate::{
 /// Handle a connection with an individual client. This function is called concurrently as a Tokio task.
 pub async fn handle_connection(
     stream: TcpStream, addr: SocketAddr, map: Shared<ServerMap>, db_pool: sqlx::SqlitePool,
-    map_changes_receiver: broadcast::Receiver<maps::Modification>
+    map_changes_sender: broadcast::Sender<messages::MapModification>,
+    map_changes_receiver: broadcast::Receiver<messages::MapModification>
 ) {
     // Perform the WebSocket handshake:
 
@@ -27,7 +28,7 @@ pub async fn handle_connection(
 
             // Handle the connection should the handshake complete successfully:
 
-            match handle_websocket_connection(ws, &addr, map, db_pool, map_changes_receiver).await {
+            match handle_websocket_connection(ws, &addr, map, db_pool, map_changes_sender, map_changes_receiver).await {
                 Ok(_) => {}
 
                 Err(Error::NetworkError(e)) => match e {
@@ -73,7 +74,8 @@ pub async fn handle_connection(
 /// [`handle_established_connection`] function.
 async fn handle_websocket_connection(
     mut ws: Connection, addr: &SocketAddr, map: Shared<ServerMap>, db_pool: sqlx::SqlitePool,
-    map_changes_receiver: broadcast::Receiver<maps::Modification>
+    map_changes_sender: broadcast::Sender<messages::MapModification>,
+    map_changes_receiver: broadcast::Receiver<messages::MapModification>
 ) -> Result<()> {
     // Expect a 'hello' message from the client:
 
@@ -126,7 +128,15 @@ async fn handle_websocket_connection(
 
         // Begin main connection loop:
 
-        let result = handle_established_connection(&mut ws, client_id, player_id, &map, map_changes_receiver).await;
+        let result = handle_established_connection(
+            &mut ws,
+            client_id,
+            player_id,
+            &map,
+            map_changes_sender,
+            map_changes_receiver
+        )
+        .await;
 
         // Remove this client's player entity from the game world and update database with changes to said entity:
 
@@ -148,7 +158,8 @@ async fn handle_websocket_connection(
 /// messages have completed.
 async fn handle_established_connection(
     ws: &mut Connection, client_id: Id, player_id: Id, map: &Shared<ServerMap>,
-    mut map_changes_receiver: broadcast::Receiver<maps::Modification>
+    mut map_changes_sender: broadcast::Sender<messages::MapModification>,
+    mut map_changes_receiver: broadcast::Receiver<messages::MapModification>
 ) -> Result<()> {
     // The server keeps track of the  coordinates of chunks that it believes each remote client has loaded using a hash
     // set:
@@ -164,7 +175,17 @@ async fn handle_established_connection(
 
                     // Handle and respond to received message:
 
-                    if let Some(response) = handle_message(msg, client_id, player_id, &map, &mut remote_loaded_chunk_coords).await {
+                    let response_future = handle_message(
+                        msg,
+                        client_id,
+                        player_id,
+                        &map,
+                        &mut map_changes_sender,
+                        &mut map_changes_receiver,
+                        &mut remote_loaded_chunk_coords
+                    );
+
+                    if let Some(response) = response_future.await {
                         log::debug!("Response to client {} - {}", client_id, response);
                         ws.send(&response).await?;
                     }
@@ -180,8 +201,8 @@ async fn handle_established_connection(
                     Ok(modification) => {
                         let response = handle_map_change(modification, &remote_loaded_chunk_coords).await;
 
-                        log::debug!("Informing client {} of change to game world - todo", client_id);
-                        // TODO: ws.send(...).await?;
+                        log::debug!("Informing client {} of change to game world - {}", client_id, response);
+                        ws.send(&response).await?;
                     }
 
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
@@ -208,6 +229,8 @@ async fn handle_established_connection(
 
 async fn handle_message(
     msg: messages::ToServer, client_id: Id, player_id: Id, map: &Shared<ServerMap>,
+    map_changes_sender: &mut broadcast::Sender<messages::MapModification>,
+    map_changes_receiver: &mut broadcast::Receiver<messages::MapModification>,
     remote_loaded_chunk_coords: &mut HashSet<ChunkCoords>
 ) -> Option<messages::FromServer> {
     match msg {
@@ -262,28 +285,41 @@ async fn handle_message(
         }
 
         messages::ToServer::MoveMyEntity { request_number, direction } => {
-            if let Some(player) = map.lock().unwrap().player_entity_by_id(player_id) {
+            let ret = if let Some(player) = map.lock().unwrap().player_entity_by_id(player_id) {
                 // TODO: Check for blocking tiles/entities...
                 // TODO: Prevent player exceeding movement rate...
 
                 // Modify player coordinates:
                 player.move_towards_unchecked(direction);
 
-                // TODO: Broadcast change on world modification channel...
+                // Inform other tasks of the entity's movement:
+
+                let broadcast_msg =
+                    messages::MapModification::EntityMoved { entity_id: player_id, new_position: player.position() };
+
+                map_changes_sender.send(broadcast_msg).unwrap();
 
                 Some(messages::FromServer::YourEntityMoved { request_number, new_position: player.position() })
             }
             else {
                 None
+            };
+
+            if ret.is_some() {
+                // The broadcast isn't relevant to the task that sent it so discard:
+                map_changes_receiver.recv().await.unwrap();
             }
+
+            ret
         }
     }
 }
 
 async fn handle_map_change(
-    modification: maps::Modification, remote_loaded_chunk_coords: &HashSet<ChunkCoords>
+    modification: messages::MapModification, _remote_loaded_chunk_coords: &HashSet<ChunkCoords>
 ) -> messages::FromServer {
-    unimplemented!()
+    // TODO: Check if modification is actually relevant to the remote client before sending.
+    messages::FromServer::MapModified(modification)
 }
 
 #[derive(Error, Debug)]
