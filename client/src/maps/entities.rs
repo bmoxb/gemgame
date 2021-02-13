@@ -41,7 +41,7 @@ impl PlayerEntity {
     pub fn update(&mut self, delta: f32) { self.time_since_last_movement += delta; }
 
     ///
-    pub fn move_towards(
+    pub fn move_towards_checked(
         &mut self, direction: Direction, map: &mut ClientMap, connection: &mut networking::Connection
     ) -> networking::Result<()> {
         // First check if required amount of time has paced since last movement (i.e. don't exceed maximum movement

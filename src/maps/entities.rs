@@ -27,6 +27,12 @@ impl Entity {
             Variety::Human { .. } => 0.1
         }
     }
+
+    /// Modify entity position without performing any sort of checks.
+    pub fn move_towards_unchecked(&mut self, direction: Direction) {
+        let new_pos = direction.apply(self.pos);
+        self.pos = new_pos;
+    }
 }
 
 impl fmt::Display for Entity {

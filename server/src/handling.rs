@@ -118,7 +118,7 @@ async fn handle_websocket_connection(
         ws.send(&messages::FromServer::Welcome {
             version: shared::VERSION.to_string(),
             your_client_id: client_id,
-            your_entity_with_id: (player_id, player_entity.inner_entity_cloned())
+            your_entity_with_id: (player_id, player_entity.contained.clone())
         })
         .await?;
 
@@ -199,10 +199,10 @@ async fn handle_established_connection(
             res = map_changes_receiver.recv() => {
                 match res {
                     Ok(modification) => {
-                        let response = handle_map_change(modification, &remote_loaded_chunk_coords).await;
-
-                        log::debug!("Informing client {} of change to game world - {}", client_id, response);
-                        ws.send(&response).await?;
+                        if let Some(response) = handle_map_change(modification, map, &remote_loaded_chunk_coords).await {
+                            log::debug!("Informing client {} of change to game world - {}", client_id, response);
+                            ws.send(&response).await?;
+                        }
                     }
 
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
@@ -285,28 +285,33 @@ async fn handle_message(
         }
 
         messages::ToServer::MoveMyEntity { request_number, direction } => {
-            let ret = if let Some(player) = map.lock().unwrap().player_entity_by_id(player_id) {
+            let ret = if let Some(entity) = map.lock().unwrap().contained_entity_by_id(player_id) {
                 // TODO: Check for blocking tiles/entities...
                 // TODO: Prevent player exceeding movement rate...
 
+                let old_position = entity.pos;
+
                 // Modify player coordinates:
-                player.move_towards_unchecked(direction);
+                entity.move_towards_unchecked(direction);
 
                 // Inform other tasks of the entity's movement:
 
-                let broadcast_msg =
-                    messages::MapModification::EntityMoved { entity_id: player_id, new_position: player.position() };
+                let broadcast_msg = messages::MapModification::EntityMoved {
+                    entity_id: player_id,
+                    old_position,
+                    new_position: entity.pos
+                };
 
                 map_changes_sender.send(broadcast_msg).unwrap();
 
-                Some(messages::FromServer::YourEntityMoved { request_number, new_position: player.position() })
+                Some(messages::FromServer::YourEntityMoved { request_number, new_position: entity.pos })
             }
             else {
                 None
             };
 
             if ret.is_some() {
-                // The broadcast isn't relevant to the task that sent it so discard:
+                // The broadcast isn't relevant to the task that sent it so immediately receive and discard:
                 map_changes_receiver.recv().await.unwrap();
             }
 
@@ -316,10 +321,35 @@ async fn handle_message(
 }
 
 async fn handle_map_change(
-    modification: messages::MapModification, _remote_loaded_chunk_coords: &HashSet<ChunkCoords>
-) -> messages::FromServer {
-    // TODO: Check if modification is actually relevant to the remote client before sending.
-    messages::FromServer::MapModified(modification)
+    modification: messages::MapModification, map: &Shared<ServerMap>, remote_loaded_chunk_coords: &HashSet<ChunkCoords>
+) -> Option<messages::FromServer> {
+    match modification {
+        messages::MapModification::TileChanged { position, .. } => {
+            let is_position_loaded = remote_loaded_chunk_coords.contains(&position.as_chunk_coords());
+            is_position_loaded.then(|| messages::FromServer::MapModified(modification))
+        }
+
+        messages::MapModification::EntityMoved { old_position, new_position, .. } => {
+            let was_in_loaded = remote_loaded_chunk_coords.contains(&old_position.as_chunk_coords());
+            let is_in_loaded = remote_loaded_chunk_coords.contains(&new_position.as_chunk_coords());
+
+            if was_in_loaded && is_in_loaded {
+                // Entity moving within the bounds of the client's loaded chunks:
+                Some(messages::FromServer::MapModified(modification))
+            }
+            else if was_in_loaded {
+                // Entity moved out of the client's loaded chunks:
+                unimplemented!(); // TODO: tell client to unload the entity in question
+            }
+            else if is_in_loaded {
+                // Entity just moved into the client's loaded chunks:
+                unimplemented!(); // TODO: Provide entity to client
+            }
+            else {
+                None
+            }
+        }
+    }
 }
 
 #[derive(Error, Debug)]

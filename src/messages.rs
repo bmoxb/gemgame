@@ -126,6 +126,8 @@ pub enum MapModification {
     EntityMoved {
         /// The ID of the entity that moved.
         entity_id: Id,
+        /// The previous position of the entity (i.e. before the movement that this message describes).
+        old_position: maps::TileCoords,
         /// The new position of the entity that moved.
         new_position: maps::TileCoords
     }
@@ -137,8 +139,8 @@ impl fmt::Display for MapModification {
             MapModification::TileChanged { position, change_to } => {
                 write!(f, "tile changed at {} to {:?}", position, change_to)
             }
-            MapModification::EntityMoved { entity_id, new_position } => {
-                write!(f, "entity {} moved to {}", entity_id, new_position)
+            MapModification::EntityMoved { entity_id, old_position, new_position } => {
+                write!(f, "entity {} moved from {} to {}", entity_id, old_position, new_position)
             }
         }
     }

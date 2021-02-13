@@ -1,6 +1,6 @@
 use shared::{
     maps::{
-        entities::{Direction, Entity, Variety},
+        entities::{Entity, Variety},
         TileCoords
     },
     Id
@@ -9,7 +9,7 @@ use sqlx::Row;
 
 /// Represents an entity controlled by a player (i.e. controlled remotely by a specific client).
 pub struct PlayerEntity {
-    contained: Entity
+    pub contained: Entity
 }
 
 impl PlayerEntity {
@@ -89,23 +89,12 @@ impl PlayerEntity {
         .await
         .map(|_| ())
     }
-
-    pub fn position(&self) -> TileCoords { self.contained.pos }
-
-    /// Modify entity position without performing any sort of checks.
-    pub fn move_towards_unchecked(&mut self, direction: Direction) {
-        let new_pos = direction.apply(self.contained.pos);
-        self.contained.pos = new_pos;
-    }
-
-    pub fn inner_entity_cloned(&self) -> Entity { self.contained.clone() }
 }
 
-/*
 /// Represents an entity controlled by the server.
 pub struct NonPlayerEntity {
-    contained: Entity,
-    controller: Box<dyn Controller>
+    pub contained: Entity,
+    controller: Box<dyn Controller + Send>
 }
 
 impl NonPlayerEntity {
@@ -115,4 +104,3 @@ impl NonPlayerEntity {
 pub trait Controller {
     fn update(&mut self, e: &mut Entity);
 }
-*/

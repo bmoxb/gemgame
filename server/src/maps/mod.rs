@@ -4,11 +4,11 @@ pub mod generators;
 
 use std::{collections::HashMap, io, path::PathBuf};
 
-use entities::PlayerEntity;
+use entities::{NonPlayerEntity, PlayerEntity};
 use generators::Generator;
 use serde::{Deserialize, Serialize};
 use shared::{
-    maps::{Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
+    maps::{entities::Entity, Chunk, ChunkCoords, Chunks, Map},
     Id
 };
 use tokio::io::AsyncReadExt;
@@ -29,12 +29,22 @@ pub struct ServerMap {
     seed: u32,
 
     /// Player-controlled entities mapped to entity IDs.
-    player_entities: HashMap<Id, PlayerEntity>
+    player_entities: HashMap<Id, PlayerEntity>,
+
+    /// AI-controlled entities mapped to entity IDs.
+    non_player_entities: HashMap<Id, NonPlayerEntity>
 }
 
 impl ServerMap {
     pub fn new(directory: PathBuf, generator: Box<dyn Generator + Send>, seed: u32) -> Self {
-        ServerMap { loaded_chunks: HashMap::new(), directory, generator, seed, player_entities: HashMap::new() }
+        ServerMap {
+            loaded_chunks: HashMap::new(),
+            directory,
+            generator,
+            seed,
+            player_entities: HashMap::new(),
+            non_player_entities: HashMap::new()
+        }
     }
 
     /// Attempt to load a map from the specified directory. If unsuccessful, create a new map with appropriate defaults
@@ -122,7 +132,14 @@ impl ServerMap {
         self.player_entities.insert(id, entity);
     }
 
-    pub fn player_entity_by_id(&mut self, id: Id) -> Option<&mut PlayerEntity> { self.player_entities.get_mut(&id) }
+    pub fn contained_entity_by_id(&mut self, id: Id) -> Option<&mut Entity> {
+        self.player_entities
+            .get_mut(&id)
+            .map(|e| &mut e.contained)
+            .or(self.non_player_entities.get_mut(&id).map(|e| &mut e.contained))
+    }
+
+    //pub fn player_entity_by_id(&mut self, id: Id) -> Option<&mut PlayerEntity> { self.player_entities.get_mut(&id) }
 
     pub fn remove_player_entity(&mut self, id: Id) -> Option<PlayerEntity> {
         let entity = self.player_entities.remove(&id);
