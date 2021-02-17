@@ -83,8 +83,13 @@ impl ClientMap {
                 }
             }
 
-            messages::MapModification::EntityMoved { entity_id, new_position } => {
-                unimplemented!()
+            messages::MapModification::EntityMoved { entity_id, old_position, new_position } => {
+                if let Some(entity) = self.entities.get_mut(&entity_id) {
+                    entity.pos = new_position;
+                }
+                else {
+                    log::warn!("Told by server to move entity {} from {} to {} yet that entity is not loaded", entity_id, old_position, new_position);
+                }
             }
         }
     }

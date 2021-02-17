@@ -329,7 +329,7 @@ async fn handle_map_change(
             is_position_loaded.then(|| messages::FromServer::MapModified(modification))
         }
 
-        messages::MapModification::EntityMoved { old_position, new_position, .. } => {
+        messages::MapModification::EntityMoved { entity_id: _, old_position, new_position } => {
             let was_in_loaded = remote_loaded_chunk_coords.contains(&old_position.as_chunk_coords());
             let is_in_loaded = remote_loaded_chunk_coords.contains(&new_position.as_chunk_coords());
 
