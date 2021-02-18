@@ -50,7 +50,11 @@ impl GameState {
                     self.map.set_loaded_tile_at(coords, tile);
                 }
                 else {
-                    log::warn!("Told by server to change tile at {} to {:?} yet that tile's chunk is not loaded", coords, tile);
+                    log::warn!(
+                        "Told by server to change tile at {} to {:?} yet that tile's chunk is not loaded",
+                        coords,
+                        tile
+                    );
                 }
             }
 

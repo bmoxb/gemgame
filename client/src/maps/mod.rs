@@ -4,8 +4,11 @@ pub mod rendering;
 use std::collections::{HashMap, HashSet};
 
 use shared::{
-    maps::{entities::Entities, Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
-    messages
+    maps::{
+        entities::{Entities, Entity},
+        Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords
+    },
+    messages, Id
 };
 
 use crate::networking::{self, Connection, ConnectionTrait};
@@ -87,5 +90,19 @@ impl Map for ClientMap {
         self.requested_chunks.remove(&coords);
 
         self.loaded_chunks.insert(coords, chunk);
+    }
+
+    fn entity_by_id(&self, id: Id) -> Option<&Entity> { self.entities.get(&id) }
+
+    fn entity_by_id_mut(&mut self, id: Id) -> Option<&mut Entity> { self.entities.get_mut(&id) }
+
+    fn add_entity(&mut self, id: Id, entity: Entity) {
+        self.entities.insert(id, entity);
+        log::info!("Entity with ID {} added to game map", id);
+    }
+
+    fn remove_entity(&mut self, id: Id) -> Option<Entity> {
+        log::info!("Removing entity with ID {} from game map", id);
+        self.entities.remove(&id)
     }
 }

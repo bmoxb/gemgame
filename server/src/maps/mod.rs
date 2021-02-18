@@ -33,13 +33,7 @@ pub struct ServerMap {
 
 impl ServerMap {
     pub fn new(directory: PathBuf, generator: Box<dyn Generator + Send>, seed: u32) -> Self {
-        ServerMap {
-            loaded_chunks: HashMap::new(),
-            directory,
-            generator,
-            seed,
-            player_entities: HashMap::new()
-        }
+        ServerMap { loaded_chunks: HashMap::new(), directory, generator, seed, player_entities: HashMap::new() }
     }
 
     /// Attempt to load a map from the specified directory. If unsuccessful, create a new map with appropriate defaults
@@ -135,16 +129,13 @@ impl Map for ServerMap {
     fn entity_by_id_mut(&mut self, id: Id) -> Option<&mut Entity> { self.player_entities.get_mut(&id) }
 
     fn add_entity(&mut self, id: Id, entity: Entity) {
-        log::debug!("Player entity with ID {} added to game world", id);
         self.player_entities.insert(id, entity);
+        log::debug!("Player entity with ID {} added to game map", id);
     }
 
     fn remove_entity(&mut self, id: Id) -> Option<Entity> {
-        let entity = self.player_entities.remove(&id);
-        if entity.is_some() {
-            log::debug!("Player entity with ID {} removed from game world", id);
-        }
-        entity
+        log::debug!("Removing player entity with ID {} from game map", id);
+        self.player_entities.remove(&id)
     }
 }
 

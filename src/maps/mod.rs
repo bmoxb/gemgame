@@ -5,10 +5,10 @@ use std::collections::HashMap;
 
 pub use coords::*;
 use entities::Entity;
-use crate::Id;
-
 use serde::{Deserialize, Serialize};
 use serde_big_array::big_array;
+
+use crate::Id;
 
 // TODO: Remove this workaround when const generics are properly stablised.
 big_array! { BigArray; }
@@ -53,11 +53,15 @@ pub trait Map {
     /// Have this map include the given chunk in its collection of loaded chunks.
     fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk);
 
+    /// Return the entity with the specified ID as an optional reference.
     fn entity_by_id(&self, id: Id) -> Option<&Entity>;
 
-    /// Fetch an entity on the map by the entity's ID.
+    /// Return the entity with the specified ID as an optional mutable reference.
     fn entity_by_id_mut(&mut self, id: Id) -> Option<&mut Entity>;
 
+    /// Add an entity to the map. On client side this method is used to add all entities not controlled by the client
+    /// (i.e. both players and AI-controlled entities) while on the server side this method is used to add all
+    /// player-controlled entities (a separate system is used to manage AI-controled entities).
     fn add_entity(&mut self, id: Id, entity: Entity);
 
     fn remove_entity(&mut self, id: Id) -> Option<Entity>;
