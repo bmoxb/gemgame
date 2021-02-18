@@ -169,12 +169,7 @@ struct MapConfig {
 /// tasks of changes made to the game map.
 #[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 pub enum Modification {
-    TileChanged {
-        /// Position of the tile tile to be modified.
-        position: TileCoords,
-        /// What the tile at the specified coordinates should be changed to.
-        change_to: Tile
-    },
+    TileChanged(TileCoords, Tile),
 
     EntityMoved {
         /// The ID of the entity that moved.
@@ -194,17 +189,17 @@ pub enum Modification {
     EntityRemoved(Id)
 }
 
-impl fmt::Display for MapModification {
+impl fmt::Display for Modification {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            MapModification::TileChanged { position, change_to } => {
+            Modification::TileChanged(position, change_to) => {
                 write!(f, "tile changed at {} to {:?}", position, change_to)
             }
-            MapModification::EntityMoved { entity_id, old_position, new_position } => {
+            Modification::EntityMoved { entity_id, old_position, new_position } => {
                 write!(f, "entity {} moved from {} to {}", entity_id, old_position, new_position)
             }
-            MapModification::EntityAdded(id) => write!(f, "entity {} added to map", id),
-            MapModification::EntityRemoved(id) => write!(f, "entity {} removed from map", id)
+            Modification::EntityAdded(id) => write!(f, "entity {} added to map", id),
+            Modification::EntityRemoved(id) => write!(f, "entity {} removed from map", id)
         }
     }
 }

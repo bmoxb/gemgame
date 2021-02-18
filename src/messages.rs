@@ -82,7 +82,7 @@ pub enum FromServer {
 
     /// Whenever a map tile is change, this message to sent to all clients that the server believes has loaded the
     /// chunk that the modified tile is contained in.
-    TileChanged(maps::TileCoords, maps::Tile),
+    ChangeTile(maps::TileCoords, maps::Tile),
 
     /// Inform a client that their player entity's position has changed. This is most frequently sent as a response to
     /// a client sending a [`ToServer::MoveMyEntity`] message.
@@ -90,7 +90,7 @@ pub enum FromServer {
 
     /// Inform a client that an entity that is not the player entity that they control has moved within the bounds of
     /// that client's loaded chunks.
-    EntityMoved(Id, maps::TileCoords),
+    MoveEntity(Id, maps::TileCoords),
 
     /// Provide a client with some entity. This message is sent to a client whenever one of the following occurs:
     /// * The client requests a chunk which has an entity present in it.
@@ -117,11 +117,11 @@ impl fmt::Display for FromServer {
                 )
             }
             FromServer::ProvideChunk(coords, _chunk) => write!(f, "provide chunk at {}", coords),
-            FromServer::TileChanged(coords, tile) => write!(f, "change tile at {} to {:?}", coords, tile),
+            FromServer::ChangeTile(coords, tile) => write!(f, "change tile at {} to {:?}", coords, tile),
             FromServer::YourEntityMoved { request_number, new_position } => {
                 write!(f, "your entity moved to {} (request #{})", new_position, request_number)
             }
-            FromServer::EntityMoved(id, pos) => write!(f, "move entity {} to {}", id, pos),
+            FromServer::MoveEntity(id, pos) => write!(f, "move entity {} to {}", id, pos),
             FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id),
             FromServer::ShouldUnloadEntity(id) => write!(f, "should unload entity {}", id)
         }
