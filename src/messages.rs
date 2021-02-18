@@ -80,13 +80,17 @@ pub enum FromServer {
     /// Provide chunk data to a client so it may store it locally. Chunks are provided when requested by the client.
     ProvideChunk(maps::ChunkCoords, maps::Chunk),
 
-    /// Whenever a tile is modified or an entity moves in a chunk, the server sends a message about the changed to each
-    /// client that it believes has the chunk in question loaded.
-    MapModified(MapModification),
+    /// Whenever a map tile is change, this message to sent to all clients that the server believes has loaded the
+    /// chunk that the modified tile is contained in.
+    TileChanged(maps::TileCoords, maps::Tile),
 
     /// Inform a client that their player entity's position has changed. This is most frequently sent as a response to
     /// a client sending a [`ToServer::MoveMyEntity`] message.
     YourEntityMoved { request_number: u32, new_position: maps::TileCoords },
+
+    /// Inform a client that an entity that is not the player entity that they control has moved within the bounds of
+    /// that client's loaded chunks.
+    EntityMoved(Id, maps::TileCoords),
 
     /// Provide a client with some entity. This message is sent to a client whenever one of the following occurs:
     /// * The client requests a chunk which has an entity present in it.
@@ -113,57 +117,13 @@ impl fmt::Display for FromServer {
                 )
             }
             FromServer::ProvideChunk(coords, _chunk) => write!(f, "provide chunk at {}", coords),
-            FromServer::MapModified(modification) => write!(f, "map modified - {}", modification),
+            FromServer::TileChanged(coords, tile) => write!(f, "change tile at {} to {:?}", coords, tile),
             FromServer::YourEntityMoved { request_number, new_position } => {
-                write!(f, "your entity has moved to {} (request #{})", new_position, request_number)
+                write!(f, "your entity moved to {} (request #{})", new_position, request_number)
             }
+            FromServer::EntityMoved(id, pos) => write!(f, "move entity {} to {}", id, pos),
             FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id),
             FromServer::ShouldUnloadEntity(id) => write!(f, "should unload entity {}", id)
-        }
-    }
-}
-
-/// Represents a change made to the game map (tiles and entities).
-#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
-pub enum MapModification {
-    TileChanged {
-        /// Position of the tile tile to be modified.
-        position: maps::TileCoords,
-        /// What the tile at the specified coordinates should be changed to.
-        change_to: maps::Tile
-    },
-
-    EntityMoved {
-        /// The ID of the entity that moved.
-        entity_id: Id,
-        /// The previous position of the entity (i.e. before the movement that this message describes).
-        old_position: maps::TileCoords,
-        /// The new position of the entity that moved.
-        new_position: maps::TileCoords
-    },
-
-    /// Indicates a new entity has been added to the map (in the case of a player entity, this means that a player just
-    /// connected). This variant is used internally by the server and so can be ignored by the client application.
-    EntityAdded(Id),
-
-    /// Indicates that the entity with the specified ID has been removed from the map (in the case of a player entity,
-    /// this means that a player just disconnected). This variant is used internally by the server and so can be
-    /// ignored by the client application.
-    EntityRemoved(Id)
-}
-
-impl fmt::Display for MapModification {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            MapModification::TileChanged { position, change_to } => {
-                write!(f, "tile changed at {} to {:?}", position, change_to)
-            }
-            MapModification::EntityMoved { entity_id, old_position, new_position } => {
-                write!(f, "entity {} moved from {} to {}", entity_id, old_position, new_position)
-            }
-
-            MapModification::EntityAdded(id, entity) => write!(f, "entity {} - {} added to map", id, entity),
-            MapModification::EntityRemoved(id) => write!(f, "entity {} removed from map", id)
         }
     }
 }

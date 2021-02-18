@@ -2,13 +2,13 @@ pub mod chunks;
 pub mod entities;
 pub mod generators;
 
-use std::{collections::HashMap, io, path::PathBuf};
+use std::{collections::HashMap, io, path::PathBuf, fmt};
 
 use entities::{NonPlayerEntity, PlayerEntity};
 use generators::Generator;
 use serde::{Deserialize, Serialize};
 use shared::{
-    maps::{entities::Entity, Chunk, ChunkCoords, Chunks, Map},
+    maps::{entities::Entity, Chunk, ChunkCoords, Chunks, Map, TileCoords, Tile},
     Id
 };
 use tokio::io::AsyncReadExt;
@@ -163,6 +163,50 @@ struct MapConfig {
     #[serde(rename = "generator")]
     generator_name: String,
     seed: u32
+}
+
+/// Represents a change made to the game map (tiles and entities). This enum is used by client tasks to inform other
+/// tasks of changes made to the game map.
+#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
+pub enum Modification {
+    TileChanged {
+        /// Position of the tile tile to be modified.
+        position: TileCoords,
+        /// What the tile at the specified coordinates should be changed to.
+        change_to: Tile
+    },
+
+    EntityMoved {
+        /// The ID of the entity that moved.
+        entity_id: Id,
+        /// The previous position of the entity (i.e. before the movement that this message describes).
+        old_position: TileCoords,
+        /// The new position of the entity that moved.
+        new_position: TileCoords
+    },
+
+    /// Indicates a new entity has been added to the map (in the case of a player entity, this means that a player just
+    /// connected).
+    EntityAdded(Id),
+
+    /// Indicates that the entity with the specified ID has been removed from the map (in the case of a player entity,
+    /// this means that a player just disconnected).
+    EntityRemoved(Id)
+}
+
+impl fmt::Display for MapModification {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MapModification::TileChanged { position, change_to } => {
+                write!(f, "tile changed at {} to {:?}", position, change_to)
+            }
+            MapModification::EntityMoved { entity_id, old_position, new_position } => {
+                write!(f, "entity {} moved from {} to {}", entity_id, old_position, new_position)
+            }
+            MapModification::EntityAdded(id) => write!(f, "entity {} added to map", id),
+            MapModification::EntityRemoved(id) => write!(f, "entity {} removed from map", id)
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
