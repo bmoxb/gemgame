@@ -71,28 +71,6 @@ impl ClientMap {
 
         !tile_blocking && !entity_blocking
     }
-
-    pub fn apply_modification(&mut self, modification: messages::MapModification) {
-        match modification {
-            messages::MapModification::TileChanged { position, change_to } => {
-                if self.is_tile_loaded(position) {
-                    self.set_loaded_tile_at(position, change_to);
-                }
-                else {
-                    log::warn!("Told by server to change tile at {} to {:?} yet the chunk that tile is contained in is not loaded", position, change_to);
-                }
-            }
-
-            messages::MapModification::EntityMoved { entity_id, old_position, new_position } => {
-                if let Some(entity) = self.entities.get_mut(&entity_id) {
-                    entity.pos = new_position;
-                }
-                else {
-                    log::warn!("Told by server to move entity {} from {} to {} yet that entity is not loaded", entity_id, old_position, new_position);
-                }
-            }
-        }
-    }
 }
 
 impl Map for ClientMap {

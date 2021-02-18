@@ -42,25 +42,31 @@ impl GameState {
             }
 
             messages::FromServer::ProvideChunk(coords, chunk) => {
-                log::debug!("Chunk loaded from server: {}", coords);
                 self.map.provide_chunk(coords, chunk);
             }
 
-            messages::FromServer::MapModified(modification) => {
-                log::trace!("Notified of a modification to the map affecting loaded chunks: {}", modification);
-                self.map.apply_modification(modification);
+            messages::FromServer::ChangeTile(coords, tile) => {
+                if self.map.is_tile_loaded(coords) {
+                    self.map.set_loaded_tile_at(coords, tile);
+                }
+                else {
+                    log::warn!("Told by server to change tile at {} to {:?} yet that tile's chunk is not loaded", coords, tile);
+                }
             }
 
             messages::FromServer::YourEntityMoved { request_number, new_position } => {
-                log::trace!(
-                    "Received player movement reconciliation for request {} to position {}",
-                    request_number,
-                    new_position
-                );
                 self.player_entity.received_movement_reconciliation(request_number, new_position);
             }
 
+            messages::FromServer::MoveEntity(id, pos) => {
+                unimplemented!() // TODO
+            }
+
             messages::FromServer::ProvideEntity(_entity_id, _entity) => {
+                unimplemented!() // TODO
+            }
+
+            messages::FromServer::ShouldUnloadEntity(_entity_id) => {
                 unimplemented!() // TODO
             }
         }
