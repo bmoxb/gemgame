@@ -9,7 +9,7 @@ use tokio::{net::TcpStream, sync::broadcast};
 use tokio_tungstenite::tungstenite;
 
 use crate::{
-    maps::{self, entities::PlayerEntity, ServerMap},
+    maps::{self, entities, ServerMap},
     networking::{self, Connection},
     Shared
 };
@@ -88,7 +88,7 @@ async fn handle_websocket_connection(
 
                 // Get the client their existing player entity (if any) from database:
 
-                if let Some((entity_id, entity)) = PlayerEntity::from_database(client_id, &mut db).await? {
+                if let Some((entity_id, entity)) = entities::player_from_database(client_id, &mut db).await? {
                     (client_id, entity_id, entity)
                 }
                 else {
@@ -98,7 +98,7 @@ async fn handle_websocket_connection(
                         client_id
                     );
 
-                    let (entity_id, entity) = PlayerEntity::new_to_database(client_id, &mut db).await?;
+                    let (entity_id, entity) = entities::new_player_in_database(client_id, &mut db).await?;
                     (client_id, entity_id, entity)
                 }
             }
@@ -108,7 +108,7 @@ async fn handle_websocket_connection(
 
                 // Create a new entity for this client and insert into the database:
 
-                let (new_entity_id, new_entity) = PlayerEntity::new_to_database(new_id, &mut db).await?;
+                let (new_entity_id, new_entity) = entities::new_player_in_database(new_id, &mut db).await?;
                 (new_id, new_entity_id, new_entity)
             }
         };
@@ -118,12 +118,12 @@ async fn handle_websocket_connection(
         ws.send(&messages::FromServer::Welcome {
             version: shared::VERSION.to_string(),
             your_client_id: client_id,
-            your_entity_with_id: (player_id, player_entity.contained.clone())
+            your_entity_with_id: (player_id, player_entity.clone())
         })
         .await?;
 
         // Place this client's player entity on the game map:
-        map.lock().unwrap().add_player_entity(player_id, player_entity);
+        map.lock().unwrap().add_entity(player_id, player_entity);
 
         // Inform other tasks that a new entity now exists on the game map:
 
@@ -144,10 +144,10 @@ async fn handle_websocket_connection(
 
         // Remove this client's player entity from the game world and update database with changes to said entity:
 
-        let entity_option = map.lock().unwrap().remove_player_entity(player_id);
+        let entity_option = map.lock().unwrap().remove_entity(player_id);
         if let Some(player_entity) = entity_option {
             let mut db = db_pool.acquire().await.unwrap();
-            player_entity.update_database(client_id, &mut db).await?;
+            entities::update_database_for_player(&player_entity, client_id, &mut db).await?;
         }
 
         // Inform other tasks that an entity has been removed from the game map:
@@ -294,7 +294,7 @@ async fn handle_message(
         }
 
         messages::ToServer::MoveMyEntity { request_number, direction } => {
-            let ret = if let Some(entity) = map.lock().unwrap().contained_entity_by_id(player_id) {
+            let ret = if let Some(entity) = map.lock().unwrap().entity_by_id_mut(player_id) {
                 // TODO: Check for blocking tiles/entities...
                 // TODO: Prevent player exceeding movement rate...
 
@@ -363,7 +363,7 @@ async fn handle_map_change(
 }
 
 fn make_provide_entity_message(entity_id: Id, map: &Shared<ServerMap>) -> Option<messages::FromServer> {
-    if let Some(entity) = map.lock().unwrap().contained_entity_by_id(entity_id) {
+    if let Some(entity) = map.lock().unwrap().entity_by_id(entity_id) {
         Some(messages::FromServer::ProvideEntity(entity_id, entity.clone()))
     }
     else {

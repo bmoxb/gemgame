@@ -37,6 +37,7 @@ impl ClientMap {
     }
 
     /// Attempt to get the tile at the specified tile coordinates.
+    /// TODO: Remove this method, have server automatically send chunks to client based on player position.
     pub fn tile_at(&mut self, coords: TileCoords) -> Option<&Tile> {
         if !self.is_tile_loaded(coords) {
             let chunk_coords = coords.as_chunk_coords();
@@ -54,6 +55,7 @@ impl ClientMap {
         self.loaded_tile_at(coords)
     }
 
+    /// TODO: Remove this method, reason as above.
     pub fn request_needed_chunks_from_server(&mut self, ws: &mut Connection) -> networking::Result<()> {
         for coords in &self.needed_chunks {
             if !self.requested_chunks.contains(coords) {

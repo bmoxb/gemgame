@@ -4,6 +4,9 @@ pub mod entities;
 use std::collections::HashMap;
 
 pub use coords::*;
+use entities::Entity;
+use crate::Id;
+
 use serde::{Deserialize, Serialize};
 use serde_big_array::big_array;
 
@@ -49,6 +52,15 @@ pub trait Map {
 
     /// Have this map include the given chunk in its collection of loaded chunks.
     fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk);
+
+    fn entity_by_id(&self, id: Id) -> Option<&Entity>;
+
+    /// Fetch an entity on the map by the entity's ID.
+    fn entity_by_id_mut(&mut self, id: Id) -> Option<&mut Entity>;
+
+    fn add_entity(&mut self, id: Id, entity: Entity);
+
+    fn remove_entity(&mut self, id: Id) -> Option<Entity>;
 }
 
 /// Type alias for a hash map that maps chunk coordinates to chunks.

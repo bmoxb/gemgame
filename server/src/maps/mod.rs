@@ -4,7 +4,6 @@ pub mod generators;
 
 use std::{collections::HashMap, fmt, io, path::PathBuf};
 
-use entities::{NonPlayerEntity, PlayerEntity};
 use generators::Generator;
 use serde::{Deserialize, Serialize};
 use shared::{
@@ -29,10 +28,7 @@ pub struct ServerMap {
     seed: u32,
 
     /// Player-controlled entities mapped to entity IDs.
-    player_entities: HashMap<Id, PlayerEntity>,
-
-    /// AI-controlled entities mapped to entity IDs.
-    non_player_entities: HashMap<Id, NonPlayerEntity>
+    player_entities: HashMap<Id, Entity>
 }
 
 impl ServerMap {
@@ -42,8 +38,7 @@ impl ServerMap {
             directory,
             generator,
             seed,
-            player_entities: HashMap::new(),
-            non_player_entities: HashMap::new()
+            player_entities: HashMap::new()
         }
     }
 
@@ -126,28 +121,6 @@ impl ServerMap {
 
         success
     }
-
-    pub fn add_player_entity(&mut self, id: Id, entity: PlayerEntity) {
-        log::debug!("Player entity with ID {} added to game world", id);
-        self.player_entities.insert(id, entity);
-    }
-
-    pub fn contained_entity_by_id(&mut self, id: Id) -> Option<&mut Entity> {
-        self.player_entities
-            .get_mut(&id)
-            .map(|e| &mut e.contained)
-            .or(self.non_player_entities.get_mut(&id).map(|e| &mut e.contained))
-    }
-
-    //pub fn player_entity_by_id(&mut self, id: Id) -> Option<&mut PlayerEntity> { self.player_entities.get_mut(&id) }
-
-    pub fn remove_player_entity(&mut self, id: Id) -> Option<PlayerEntity> {
-        let entity = self.player_entities.remove(&id);
-        if entity.is_some() {
-            log::debug!("Player entity with ID {} removed from game world", id);
-        }
-        entity
-    }
 }
 
 impl Map for ServerMap {
@@ -156,6 +129,23 @@ impl Map for ServerMap {
     fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk> { self.loaded_chunks.get_mut(&coords) }
 
     fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) { self.loaded_chunks.insert(coords, chunk); }
+
+    fn entity_by_id(&self, id: Id) -> Option<&Entity> { self.player_entities.get(&id) }
+
+    fn entity_by_id_mut(&mut self, id: Id) -> Option<&mut Entity> { self.player_entities.get_mut(&id) }
+
+    fn add_entity(&mut self, id: Id, entity: Entity) {
+        log::debug!("Player entity with ID {} added to game world", id);
+        self.player_entities.insert(id, entity);
+    }
+
+    fn remove_entity(&mut self, id: Id) -> Option<Entity> {
+        let entity = self.player_entities.remove(&id);
+        if entity.is_some() {
+            log::debug!("Player entity with ID {} removed from game world", id);
+        }
+        entity
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
