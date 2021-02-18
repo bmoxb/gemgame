@@ -8,7 +8,7 @@ use crate::Id;
 /// Type alias for a hash map of entity IDs to entities.
 pub type Entities = HashMap<Id, Entity>;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Entity {
     /// The name of this entity.
     pub name: String,
@@ -41,7 +41,7 @@ impl fmt::Display for Entity {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub enum Variety {
     Human {
         /// Direction that this human entity is facing. Defaults to 'down'.

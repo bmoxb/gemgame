@@ -88,9 +88,18 @@ pub enum FromServer {
     /// a client sending a [`ToServer::MoveMyEntity`] message.
     YourEntityMoved { request_number: u32, new_position: maps::TileCoords },
 
-    /// Provide a client with some entity. This is done when the client's player entity comes to be in close proximity
-    /// to another entity that the server believes is not already loaded by the client.
-    ProvideEntity(Id, Entity)
+    /// Provide a client with some entity. This message is sent to a client whenever one of the following occurs:
+    /// * The client requests a chunk which has an entity present in it.
+    /// * An entity in a chunk not loaded by the client moves into a chunk that is.
+    /// * An entity that would be in one of the client's loaded chunks is added to the map (typically when a new player
+    ///   connects).
+    ProvideEntity(Id, Entity),
+
+    /// Instruct the client to unload the entity with the specified ID. This message is sent whenever:
+    /// * An entity in one of the client's loaded chunks moves into a chunk that is not loaded by that client.
+    /// * An entity in one of the chunks loaded by the client is removed from the map (typically as a result of a
+    ///   player disconnecting).
+    ShouldUnloadEntity(Id)
 }
 
 impl fmt::Display for FromServer {
@@ -108,7 +117,8 @@ impl fmt::Display for FromServer {
             FromServer::YourEntityMoved { request_number, new_position } => {
                 write!(f, "your entity has moved to {} (request #{})", new_position, request_number)
             }
-            FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id)
+            FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id),
+            FromServer::ShouldUnloadEntity(id) => write!(f, "should unload entity {}", id)
         }
     }
 }
@@ -130,7 +140,16 @@ pub enum MapModification {
         old_position: maps::TileCoords,
         /// The new position of the entity that moved.
         new_position: maps::TileCoords
-    }
+    },
+
+    /// Indicates a new entity has been added to the map (in the case of a player entity, this means that a player just
+    /// connected). This variant is used internally by the server and so can be ignored by the client application.
+    EntityAdded(Id),
+
+    /// Indicates that the entity with the specified ID has been removed from the map (in the case of a player entity,
+    /// this means that a player just disconnected). This variant is used internally by the server and so can be
+    /// ignored by the client application.
+    EntityRemoved(Id)
 }
 
 impl fmt::Display for MapModification {
@@ -142,6 +161,9 @@ impl fmt::Display for MapModification {
             MapModification::EntityMoved { entity_id, old_position, new_position } => {
                 write!(f, "entity {} moved from {} to {}", entity_id, old_position, new_position)
             }
+
+            MapModification::EntityAdded(id, entity) => write!(f, "entity {} - {} added to map", id, entity),
+            MapModification::EntityRemoved(id) => write!(f, "entity {} removed from map", id)
         }
     }
 }
