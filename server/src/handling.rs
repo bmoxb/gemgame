@@ -75,7 +75,7 @@ pub async fn handle_connection(
 async fn handle_websocket_connection(
     mut ws: Connection, addr: &SocketAddr, map: Shared<ServerMap>, db_pool: sqlx::SqlitePool,
     map_changes_sender: broadcast::Sender<maps::Modification>,
-    map_changes_receiver: broadcast::Receiver<maps::Modification>
+    mut map_changes_receiver: broadcast::Receiver<maps::Modification>
 ) -> Result<()> {
     // Expect a 'hello' message from the client:
 
@@ -122,9 +122,13 @@ async fn handle_websocket_connection(
         })
         .await?;
 
-        // Place this client's player entity in the game world:
-
+        // Place this client's player entity on the game map:
         map.lock().unwrap().add_player_entity(player_id, player_entity);
+
+        // Inform other tasks that a new entity now exists on the game map:
+
+        map_changes_sender.send(maps::Modification::EntityAdded(player_id)).unwrap();
+        map_changes_receiver.recv().await.unwrap();
 
         // Begin main connection loop:
 
@@ -133,8 +137,8 @@ async fn handle_websocket_connection(
             client_id,
             player_id,
             &map,
-            map_changes_sender,
-            map_changes_receiver
+            &map_changes_sender,
+            &mut map_changes_receiver
         )
         .await;
 
@@ -145,6 +149,11 @@ async fn handle_websocket_connection(
             let mut db = db_pool.acquire().await.unwrap();
             player_entity.update_database(client_id, &mut db).await?;
         }
+
+        // Inform other tasks that an entity has been removed from the game map:
+
+        map_changes_sender.send(maps::Modification::EntityRemoved(player_id)).unwrap();
+        map_changes_receiver.recv().await.unwrap();
 
         result
     }
@@ -158,8 +167,8 @@ async fn handle_websocket_connection(
 /// messages have completed.
 async fn handle_established_connection(
     ws: &mut Connection, client_id: Id, player_id: Id, map: &Shared<ServerMap>,
-    mut map_changes_sender: broadcast::Sender<maps::Modification>,
-    mut map_changes_receiver: broadcast::Receiver<maps::Modification>
+    map_changes_sender: &broadcast::Sender<maps::Modification>,
+    map_changes_receiver: &mut broadcast::Receiver<maps::Modification>
 ) -> Result<()> {
     // The server keeps track of the  coordinates of chunks that it believes each remote client has loaded using a hash
     // set:
@@ -180,8 +189,8 @@ async fn handle_established_connection(
                         client_id,
                         player_id,
                         &map,
-                        &mut map_changes_sender,
-                        &mut map_changes_receiver,
+                        map_changes_sender,
+                        map_changes_receiver,
                         &mut remote_loaded_chunk_coords
                     );
 
@@ -229,7 +238,7 @@ async fn handle_established_connection(
 
 async fn handle_message(
     msg: messages::ToServer, client_id: Id, player_id: Id, map: &Shared<ServerMap>,
-    map_changes_sender: &mut broadcast::Sender<maps::Modification>,
+    map_changes_sender: &broadcast::Sender<maps::Modification>,
     map_changes_receiver: &mut broadcast::Receiver<maps::Modification>,
     remote_loaded_chunk_coords: &mut HashSet<ChunkCoords>
 ) -> Option<messages::FromServer> {
@@ -296,11 +305,8 @@ async fn handle_message(
 
                 // Inform other tasks of the entity's movement:
 
-                let broadcast_msg = maps::Modification::EntityMoved {
-                    entity_id: player_id,
-                    old_position,
-                    new_position: entity.pos
-                };
+                let broadcast_msg =
+                    maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position: entity.pos };
 
                 map_changes_sender.send(broadcast_msg).unwrap();
 
@@ -350,13 +356,9 @@ async fn handle_map_change(
             }
         }
 
-        maps::Modification::EntityAdded(id) => {
-            make_provide_entity_message(id, map)
-        }
+        maps::Modification::EntityAdded(id) => make_provide_entity_message(id, map), // TODO: Check if in loaded chunks
 
-        maps::Modification::EntityRemoved(id) => {
-            Some(messages::FromServer::ShouldUnloadEntity(id))
-        }
+        maps::Modification::EntityRemoved(id) => Some(messages::FromServer::ShouldUnloadEntity(id)) // TODO: as above
     }
 }
 
@@ -365,7 +367,10 @@ fn make_provide_entity_message(entity_id: Id, map: &Shared<ServerMap>) -> Option
         Some(messages::FromServer::ProvideEntity(entity_id, entity.clone()))
     }
     else {
-        log::warn!("Message on map modification channel refers to entity {} yet an entity with that ID could not be found", entity_id);
+        log::warn!(
+            "Message on map modification channel refers to entity {} yet an entity with that ID could not be found",
+            entity_id
+        );
         None
     }
 }

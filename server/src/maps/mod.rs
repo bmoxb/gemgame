@@ -2,13 +2,13 @@ pub mod chunks;
 pub mod entities;
 pub mod generators;
 
-use std::{collections::HashMap, io, path::PathBuf, fmt};
+use std::{collections::HashMap, fmt, io, path::PathBuf};
 
 use entities::{NonPlayerEntity, PlayerEntity};
 use generators::Generator;
 use serde::{Deserialize, Serialize};
 use shared::{
-    maps::{entities::Entity, Chunk, ChunkCoords, Chunks, Map, TileCoords, Tile},
+    maps::{entities::Entity, Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
     Id
 };
 use tokio::io::AsyncReadExt;
