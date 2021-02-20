@@ -6,3 +6,7 @@ server/world/
 *.wasm
 # Server log files:
 *.log
+*.db
+*.db-wal
+*.db-shm
+client id.txt

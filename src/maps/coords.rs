@@ -1,10 +1,10 @@
-use std::{fmt, hash::Hash};
+use std::{cmp, fmt, hash::Hash};
 
 use serde::{Deserialize, Serialize};
 
-use super::{CHUNK_HEIGHT, CHUNK_WIDTH};
+use super::{CHUNK_HEIGHT, CHUNK_TILE_COUNT, CHUNK_WIDTH};
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct TileCoords {
     pub x: i32,
     pub y: i32
@@ -40,7 +40,7 @@ impl fmt::Display for TileCoords {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "tile coordinates ({}, {})", self.x, self.y) }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ChunkCoords {
     pub x: i32,
     pub y: i32
@@ -50,10 +50,18 @@ impl fmt::Display for ChunkCoords {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "chunk coordinates ({}, {})", self.x, self.y) }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct OffsetCoords {
     pub x: u8,
     pub y: u8
+}
+
+impl OffsetCoords {
+    /// Calculate the within the array used to store tiles in chunks. Guaranteed to be within bounds regardless of
+    /// offset coordinate values.
+    pub fn calculate_index(&self) -> usize {
+        cmp::min((self.y as i32 * CHUNK_WIDTH + self.x as i32) as usize, CHUNK_TILE_COUNT - 1)
+    }
 }
 
 impl fmt::Display for OffsetCoords {
@@ -63,7 +71,7 @@ impl fmt::Display for OffsetCoords {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::{ChunkCoords, OffsetCoords, TileCoords};
 
     #[test]

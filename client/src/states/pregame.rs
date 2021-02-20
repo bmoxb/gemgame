@@ -3,8 +3,9 @@ use shared::{messages, WEBSOCKET_CONNECTION_PORT};
 
 use super::State;
 use crate::{
+    maps::entities::PlayerEntity,
     networking::{self, ConnectionTrait, PendingConnectionTrait},
-    AssetManager
+    sessions, AssetManager
 };
 
 const SERVER_ADDRESS: &str = "localhost";
@@ -65,8 +66,22 @@ struct ConnectedState {
 }
 
 impl ConnectedState {
-    fn new(connection: networking::Connection) -> Self {
-        ConnectedState { connection: Some(connection), text: CONNECTING_TEXT }
+    fn new(mut connection: networking::Connection) -> Self {
+        let hello_msg = messages::ToServer::Hello { client_id_option: sessions::retrieve_client_id() };
+
+        let text = match connection.send(&hello_msg) {
+            Ok(_) => {
+                log::debug!("Sent 'hello' message to server: {}", hello_msg);
+                CONNECTING_TEXT
+            }
+
+            Err(e) => {
+                log::error!("Failed to send 'hello' message due to error: {}", e);
+                FAILED_TEXT
+            }
+        };
+
+        ConnectedState { connection: Some(connection), text }
     }
 }
 
@@ -76,12 +91,29 @@ impl State for ConnectedState {
             Ok(msg_option) => {
                 if let Some(msg) = msg_option {
                     match msg {
-                        messages::FromServer::Welcome { version } => {
+                        messages::FromServer::Welcome {
+                            version,
+                            your_client_id,
+                            your_entity_with_id: (entity_id, entity)
+                        } => {
                             log::debug!("Server version: {}", version);
 
+                            // Check version aligns with that of the version:
+
                             if version == shared::VERSION {
+                                // Save the client ID (browser local storage):
+
+                                log::debug!("Given client ID: {}", your_client_id);
+
+                                sessions::store_client_id(your_client_id);
+
+                                // Enter the main game state:
+
+                                log::debug!("Given player entity: {} - {}", entity, entity_id);
+
+                                let player_entity = PlayerEntity::new(entity_id, entity);
                                 let taken_connection = self.connection.take().unwrap();
-                                let game_state = super::game::GameState::new(taken_connection);
+                                let game_state = super::game::GameState::new(taken_connection, player_entity);
 
                                 return Some(Box::new(game_state));
                             }
@@ -106,7 +138,7 @@ impl State for ConnectedState {
             }
 
             Err(e) => {
-                log::warn!("Connecting error while waiting to receive a welcome message: {}", e);
+                log::error!("Connecting error while waiting to receive a 'welcome' message: {}", e);
                 self.text = FAILED_TEXT;
             }
         }

@@ -12,12 +12,18 @@ flexi_logger = { version = "0.16", features = ["colors"] }
 
 structopt = "0.3"
 
-tokio = { version = "0.3", features = ["rt-multi-thread", "macros", "fs", "signal"] }
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "fs", "signal", "sync"] }
 futures-util = "0.3"
-tokio-tungstenite = "0.12"
+tokio-tungstenite = "0.13"
+
+# To use main sqlx repo when pull request merged.
+sqlx = { git = "https://github.com/launchbadge/sqlx.git", features = ["runtime-tokio-native-tls", "sqlite"] }
+
+thiserror = "1.0"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bincode = "1.3"
 
+rand = "0.8"
 noise = "0.7"

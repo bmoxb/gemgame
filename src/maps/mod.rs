@@ -1,10 +1,14 @@
 pub mod coords;
+pub mod entities;
 
-use std::{cmp, collections::HashMap};
+use std::collections::HashMap;
 
 pub use coords::*;
+use entities::Entity;
 use serde::{Deserialize, Serialize};
 use serde_big_array::big_array;
+
+use crate::Id;
 
 // TODO: Remove this workaround when const generics are properly stablised.
 big_array! { BigArray; }
@@ -22,19 +26,42 @@ pub trait Map {
     /// Fetch the tile at the given tile coordinates assuming it is in a chunk that is already loaded.
     fn loaded_tile_at(&self, coords: TileCoords) -> Option<&Tile> {
         let chunk = self.loaded_chunk_at(coords.as_chunk_coords())?;
-
         Some(chunk.tile_at_offset(coords.as_chunk_offset_coords()))
+    }
+
+    /// Change the tile at the specified tile coordinates assuming it is in a chunk that is already loaded.
+    fn set_loaded_tile_at(&mut self, coords: TileCoords, tile: Tile) -> bool {
+        if let Some(chunk) = self.loaded_chunk_at_mut(coords.as_chunk_coords()) {
+            chunk.set_tile_at_offset(coords.as_chunk_offset_coords(), tile);
+            true
+        }
+        else {
+            false
+        }
     }
 
     fn is_tile_loaded(&self, coords: TileCoords) -> bool { self.loaded_chunk_at(coords.as_chunk_coords()).is_some() }
 
-    /// Returns the chunk at the given chunk coordinates assuming it is already loaded.
+    fn is_chunk_loaded(&self, coords: ChunkCoords) -> bool { self.loaded_chunk_at(coords).is_some() }
+
+    /// Return the loaded chunk at the given chunk coordinates as an optional immutable reference.
     fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk>;
 
-    fn is_chunk_loaded(&self, coords: ChunkCoords) -> bool { self.loaded_chunk_at(coords).is_some() }
+    /// Return the loaded chunk at the given chunk coordinates as a optional mutable reference.
+    fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk>;
 
     /// Have this map include the given chunk in its collection of loaded chunks.
     fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk);
+
+    /// Return the entity with the specified ID as an optional reference.
+    fn entity_by_id(&self, id: Id) -> Option<&Entity>;
+
+    /// Add an entity to the map. On client side this method is used to add all entities not controlled by the client
+    /// (i.e. both players and AI-controlled entities) while on the server side this method is used to add all
+    /// player-controlled entities (a separate system is used to manage AI-controled entities).
+    fn add_entity(&mut self, id: Id, entity: Entity);
+
+    fn remove_entity(&mut self, id: Id) -> Option<Entity>;
 }
 
 /// Type alias for a hash map that maps chunk coordinates to chunks.
@@ -51,19 +78,24 @@ pub struct Chunk {
 impl Chunk {
     pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self { Chunk { tiles } }
 
-    pub fn tile_at_offset(&self, mut offset: OffsetCoords) -> &Tile {
-        // Ensure offset coordinates are within the chunk's bounds:
-        offset.x = cmp::max(0, cmp::min(offset.x, CHUNK_WIDTH as u8 - 1));
-        offset.y = cmp::max(0, cmp::min(offset.y, CHUNK_HEIGHT as u8 - 1));
+    pub fn tile_at_offset(&self, offset: OffsetCoords) -> &Tile { &self.tiles[offset.calculate_index()] }
 
-        &self.tiles[(offset.y as i32 * CHUNK_WIDTH + offset.x as i32) as usize]
+    pub fn set_tile_at_offset(&mut self, offset: OffsetCoords, tile: Tile) {
+        self.tiles[offset.calculate_index()] = tile;
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
-
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum Tile {
     Ground
+}
+
+impl Tile {
+    pub fn is_blocking(&self) -> bool {
+        match self {
+            Tile::Ground => false
+        }
+    }
 }
 
 impl Default for Tile {

@@ -11,7 +11,7 @@ extern "C" {
     fn ws_receive() -> JsObject;
 }
 
-const IO_ERROR_MSG: &'static str = "Please see the browser console for error message";
+const IO_ERROR_MSG: &str = "Please see the browser console for error message";
 
 pub struct PendingConnection;
 

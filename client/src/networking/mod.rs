@@ -1,10 +1,11 @@
 #[cfg(target_arch = "wasm32")]
-mod wasm;
+mod browser;
 #[cfg(target_arch = "wasm32")]
-pub use wasm::*;
+pub use browser::*;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod desktop;
+
 use std::{convert, fmt};
 
 #[cfg(not(target_arch = "wasm32"))]

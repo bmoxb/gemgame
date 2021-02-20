@@ -1,18 +1,18 @@
 mod handling;
+mod id;
+mod maps;
 mod networking;
-mod world;
 
 use std::{
-    collections::HashMap,
-    net::SocketAddr,
+    fs,
     path::PathBuf,
     sync::{Arc, Mutex}
 };
 
+use maps::ServerMap;
 use shared::WEBSOCKET_CONNECTION_PORT;
 use structopt::StructOpt;
-use tokio::net::TcpListener;
-use world::World;
+use tokio::{net::TcpListener, sync::broadcast};
 
 #[tokio::main]
 async fn main() {
@@ -25,7 +25,29 @@ async fn main() {
 
     // Logger initialisation:
 
-    let mut logger = flexi_logger::Logger::with_str(options.log_level)
+    let log_level = {
+        if options.log_debug {
+            flexi_logger::Level::Debug
+        }
+        else if options.log_trace {
+            flexi_logger::Level::Trace
+        }
+        else {
+            flexi_logger::Level::Info
+        }
+    }
+    .to_level_filter();
+
+    let mut log_spec_builder = flexi_logger::LogSpecBuilder::new();
+    log_spec_builder.default(log_level);
+
+    for module in &["sqlx", "tungstenite", "tokio_tungstenite", "mio"] {
+        log_spec_builder.module(module, flexi_logger::LevelFilter::Warn);
+    }
+
+    let log_spec = log_spec_builder.finalize();
+
+    let mut logger = flexi_logger::Logger::with(log_spec)
         .log_target(flexi_logger::LogTarget::StdOut)
         .format_for_stdout(flexi_logger::colored_detailed_format);
 
@@ -42,51 +64,88 @@ async fn main() {
     }
     logger.start().expect("Failed to initialise logger");
 
-    // Prepare data structures that are to be shared between threads:
-
-    let connections: Shared<ConnectionRecords> = Arc::new(Mutex::new(HashMap::new()));
-
-    let world: Shared<World> =
-        Arc::new(Mutex::new(World::new(options.world_directory.clone()).expect("Failed to create game world")));
-
     // Bind socket and handle connections:
 
-    let host_address = format!("127.0.0.1:{}", options.port);
+    let host_address = format!("0.0.0.0:{}", options.port);
 
-    match TcpListener::bind(&host_address).await {
-        Ok(listener) => {
-            log::info!("Created TCP/IP listener bound to address: {}", host_address);
+    let listener = TcpListener::bind(&host_address).await.expect("Failed to create TCP/IP listener");
+    log::info!("Created TCP/IP listener bound to address: {}", host_address);
 
-            // The 'select' macro below means that connections will be continuously listened for unless Ctrl-C is
-            // pressed and the loop is exited.
+    // Load/create game map that is to be shared between threads:
 
-            while let Some(Ok((stream, addr))) = tokio::select!(
-                res = listener.accept() => Some(res),
-                _ = tokio::signal::ctrl_c() => None
-            ) {
+    let contained_map = ServerMap::try_load(options.map_directory.clone()).await;
+    let map: Shared<ServerMap> = Arc::new(Mutex::new(contained_map));
+    log::info!("Loaded/created game map from directory: {}", options.map_directory.display());
+
+    // Connect to database:
+
+    let _ = fs::OpenOptions::new().append(true).create(true).open(&options.database_file); // Create file if not exists.
+
+    let connection_string = format!("sqlite://{}", &options.database_file);
+
+    let db_pool_options = sqlx::sqlite::SqlitePoolOptions::new().max_connections(options.max_database_connections);
+    let db_pool = db_pool_options.connect(&connection_string).await.expect("Failed to connect to database");
+
+    log::info!(
+        "Created connection pool with maximum of {} simultaneous connections to database: {}",
+        options.max_database_connections,
+        connection_string
+    );
+
+    let create_table_query = sqlx::query(
+        "CREATE TABLE IF NOT EXISTS client_entities (
+            client_id TEXT PRIMARY KEY,
+            entity_id TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            tile_x INTEGER NOT NULL,
+            tile_y INTEGER NOT NULL
+        )"
+    );
+    create_table_query.execute(&db_pool).await.expect("Failed to create required table in database");
+
+    log::info!("Prepared necessary database table");
+
+    // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes
+    // made to the game world:
+
+    let (map_changes_sender, mut map_changes_receiver) = broadcast::channel(5);
+
+    log::info!("Listening for incoming TCP/IP connections...");
+
+    loop {
+        // Connections will be continuously listened for unless Ctrl-C is pressed and the loop is exited. Messages on
+        // the world modifcation channel are also listened for and immediately discarded. This is done as the main task
+        // must maintain access to the channel in order to clone and pass it to new connection tasks while also not
+        // blocking the broadcasted message queue.
+        tokio::select!(
+            res = listener.accept() => {
+                let (stream, addr) = res.unwrap();
+
                 log::info!("Incoming connection from: {}", addr);
 
-                tokio::spawn(handling::handle_connection(stream, addr, Arc::clone(&connections), Arc::clone(&world)));
+                tokio::spawn(handling::handle_connection(
+                    stream,
+                    addr,
+                    Arc::clone(&map),
+                    db_pool.clone(),
+                    map_changes_sender.clone(),
+                    map_changes_sender.subscribe()
+                ));
             }
+            _ = map_changes_receiver.recv() => {} // Discard the broadcasted world modification message.
+            _ = tokio::signal::ctrl_c() => break // Break on Ctrl-C.
+        );
+    }
 
-            log::info!("No longer listening for connections");
+    log::info!("No longer listening for connections");
 
-            // TODO: Save game world before closing the program.
-        }
-
-        Err(e) => {
-            log::error!("Failed to create TCP/IP listener at '{}' due to error - {}", host_address, e);
-        }
+    let contained_map = Arc::try_unwrap(map).ok().unwrap().into_inner().unwrap();
+    if let Err(e) = contained_map.save_all().await {
+        log::error!("Failed to save game map before exiting due to error: {}", e);
     }
 }
 
 type Shared<T> = Arc<Mutex<T>>;
-
-type ConnectionRecords = HashMap<SocketAddr, ConnectionRecord>;
-
-pub struct ConnectionRecord {
-    current_map_key: String
-}
 
 // TODO: When Clap version 3 is stable, use that instead?
 /// Server application for not-yet-named web MMO roguelike.
@@ -97,13 +156,26 @@ struct Options {
     #[structopt(short, long, default_value = "0")]
     port: u16,
 
-    /// Directory containing game world data.
-    #[structopt(long, default_value = "world/", parse(from_os_str))]
-    world_directory: PathBuf,
+    /// Directory containing game map data.
+    #[structopt(long, default_value = "map/", parse(from_os_str))]
+    map_directory: PathBuf,
 
-    /// Specify the logging level (trace, debug, info, warn, error).
-    #[structopt(short, long, default_value = "info")]
-    log_level: String,
+    /// The database file in which to store client/player data.
+    #[structopt(long, default_value = "clients.db")]
+    database_file: String,
+
+    /// Specify the maximum number of connections that the database connection pool is able to have open
+    /// simultaneously.
+    #[structopt(long, default_value = "25")]
+    max_database_connections: u32,
+
+    /// Display all debugging logger messages.
+    #[structopt(long, conflicts_with = "log-trace")]
+    log_debug: bool,
+
+    /// Display all tracing and debugging logger messages.
+    #[structopt(long)]
+    log_trace: bool,
 
     /// Specifiy whether or not log messages should be written to a file in addition to stdout.
     #[structopt(long)]

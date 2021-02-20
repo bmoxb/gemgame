@@ -1,3 +1,5 @@
+const NIL = -1;
+
 const PENDING = 0;
 const OK = 1;
 const CLOSED = 2;
@@ -35,7 +37,18 @@ function register_plugin(importObject) {
         if(received.length > 0) {
             return js_object(received.shift())
         }
-        return -1;
+        return NIL;
+    }
+
+    importObject.env.local_storage_get = function(key) {
+        var value = window.localStorage.getItem(consume_js_object(key));
+
+        if(value) { return js_object(value); }
+        else { return NIL; }
+    }
+
+    importObject.env.local_storage_set = function(key, value) {
+        window.localStorage.setItem(consume_js_object(key), consume_js_object(value));
     }
 }
 

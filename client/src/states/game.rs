@@ -1,40 +1,78 @@
-use shared::{maps::Map, messages};
+use macroquad::prelude as quad;
+use shared::{
+    maps::{entities::Direction, Map},
+    messages
+};
 
 use super::State;
 use crate::{
-    maps,
+    maps::{self, entities::PlayerEntity},
     networking::{self, ConnectionTrait},
     AssetManager, TextureKey
 };
 
 pub struct GameState {
+    /// Connection with the remote server.
     connection: networking::Connection,
+    /// The player character entity.
+    player_entity: PlayerEntity,
+    /// The current world map that the player entity is in.
     map: maps::ClientMap,
+    /// The rendering system used to draw the current world map to the screen.
     map_renderer: maps::rendering::Renderer
 }
 
 impl GameState {
-    pub fn new(connection: networking::Connection) -> Self {
-        GameState { connection, map: maps::ClientMap::new(), map_renderer: maps::rendering::Renderer::new(0.08, 16) }
+    pub fn new(connection: networking::Connection, player_entity: PlayerEntity) -> Self {
+        GameState {
+            connection,
+            map: maps::ClientMap::new(),
+            map_renderer: maps::rendering::Renderer::new(0.08, 16),
+            player_entity
+        }
     }
 }
 
 impl GameState {
-    fn handle_message_from_server(&mut self, msg: messages::FromServer) -> networking::Result<()> {
+    fn handle_message_from_server(&mut self, msg: messages::FromServer) {
         match msg {
-            messages::FromServer::Welcome { version: _ } => {
+            messages::FromServer::Welcome { .. } => {
                 log::warn!("Unexpectedly received 'welcome' message from server");
                 unimplemented!()
             }
 
             messages::FromServer::ProvideChunk(coords, chunk) => {
-                log::debug!("Chunk loaded from server: {}", coords);
-
                 self.map.provide_chunk(coords, chunk);
-                Ok(())
             }
 
-            messages::FromServer::UpdateTile(_coords, _tile) => unimplemented!() // TODO
+            messages::FromServer::ChangeTile(coords, tile) => {
+                if self.map.is_tile_loaded(coords) {
+                    self.map.set_loaded_tile_at(coords, tile);
+                }
+                else {
+                    log::warn!(
+                        "Told by server to change tile at {} to {:?} yet that tile's chunk is not loaded",
+                        coords,
+                        tile
+                    );
+                }
+            }
+
+            messages::FromServer::YourEntityMoved { request_number, new_position } => {
+                self.player_entity.received_movement_reconciliation(request_number, new_position);
+            }
+
+            messages::FromServer::MoveEntity(id, pos) => {
+                self.map.set_entity_position_by_id(id, pos);
+            }
+
+            messages::FromServer::ProvideEntity(id, entity) => {
+                self.map.add_entity(id, entity);
+            }
+
+            messages::FromServer::ShouldUnloadEntity(id) => {
+                self.map.remove_entity(id);
+            }
         }
     }
 }
@@ -42,21 +80,48 @@ impl GameState {
 impl State for GameState {
     fn required_textures(&self) -> &[TextureKey] { &[TextureKey::Tiles, TextureKey::Entities] }
 
-    fn update_and_draw(&mut self, assets: &AssetManager, _delta: f32) -> Option<Box<dyn State>> {
+    fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
+        // Map updates:
+
         self.map_renderer.draw(&mut self.map, assets.texture(TextureKey::Tiles), assets.texture(TextureKey::Entities));
 
-        self.map.request_needed_chunks_from_server(&mut self.connection).unwrap(); // TODO
+        self.map.request_needed_chunks_from_server(&mut self.connection).unwrap(); // TODO: Don't just unwrap.
+
+        // Player entity updates/input handling:
+
+        self.player_entity.update(delta);
+
+        let direction_option = {
+            if quad::is_key_down(quad::KeyCode::W) {
+                Some(Direction::Up)
+            }
+            else if quad::is_key_down(quad::KeyCode::A) {
+                Some(Direction::Left)
+            }
+            else if quad::is_key_down(quad::KeyCode::S) {
+                Some(Direction::Down)
+            }
+            else if quad::is_key_down(quad::KeyCode::D) {
+                Some(Direction::Right)
+            }
+            else {
+                None
+            }
+        };
+
+        if let Some(direction) = direction_option {
+            // TODO: Don't just unwrap.
+            self.player_entity.move_towards_checked(direction, &mut self.map, &mut self.connection).unwrap();
+        }
+
+        // Networking:
 
         match self.connection.receive::<messages::FromServer>() {
             Ok(msg_option) => {
                 if let Some(msg) = msg_option {
                     log::info!("Received message from server: {}", msg);
 
-                    let result = self.handle_message_from_server(msg);
-
-                    if let Err(e) = result {
-                        log::warn!("Error occurred during the handling of message from server: {}", e);
-                    }
+                    self.handle_message_from_server(msg);
                 }
             }
 
