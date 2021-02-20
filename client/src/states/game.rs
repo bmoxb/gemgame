@@ -63,7 +63,7 @@ impl GameState {
             }
 
             messages::FromServer::MoveEntity(id, pos) => {
-                unimplemented!() // TODO
+                self.map.set_entity_position_by_id(id, pos);
             }
 
             messages::FromServer::ProvideEntity(id, entity) => {

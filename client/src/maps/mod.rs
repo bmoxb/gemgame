@@ -76,6 +76,15 @@ impl ClientMap {
 
         !tile_blocking && !entity_blocking
     }
+
+    pub fn set_entity_position_by_id(&mut self, id: Id, new_pos: TileCoords) {
+        if let Some(entity) = self.entities.get_mut(&id) {
+            entity.pos = new_pos;
+        }
+        else {
+            log::warn!("Cannot set position of entity {} as it is not loaded", id);
+        }
+    }
 }
 
 impl Map for ClientMap {
