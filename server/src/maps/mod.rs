@@ -155,7 +155,7 @@ impl ServerMap {
                 self.chunk_coords_to_player_ids.entry(new_pos_chunk_coords).or_default().insert(entity_id);
             }
 
-            Some((old_pos, entity.pos))
+            Some((old_pos, new_pos))
         }
         else {
             None
