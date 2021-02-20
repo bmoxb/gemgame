@@ -57,7 +57,9 @@ impl State for ConnectingState {
         None
     }
 
-    fn title(&self) -> &'static str { "Connecting To Server" }
+    fn title(&self) -> &'static str {
+        "Connecting To Server"
+    }
 }
 
 struct ConnectedState {
@@ -148,5 +150,7 @@ impl State for ConnectedState {
         None
     }
 
-    fn title(&self) -> &'static str { "Connected To Server" }
+    fn title(&self) -> &'static str {
+        "Connected To Server"
+    }
 }

@@ -88,9 +88,13 @@ impl ClientMap {
 }
 
 impl Map for ClientMap {
-    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> { self.loaded_chunks.get(&coords) }
+    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> {
+        self.loaded_chunks.get(&coords)
+    }
 
-    fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk> { self.loaded_chunks.get_mut(&coords) }
+    fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk> {
+        self.loaded_chunks.get_mut(&coords)
+    }
 
     fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
         // TODO: Unload chunk(s) should too many be loaded already?
@@ -101,7 +105,9 @@ impl Map for ClientMap {
         self.loaded_chunks.insert(coords, chunk);
     }
 
-    fn entity_by_id(&self, id: Id) -> Option<&Entity> { self.entities.get(&id) }
+    fn entity_by_id(&self, id: Id) -> Option<&Entity> {
+        self.entities.get(&id)
+    }
 
     fn add_entity(&mut self, id: Id, entity: Entity) {
         self.entities.insert(id, entity);

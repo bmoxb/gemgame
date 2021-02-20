@@ -84,11 +84,15 @@ impl fmt::Display for Error {
 }
 
 impl convert::From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self { Error::ConnectionError(Box::new(e)) }
+    fn from(e: std::io::Error) -> Self {
+        Error::ConnectionError(Box::new(e))
+    }
 }
 
 impl convert::From<bincode::Error> for Error {
-    fn from(e: bincode::Error) -> Self { Error::BincodeError(e) }
+    fn from(e: bincode::Error) -> Self {
+        Error::BincodeError(e)
+    }
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

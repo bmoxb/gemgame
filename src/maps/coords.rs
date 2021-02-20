@@ -37,7 +37,9 @@ impl TileCoords {
 }
 
 impl fmt::Display for TileCoords {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "tile coordinates ({}, {})", self.x, self.y) }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "tile coordinates ({}, {})", self.x, self.y)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
@@ -47,7 +49,9 @@ pub struct ChunkCoords {
 }
 
 impl fmt::Display for ChunkCoords {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "chunk coordinates ({}, {})", self.x, self.y) }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "chunk coordinates ({}, {})", self.x, self.y)
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

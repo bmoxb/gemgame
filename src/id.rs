@@ -8,7 +8,9 @@ pub struct Id {
 }
 
 impl Id {
-    pub fn new(value: u128) -> Self { Id { value } }
+    pub fn new(value: u128) -> Self {
+        Id { value }
+    }
 
     pub fn decode(s: &str) -> Option<Self> {
         let bytes = base64::decode_config(s, base64::STANDARD_NO_PAD).ok()?;
@@ -23,7 +25,9 @@ impl Id {
 }
 
 impl fmt::Display for Id {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{} (0x{:032X})", self.encode(), self.value) }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} (0x{:032X})", self.encode(), self.value)
+    }
 }
 
 #[cfg(test)]

@@ -40,9 +40,13 @@ pub trait Map {
         }
     }
 
-    fn is_tile_loaded(&self, coords: TileCoords) -> bool { self.loaded_chunk_at(coords.as_chunk_coords()).is_some() }
+    fn is_tile_loaded(&self, coords: TileCoords) -> bool {
+        self.loaded_chunk_at(coords.as_chunk_coords()).is_some()
+    }
 
-    fn is_chunk_loaded(&self, coords: ChunkCoords) -> bool { self.loaded_chunk_at(coords).is_some() }
+    fn is_chunk_loaded(&self, coords: ChunkCoords) -> bool {
+        self.loaded_chunk_at(coords).is_some()
+    }
 
     /// Return the loaded chunk at the given chunk coordinates as an optional immutable reference.
     fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk>;
@@ -76,9 +80,13 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self { Chunk { tiles } }
+    pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self {
+        Chunk { tiles }
+    }
 
-    pub fn tile_at_offset(&self, offset: OffsetCoords) -> &Tile { &self.tiles[offset.calculate_index()] }
+    pub fn tile_at_offset(&self, offset: OffsetCoords) -> &Tile {
+        &self.tiles[offset.calculate_index()]
+    }
 
     pub fn set_tile_at_offset(&mut self, offset: OffsetCoords, tile: Tile) {
         self.tiles[offset.calculate_index()] = tile;
@@ -99,5 +107,7 @@ impl Tile {
 }
 
 impl Default for Tile {
-    fn default() -> Self { Tile::Ground }
+    fn default() -> Self {
+        Tile::Ground
+    }
 }

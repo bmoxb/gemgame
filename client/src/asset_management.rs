@@ -53,5 +53,7 @@ impl<TextureKey: AssetKey> AssetManager<TextureKey> {
         }
     }
 
-    pub fn count_loaded_textures(&self) -> usize { self.loaded_textures.len() }
+    pub fn count_loaded_textures(&self) -> usize {
+        self.loaded_textures.len()
+    }
 }

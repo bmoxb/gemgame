@@ -23,7 +23,9 @@ impl super::PendingConnectionTrait<Connection> for PendingConnection {
         PendingConnection
     }
 
-    fn ready(&self) -> Result<Option<Connection>> { ConnectionStatus::result(None, Some(Connection)) }
+    fn ready(&self) -> Result<Option<Connection>> {
+        ConnectionStatus::result(None, Some(Connection))
+    }
 }
 
 /// WebSocket connection relying on the web browser's JavaScript API.

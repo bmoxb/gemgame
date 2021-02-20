@@ -89,7 +89,9 @@ impl super::ConnectionTrait for Connection {
 }
 
 impl convert::From<ws2::Error> for Error {
-    fn from(e: ws2::Error) -> Self { Error::ConnectionError(Box::new(e)) }
+    fn from(e: ws2::Error) -> Self {
+        Error::ConnectionError(Box::new(e))
+    }
 }
 
 impl convert::From<ws2::HandshakeError<ws2::ClientHandshake<net::TcpStream>>> for Error {

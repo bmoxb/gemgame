@@ -99,7 +99,9 @@ impl fmt::Display for Direction {
 }
 
 impl Default for Direction {
-    fn default() -> Self { Direction::Down }
+    fn default() -> Self {
+        Direction::Down
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -120,7 +122,9 @@ impl fmt::Display for HairStyle {
 }
 
 impl Default for HairStyle {
-    fn default() -> Self { HairStyle::Quiff }
+    fn default() -> Self {
+        HairStyle::Quiff
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -147,5 +151,7 @@ impl fmt::Display for FacialExpression {
 }
 
 impl Default for FacialExpression {
-    fn default() -> Self { FacialExpression::Neutral }
+    fn default() -> Self {
+        FacialExpression::Neutral
+    }
 }

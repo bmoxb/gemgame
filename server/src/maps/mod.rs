@@ -179,9 +179,13 @@ impl ServerMap {
 }
 
 impl Map for ServerMap {
-    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> { self.loaded_chunks.get(&coords) }
+    fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk> {
+        self.loaded_chunks.get(&coords)
+    }
 
-    fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk> { self.loaded_chunks.get_mut(&coords) }
+    fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk> {
+        self.loaded_chunks.get_mut(&coords)
+    }
 
     fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
         self.loaded_chunks.insert(coords, chunk);
@@ -190,7 +194,9 @@ impl Map for ServerMap {
 
     // TODO: Have remove chunk method which both unloads chunks and the hash sets in chunk_coords_to_player_ids field.
 
-    fn entity_by_id(&self, id: Id) -> Option<&Entity> { self.player_entities.get(&id) }
+    fn entity_by_id(&self, id: Id) -> Option<&Entity> {
+        self.player_entities.get(&id)
+    }
 
     fn add_entity(&mut self, id: Id, entity: Entity) {
         let chunk_coords = entity.pos.as_chunk_coords();

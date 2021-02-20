@@ -78,7 +78,9 @@ impl GameState {
 }
 
 impl State for GameState {
-    fn required_textures(&self) -> &[TextureKey] { &[TextureKey::Tiles, TextureKey::Entities] }
+    fn required_textures(&self) -> &[TextureKey] {
+        &[TextureKey::Tiles, TextureKey::Entities]
+    }
 
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
         // Map updates:
@@ -145,5 +147,7 @@ impl State for GameState {
         None
     }
 
-    fn title(&self) -> &'static str { "Game" }
+    fn title(&self) -> &'static str {
+        "Game"
+    }
 }

@@ -36,7 +36,9 @@ impl Connection {
         }
     }
 
-    pub async fn close(&mut self) -> Result<()> { self.ws.close(None).await.map_err(convert::Into::into) }
+    pub async fn close(&mut self) -> Result<()> {
+        self.ws.close(None).await.map_err(convert::Into::into)
+    }
 }
 
 #[derive(Error, Debug)]

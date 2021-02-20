@@ -38,7 +38,9 @@ impl PlayerEntity {
         }
     }
 
-    pub fn update(&mut self, delta: f32) { self.time_since_last_movement += delta; }
+    pub fn update(&mut self, delta: f32) {
+        self.time_since_last_movement += delta;
+    }
 
     ///
     pub fn move_towards_checked(
