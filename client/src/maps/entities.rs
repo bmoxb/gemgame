@@ -82,5 +82,25 @@ impl PlayerEntity {
     /// This method is called from the main game state whenever a [`shared::messages::FromSever::YourEntityMoved`]
     /// message is received. It is the role of this method to ensure that previous predictions regarding player
     /// entity position after movement were correct.
-    pub fn received_movement_reconciliation(&mut self, request_number: u32, position: TileCoords) {}
+    pub fn received_movement_reconciliation(&mut self, request_number: u32, position: TileCoords) {
+        if let Some(predicted_position) = self.unverified_movements.get(&request_number) {
+            if *predicted_position != position {
+                log::warn!(
+                    "Client-side movement prediction #{} position {} differs from server reconciliation of {}",
+                    request_number,
+                    predicted_position,
+                    position
+                );
+                self.contained.pos = position;
+            }
+        }
+        else {
+            log::warn!(
+                "Received movement reconciliation for movement request #{} which could not found",
+                request_number
+            );
+        }
+
+        self.unverified_movements.remove(&request_number);
+    }
 }

@@ -34,7 +34,7 @@ impl GameState {
 }
 
 impl GameState {
-    fn handle_message_from_server(&mut self, msg: messages::FromServer) -> networking::Result<()> {
+    fn handle_message_from_server(&mut self, msg: messages::FromServer) {
         match msg {
             messages::FromServer::Welcome { .. } => {
                 log::warn!("Unexpectedly received 'welcome' message from server");
@@ -74,8 +74,6 @@ impl GameState {
                 self.map.remove_entity(id);
             }
         }
-
-        Ok(())
     }
 }
 
@@ -87,7 +85,7 @@ impl State for GameState {
 
         self.map_renderer.draw(&mut self.map, assets.texture(TextureKey::Tiles), assets.texture(TextureKey::Entities));
 
-        self.map.request_needed_chunks_from_server(&mut self.connection).unwrap(); // TODO
+        self.map.request_needed_chunks_from_server(&mut self.connection).unwrap(); // TODO: Don't just unwrap.
 
         // Player entity updates/input handling:
 
@@ -112,8 +110,8 @@ impl State for GameState {
         };
 
         if let Some(direction) = direction_option {
+            // TODO: Don't just unwrap.
             self.player_entity.move_towards_checked(direction, &mut self.map, &mut self.connection).unwrap();
-            // TODO
         }
 
         // Networking:
@@ -123,11 +121,7 @@ impl State for GameState {
                 if let Some(msg) = msg_option {
                     log::info!("Received message from server: {}", msg);
 
-                    let result = self.handle_message_from_server(msg);
-
-                    if let Err(e) = result {
-                        log::warn!("Error occurred during the handling of message from server: {}", e);
-                    }
+                    self.handle_message_from_server(msg);
                 }
             }
 
