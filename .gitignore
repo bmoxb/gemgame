@@ -1,12 +1,14 @@
 # Cargo-generated build directory:
 target/
-# Game world data:
-server/world/
+# Game map data:
+server/map/
 # WASM build files:
 *.wasm
 # Server log files:
 *.log
+# Database files:
 *.db
 *.db-wal
 *.db-shm
+# File that stores client ID when running client on desktop:
 client id.txt
