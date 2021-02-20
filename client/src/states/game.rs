@@ -66,12 +66,12 @@ impl GameState {
                 unimplemented!() // TODO
             }
 
-            messages::FromServer::ProvideEntity(_entity_id, _entity) => {
-                unimplemented!() // TODO
+            messages::FromServer::ProvideEntity(id, entity) => {
+                self.map.add_entity(id, entity);
             }
 
-            messages::FromServer::ShouldUnloadEntity(_entity_id) => {
-                unimplemented!() // TODO
+            messages::FromServer::ShouldUnloadEntity(id) => {
+                self.map.remove_entity(id);
             }
         }
 
