@@ -66,7 +66,7 @@ async fn main() {
 
     // Bind socket and handle connections:
 
-    let host_address = format!("127.0.0.1:{}", options.port);
+    let host_address = format!("0.0.0.0:{}", options.port);
 
     let listener = TcpListener::bind(&host_address).await.expect("Failed to create TCP/IP listener");
     log::info!("Created TCP/IP listener bound to address: {}", host_address);
