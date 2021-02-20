@@ -2,12 +2,19 @@ pub mod chunks;
 pub mod entities;
 pub mod generators;
 
-use std::{collections::{HashMap, HashSet}, fmt, io, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt, io,
+    path::PathBuf
+};
 
 use generators::Generator;
 use serde::{Deserialize, Serialize};
 use shared::{
-    maps::{entities::{Entity, Direction}, Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
+    maps::{
+        entities::{Direction, Entity},
+        Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords
+    },
     Id
 };
 use tokio::io::AsyncReadExt;
@@ -142,7 +149,9 @@ impl ServerMap {
 
             // Check if the entity is moving across chunk boundaries:
             if old_pos_chunk_coords != new_pos_chunk_coords {
-                self.chunk_coords_to_player_ids.entry(old_pos_chunk_coords).and_modify(|x| { x.remove(&entity_id); });
+                self.chunk_coords_to_player_ids.entry(old_pos_chunk_coords).and_modify(|x| {
+                    x.remove(&entity_id);
+                });
                 self.chunk_coords_to_player_ids.entry(new_pos_chunk_coords).or_default().insert(entity_id);
             }
 
@@ -151,6 +160,21 @@ impl ServerMap {
         else {
             None
         }
+    }
+
+    /// Get entity IDs and references to all entities in the chunk at the given chunk coordinates.
+    pub fn entities_in_chunk(&self, coords: ChunkCoords) -> Vec<(Id, &Entity)> {
+        let mut entities = Vec::new();
+
+        if let Some(set) = self.chunk_coords_to_player_ids.get(&coords) {
+            for entity_id in set.iter() {
+                if let Some(entity) = self.player_entities.get(entity_id) {
+                    entities.push((*entity_id, entity));
+                }
+            }
+        }
+
+        entities
     }
 }
 
@@ -188,7 +212,9 @@ impl Map for ServerMap {
 
         // Remove the association between the entity and the chunk that entity was in:
         if let Some(entity) = &opt {
-            self.chunk_coords_to_player_ids.entry(entity.pos.as_chunk_coords()).and_modify(|x| { x.remove(&id); });
+            self.chunk_coords_to_player_ids.entry(entity.pos.as_chunk_coords()).and_modify(|x| {
+                x.remove(&id);
+            });
         }
 
         opt

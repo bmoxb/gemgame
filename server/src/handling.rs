@@ -190,7 +190,7 @@ async fn handle_established_connection(
                         &mut remote_loaded_chunk_coords
                     );
 
-                    if let Some(response) = response_future.await {
+                    for response in response_future.await {
                         log::debug!("Response to client {} - {}", client_id, response);
                         ws.send(&response).await?;
                     }
@@ -237,11 +237,11 @@ async fn handle_message(
     map_changes_sender: &broadcast::Sender<maps::Modification>,
     map_changes_receiver: &mut broadcast::Receiver<maps::Modification>,
     remote_loaded_chunk_coords: &mut HashSet<ChunkCoords>
-) -> Option<messages::FromServer> {
+) -> Vec<messages::FromServer> {
     match msg {
         messages::ToServer::Hello { .. } => {
             log::warn!("Client {} sent unexpected 'hello' message: {}", client_id, msg);
-            None
+            vec![]
         }
         messages::ToServer::RequestChunk(coords) => {
             let loaded_chunk_option = map.lock().unwrap().loaded_chunk_at(coords).cloned();
@@ -280,13 +280,20 @@ async fn handle_message(
             // Keep track of which chunks the remote client has loaded:
             remote_loaded_chunk_coords.insert(coords);
 
-            Some(messages::FromServer::ProvideChunk(coords, chunk))
+            let mut msgs = vec![messages::FromServer::ProvideChunk(coords, chunk)];
+
+            // Provide existing entities in this chunk to client:
+            for (entity_id, entity) in map.lock().unwrap().entities_in_chunk(coords) {
+                msgs.push(messages::FromServer::ProvideEntity(entity_id, entity.clone()));
+            }
+
+            msgs
         }
 
         messages::ToServer::ChunkUnloadedLocally(coords) => {
             log::debug!("Client has locally unloaded chunk at {}", coords);
             remote_loaded_chunk_coords.remove(&coords);
-            None
+            vec![]
         }
 
         messages::ToServer::MoveMyEntity { request_number, direction } => {
@@ -294,19 +301,22 @@ async fn handle_message(
                 // TODO: Check for blocking tiles/entities...
                 // TODO: Prevent player exceeding movement rate...
 
-                if let Some((old_position, new_position)) = map.lock().unwrap().move_entity_towards(player_id, direction) {
+                if let Some((old_position, new_position)) =
+                    map.lock().unwrap().move_entity_towards(player_id, direction)
+                {
                     // Inform other tasks of the entity's movement:
-                    let broadcast_msg = maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position };
+                    let broadcast_msg =
+                        maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position };
                     map_changes_sender.send(broadcast_msg).unwrap();
 
-                    Some(messages::FromServer::YourEntityMoved { request_number, new_position })
+                    vec![messages::FromServer::YourEntityMoved { request_number, new_position }]
                 }
                 else {
-                    None
+                    vec![]
                 }
             };
 
-            if ret.is_some() {
+            if !ret.is_empty() {
                 // The broadcast isn't relevant to the task that sent it so immediately receive and discard:
                 map_changes_receiver.recv().await.unwrap();
             }
