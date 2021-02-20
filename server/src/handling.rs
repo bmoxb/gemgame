@@ -143,13 +143,16 @@ async fn handle_websocket_connection(
         // Remove this client's player entity from the game world and update database with changes to said entity:
         let entity_option = map.lock().unwrap().remove_entity(player_id);
         if let Some(player_entity) = entity_option {
-            let mut db = db_pool.acquire().await.unwrap();
-            entities::update_database_for_player(&player_entity, client_id, &mut db).await?;
-        }
+            {
+                let mut db = db_pool.acquire().await.unwrap();
+                entities::update_database_for_player(&player_entity, client_id, &mut db).await?;
+            }
 
-        // Inform other tasks that an entity has been removed from the game map:
-        map_changes_sender.send(maps::Modification::EntityRemoved(player_id)).unwrap();
-        map_changes_receiver.recv().await.unwrap();
+            // Inform other tasks that an entity has been removed from the game map:
+            let modification_msg = maps::Modification::EntityRemoved(player_id, player_entity.pos.as_chunk_coords());
+            map_changes_sender.send(modification_msg).unwrap();
+            map_changes_receiver.recv().await.unwrap();
+        }
 
         result
     }
@@ -349,22 +352,30 @@ async fn handle_map_change(
             }
             else if is_in_loaded {
                 // Entity just moved into the client's loaded chunks:
-                make_provide_entity_message(entity_id, map)
+                make_provide_entity_message(entity_id, map, remote_loaded_chunk_coords)
             }
             else {
                 None
             }
         }
 
-        maps::Modification::EntityAdded(id) => make_provide_entity_message(id, map), // TODO: Check if in loaded chunks
+        maps::Modification::EntityAdded(id) => make_provide_entity_message(id, map, remote_loaded_chunk_coords),
 
-        maps::Modification::EntityRemoved(id) => Some(messages::FromServer::ShouldUnloadEntity(id)) // TODO: as above
+        maps::Modification::EntityRemoved(id, chunk_coords) => {
+            remote_loaded_chunk_coords.contains(&chunk_coords).then(|| messages::FromServer::ShouldUnloadEntity(id))
+        }
     }
 }
 
-fn make_provide_entity_message(entity_id: Id, map: &Shared<ServerMap>) -> Option<messages::FromServer> {
+/// Produces a `messages::FromServer::ProvideEntity` message provided the entity with the specified ID is within one of
+/// the remote client's loaded chunks.
+fn make_provide_entity_message(
+    entity_id: Id, map: &Shared<ServerMap>, remote_loaded_chunk_coords: &HashSet<ChunkCoords>
+) -> Option<messages::FromServer> {
     if let Some(entity) = map.lock().unwrap().entity_by_id(entity_id) {
-        Some(messages::FromServer::ProvideEntity(entity_id, entity.clone()))
+        remote_loaded_chunk_coords
+            .contains(&entity.pos.as_chunk_coords())
+            .then(|| messages::FromServer::ProvideEntity(entity_id, entity.clone()))
     }
     else {
         log::warn!(

@@ -248,8 +248,10 @@ pub enum Modification {
     EntityAdded(Id),
 
     /// Indicates that the entity with the specified ID has been removed from the map (in the case of a player entity,
-    /// this means that a player just disconnected).
-    EntityRemoved(Id)
+    /// this means that a player just disconnected). The coordinates of the chunk that the entity was positioned in are
+    /// included so that each task can decide whether to inform their client of the entity's removal based on their
+    /// loaded chunks.
+    EntityRemoved(Id, ChunkCoords)
 }
 
 impl fmt::Display for Modification {
@@ -262,7 +264,9 @@ impl fmt::Display for Modification {
                 write!(f, "entity {} moved from {} to {}", entity_id, old_position, new_position)
             }
             Modification::EntityAdded(id) => write!(f, "entity {} added to map", id),
-            Modification::EntityRemoved(id) => write!(f, "entity {} removed from map", id)
+            Modification::EntityRemoved(id, coords) => {
+                write!(f, "entity {} in chunk at {} removed from map", id, coords)
+            }
         }
     }
 }
