@@ -126,12 +126,10 @@ async fn handle_websocket_connection(
         map.lock().unwrap().add_entity(player_id, player_entity);
 
         // Inform other tasks that a new entity now exists on the game map:
-
         map_changes_sender.send(maps::Modification::EntityAdded(player_id)).unwrap();
         map_changes_receiver.recv().await.unwrap();
 
         // Begin main connection loop:
-
         let result = handle_established_connection(
             &mut ws,
             client_id,
@@ -143,7 +141,6 @@ async fn handle_websocket_connection(
         .await;
 
         // Remove this client's player entity from the game world and update database with changes to said entity:
-
         let entity_option = map.lock().unwrap().remove_entity(player_id);
         if let Some(player_entity) = entity_option {
             let mut db = db_pool.acquire().await.unwrap();
@@ -151,7 +148,6 @@ async fn handle_websocket_connection(
         }
 
         // Inform other tasks that an entity has been removed from the game map:
-
         map_changes_sender.send(maps::Modification::EntityRemoved(player_id)).unwrap();
         map_changes_receiver.recv().await.unwrap();
 
@@ -294,26 +290,20 @@ async fn handle_message(
         }
 
         messages::ToServer::MoveMyEntity { request_number, direction } => {
-            let ret = if let Some(entity) = map.lock().unwrap().entity_by_id_mut(player_id) {
+            let ret = {
                 // TODO: Check for blocking tiles/entities...
                 // TODO: Prevent player exceeding movement rate...
 
-                let old_position = entity.pos;
+                if let Some((old_position, new_position)) = map.lock().unwrap().move_entity_towards(player_id, direction) {
+                    // Inform other tasks of the entity's movement:
+                    let broadcast_msg = maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position };
+                    map_changes_sender.send(broadcast_msg).unwrap();
 
-                // Modify player coordinates:
-                entity.move_towards_unchecked(direction);
-
-                // Inform other tasks of the entity's movement:
-
-                let broadcast_msg =
-                    maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position: entity.pos };
-
-                map_changes_sender.send(broadcast_msg).unwrap();
-
-                Some(messages::FromServer::YourEntityMoved { request_number, new_position: entity.pos })
-            }
-            else {
-                None
+                    Some(messages::FromServer::YourEntityMoved { request_number, new_position })
+                }
+                else {
+                    None
+                }
             };
 
             if ret.is_some() {

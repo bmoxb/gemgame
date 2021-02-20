@@ -2,12 +2,12 @@ pub mod chunks;
 pub mod entities;
 pub mod generators;
 
-use std::{collections::HashMap, fmt, io, path::PathBuf};
+use std::{collections::{HashMap, HashSet}, fmt, io, path::PathBuf};
 
 use generators::Generator;
 use serde::{Deserialize, Serialize};
 use shared::{
-    maps::{entities::Entity, Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
+    maps::{entities::{Entity, Direction}, Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords},
     Id
 };
 use tokio::io::AsyncReadExt;
@@ -28,12 +28,23 @@ pub struct ServerMap {
     seed: u32,
 
     /// Player-controlled entities mapped to entity IDs.
-    player_entities: HashMap<Id, Entity>
+    player_entities: HashMap<Id, Entity>,
+
+    /// Chunk coordinates mapped to sets of entity IDs. This hash map exists to allow the efficient look up of which
+    /// entities exists in which chunks.
+    chunk_coords_to_player_ids: HashMap<ChunkCoords, HashSet<Id>>
 }
 
 impl ServerMap {
     pub fn new(directory: PathBuf, generator: Box<dyn Generator + Send>, seed: u32) -> Self {
-        ServerMap { loaded_chunks: HashMap::new(), directory, generator, seed, player_entities: HashMap::new() }
+        ServerMap {
+            loaded_chunks: HashMap::new(),
+            directory,
+            generator,
+            seed,
+            player_entities: HashMap::new(),
+            chunk_coords_to_player_ids: HashMap::new()
+        }
     }
 
     /// Attempt to load a map from the specified directory. If unsuccessful, create a new map with appropriate defaults
@@ -115,6 +126,32 @@ impl ServerMap {
 
         success
     }
+
+    /// Move an entity in a specified direction. This method does not perform any checks regarding whether the
+    /// destination tile is blocking/occupied however it does appropriately update the map that keeps track of which
+    /// entities reside in which chunks.
+    pub fn move_entity_towards(&mut self, entity_id: Id, direction: Direction) -> Option<(TileCoords, TileCoords)> {
+        if let Some(entity) = self.player_entities.get_mut(&entity_id) {
+            let old_pos = entity.pos;
+            let new_pos = direction.apply(old_pos);
+
+            entity.pos = new_pos;
+
+            let old_pos_chunk_coords = old_pos.as_chunk_coords();
+            let new_pos_chunk_coords = new_pos.as_chunk_coords();
+
+            // Check if the entity is moving across chunk boundaries:
+            if old_pos_chunk_coords != new_pos_chunk_coords {
+                self.chunk_coords_to_player_ids.entry(old_pos_chunk_coords).and_modify(|x| { x.remove(&entity_id); });
+                self.chunk_coords_to_player_ids.entry(new_pos_chunk_coords).or_default().insert(entity_id);
+            }
+
+            Some((old_pos, entity.pos))
+        }
+        else {
+            None
+        }
+    }
 }
 
 impl Map for ServerMap {
@@ -122,20 +159,39 @@ impl Map for ServerMap {
 
     fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk> { self.loaded_chunks.get_mut(&coords) }
 
-    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) { self.loaded_chunks.insert(coords, chunk); }
+    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
+        self.loaded_chunks.insert(coords, chunk);
+        self.chunk_coords_to_player_ids.insert(coords, HashSet::new());
+    }
+
+    // TODO: Have remove chunk method which both unloads chunks and the hash sets in chunk_coords_to_player_ids field.
 
     fn entity_by_id(&self, id: Id) -> Option<&Entity> { self.player_entities.get(&id) }
 
-    fn entity_by_id_mut(&mut self, id: Id) -> Option<&mut Entity> { self.player_entities.get_mut(&id) }
-
     fn add_entity(&mut self, id: Id, entity: Entity) {
+        let chunk_coords = entity.pos.as_chunk_coords();
+
+        self.chunk_coords_to_player_ids.entry(chunk_coords).or_default().insert(id);
         self.player_entities.insert(id, entity);
-        log::debug!("Player entity with ID {} added to game map", id);
+
+        if self.is_chunk_loaded(chunk_coords) {
+            log::debug!("Player entity with ID {} added to game map", id);
+        }
+        else {
+            log::warn!("Add entity {} to map yet that entity's position is in an unloaded chunk", id);
+        }
     }
 
     fn remove_entity(&mut self, id: Id) -> Option<Entity> {
         log::debug!("Removing player entity with ID {} from game map", id);
-        self.player_entities.remove(&id)
+        let opt = self.player_entities.remove(&id);
+
+        // Remove the association between the entity and the chunk that entity was in:
+        if let Some(entity) = &opt {
+            self.chunk_coords_to_player_ids.entry(entity.pos.as_chunk_coords()).and_modify(|x| { x.remove(&id); });
+        }
+
+        opt
     }
 }
 
