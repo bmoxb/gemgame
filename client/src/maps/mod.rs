@@ -72,9 +72,17 @@ impl ClientMap {
 
     pub fn is_position_free(&mut self, coords: TileCoords) -> bool {
         let tile_blocking = self.tile_at(coords).map_or(true, |tile| tile.is_blocking());
-        let entity_blocking = false; // TODO
 
-        !tile_blocking && !entity_blocking
+        if tile_blocking {
+            false
+        }
+        else {
+            // Determining if there are blocking entities like this is O(n) so may need a better solution for instances
+            // where many entities are together in a small area (e.g. like the O(1) solution seen on server side).
+
+            let entity_blocking = self.entities.values().any(|entity| entity.pos == coords);
+            !entity_blocking
+        }
     }
 
     pub fn set_entity_position_by_id(&mut self, id: Id, new_pos: TileCoords) {
