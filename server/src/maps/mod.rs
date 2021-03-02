@@ -134,31 +134,45 @@ impl ServerMap {
         success
     }
 
-    /// Move an entity in a specified direction. This method does not perform any checks regarding whether the
-    /// destination tile is blocking/occupied however it does appropriately update the map that keeps track of which
-    /// entities reside in which chunks.
+    /// Move an entity in a specified direction. This method checks if the desintation position is already occupied or
+    /// a blocking tile - if it is then `None` is returned (`None` is also returned should an entity with the specified
+    /// ID not be found). If the movement is deemed okay to go ahead, the entity's old position and new position (i.e.
+    /// position after the movement is applied) are returned. The hash map that keeps track of which entities reside in
+    /// which chunks is updated also.
     pub fn move_entity_towards(&mut self, entity_id: Id, direction: Direction) -> Option<(TileCoords, TileCoords)> {
-        if let Some(entity) = self.player_entities.get_mut(&entity_id) {
-            let old_pos = entity.pos;
-            let new_pos = direction.apply(old_pos);
+        if self.player_entities.contains_key(&entity_id) {
+            let (old_pos, new_pos, new_pos_is_free) = {
+                let entity = self.entity_by_id(entity_id).unwrap();
 
-            entity.pos = new_pos;
+                let new_pos = direction.apply(entity.pos);
+                (entity.pos, new_pos, self.is_position_free(new_pos))
+            };
 
-            let old_pos_chunk_coords = old_pos.as_chunk_coords();
-            let new_pos_chunk_coords = new_pos.as_chunk_coords();
+            let entity_mut = self.player_entities.get_mut(&entity_id).unwrap();
+            
+            if new_pos_is_free {
+                // Apply the new position:
+                entity_mut.pos = new_pos;
 
-            // Check if the entity is moving across chunk boundaries:
-            if old_pos_chunk_coords != new_pos_chunk_coords {
-                self.chunk_coords_to_player_ids.entry(old_pos_chunk_coords).and_modify(|x| {
-                    x.remove(&entity_id);
-                });
-                self.chunk_coords_to_player_ids.entry(new_pos_chunk_coords).or_default().insert(entity_id);
+                let old_pos_chunk_coords = old_pos.as_chunk_coords();
+                let new_pos_chunk_coords = new_pos.as_chunk_coords();
+
+                // Check if the entity is moving across chunk boundaries:
+                if old_pos_chunk_coords != new_pos_chunk_coords {
+                    self.chunk_coords_to_player_ids.entry(old_pos_chunk_coords).and_modify(|x| {
+                        x.remove(&entity_id);
+                    });
+                    self.chunk_coords_to_player_ids.entry(new_pos_chunk_coords).or_default().insert(entity_id);
+                }
+
+                Some((old_pos, new_pos))
             }
-
-            Some((old_pos, new_pos))
+            else {
+                None // Movement not allowed.
+            }
         }
         else {
-            None
+            None // Entity with that ID not found.
         }
     }
 
@@ -224,6 +238,20 @@ impl Map for ServerMap {
         }
 
         opt
+    }
+
+    fn is_blocking_entity_at(&self, coords: TileCoords) -> bool {
+        // First identify all entities in the chunk that the specified coordinates are in:
+        if let Some(entity_ids_in_chunk) = self.chunk_coords_to_player_ids.get(&coords.as_chunk_coords()) {
+            // Iterate through the entities in that chunk, checking each entity's position:
+            for entity_id in entity_ids_in_chunk {
+                if let Some(entity) = self.entity_by_id(*entity_id) {
+                    if entity.pos == coords { return true; }
+                }
+            }
+        }
+
+        false
     }
 }
 

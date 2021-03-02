@@ -48,6 +48,19 @@ pub trait Map {
         self.loaded_chunk_at(coords).is_some()
     }
 
+    fn is_position_free(&self, coords: TileCoords) -> bool {
+        !self.is_blocking_tile_at(coords) && !self.is_blocking_entity_at(coords)
+    }
+
+    fn is_blocking_tile_at(&self, coords: TileCoords) -> bool {
+        // TODO: Defaults to false for tiles at coordinates in unloaded chunks so as to allow movement between chunks
+        // before I rework how chunk loading occurs - in future there will always be at least a few chunks surrounding
+        // player in each direction whereas now chunks are only loaded when a player moves between chunks.
+        self.loaded_tile_at(coords).map(|tile| tile.is_blocking()).unwrap_or(false)
+    }
+
+    fn is_blocking_entity_at(&self, coords: TileCoords) -> bool;
+
     /// Return the loaded chunk at the given chunk coordinates as an optional immutable reference.
     fn loaded_chunk_at(&self, coords: ChunkCoords) -> Option<&Chunk>;
 

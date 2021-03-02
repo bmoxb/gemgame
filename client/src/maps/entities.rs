@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use shared::{
     maps::{
         entities::{Direction, Entity},
-        TileCoords
+        Map, TileCoords
     },
     messages, Id
 };
