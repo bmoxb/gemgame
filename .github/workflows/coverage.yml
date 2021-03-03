@@ -1,0 +1,20 @@
+name: coverage
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install OpenGL
+        run: sudo apt-get update && sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev libxi-dev
+      - name: Install Cargo Tarpaulin
+        run: cargo install cargo-tarpaulin
+      - name: Generate & upload coverage report
+        run: cargo tarpaulin --workspace --coveralls ${{secrets.COVERALLS_TOKEN}}
