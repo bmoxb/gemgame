@@ -10,7 +10,9 @@ pub fn draw(tile: &Tile, x: f32, y: f32, draw_size: f32, texture_rect_size: u16,
         dest_size: Some(quad::vec2(draw_size, draw_size)),
         source: Some(rect),
         rotation: 0.0,
-        pivot: None
+        pivot: None,
+        flip_x: false,
+        flip_y: false
     };
 
     quad::draw_texture_ex(texture, x, y, tint, params);
