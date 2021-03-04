@@ -25,18 +25,6 @@ pub enum ToServer {
         client_id_option: Option<Id>
     },
 
-    /// Indicate to the server that this client would like the data for the chunk at the specified chunk coordinates.
-    /// Should the client have a valid reason for wanting this chunk (e.g. the client's player character is moving
-    /// towards the requested chunk) then the server will response with [`FromServer::ProvideChunk`] with the chunk
-    /// data.
-    /// TODO: Remove the need to request chunks - have server provide them automatically based on player's position.
-    RequestChunk(maps::ChunkCoords),
-
-    /// Inform the server that this client has unloaded a chunk. This is done so that the server knows that it does not
-    /// need to send [`FromServer::UpdateTile`] messages for tiles in the specified chunk to this client (the server
-    /// keeps track of what chunks it believes each client has currently loaded).
-    ChunkUnloadedLocally(maps::ChunkCoords),
-
     /// Inform the server that the player has moved their player entity. The server will respond with a
     /// [`FromServer::YourEntityMoved`] message to inform the client of their player entity's new position.
     MoveMyEntity {
@@ -54,8 +42,6 @@ impl fmt::Display for ToServer {
                 Some(id) => write!(f, "hello as existing client {}", id),
                 None => write!(f, "hello as new client")
             },
-            ToServer::RequestChunk(coords) => write!(f, "request chunk at {}", coords),
-            ToServer::ChunkUnloadedLocally(coords) => write!(f, "chunk at {} has been unloaded locally", coords),
             ToServer::MoveMyEntity { request_number, direction } => {
                 write!(f, "move my player entity {} (request #{})", direction, request_number)
             }
@@ -77,8 +63,13 @@ pub enum FromServer {
         your_entity_with_id: (Id, Entity)
     },
 
-    /// Provide chunk data to a client so it may store it locally. Chunks are provided when requested by the client.
+    /// Provide chunk data to a client so it may store it locally. Chunks are provided automatically based on the
+    /// position of a client's player entity.
     ProvideChunk(maps::ChunkCoords, maps::Chunk),
+
+    /// Indicate to a client that they should unload the chunk at the specified coordinates. This message is sent when
+    /// a client's player entity moves far outside a loaded chunk.
+    ShouldUnloadChunk(maps::ChunkCoords),
 
     /// Whenever a map tile is change, this message to sent to all clients that the server believes has loaded the
     /// chunk that the modified tile is contained in.
@@ -117,6 +108,7 @@ impl fmt::Display for FromServer {
                 )
             }
             FromServer::ProvideChunk(coords, _chunk) => write!(f, "provide chunk at {}", coords),
+            FromServer::ShouldUnloadChunk(coords) => write!(f, "should unload chunk at {}", coords),
             FromServer::ChangeTile(coords, tile) => write!(f, "change tile at {} to {:?}", coords, tile),
             FromServer::YourEntityMoved { request_number, new_position } => {
                 write!(f, "your entity moved to {} (request #{})", new_position, request_number)
