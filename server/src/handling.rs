@@ -53,7 +53,7 @@ impl Handler {
 
         match Connection::new(stream).await {
             Ok(ws) => {
-                log::debug!("Performed WebSocket handshake successfully with: {}", self.address);
+                self.log("Performed WebSocket handshake successfully");
 
                 // Handle the connection should the handshake complete successfully:
 
@@ -62,37 +62,26 @@ impl Handler {
 
                     Err(Error::NetworkError(e)) => match e {
                         networking::Error::MessageNotBinary(msg) => {
-                            log::error!("Message from {} is not binary: {}", self.address, msg);
+                            self.log_error(&format!("Message is not binary: {}", msg));
                         }
 
                         networking::Error::EncodingFailure(bincode_err) => {
-                            log::error!(
-                                "Failed to communicate with client {} due to encoding error: {}",
-                                self.address,
-                                bincode_err
-                            );
+                            self.log_error(&format!("Failed to communicate due to encoding error: {}", bincode_err));
                         }
 
                         networking::Error::NetworkError(network_err) => match network_err {
                             tungstenite::Error::Protocol(vioation) if vioation.contains("closing handshake") => {
-                                log::debug!(
-                                    "Client {} closed connection without performing the closing handshake",
-                                    self.address
-                                );
+                                self.log("Connection closed without performing the closing handshake");
                             }
 
                             other => {
-                                log::error!(
-                                    "Failed to communicate with client {} due to network error: {}",
-                                    self.address,
-                                    other
-                                );
+                                self.log_error(&format!("Failed to communicate due to network error: {}", other));
                             }
                         }
                     },
 
-                    Err(Error::DatabaseError(e)) => {
-                        log::error!("Handling client {} resulted in database error: {}", self.address, e);
+                    Err(Error::DatabaseError(db_err)) => {
+                        self.log_error(&format!("Encountered database error: {}", db_err));
                     }
                 }
 
@@ -100,7 +89,7 @@ impl Handler {
             }
 
             Err(e) => {
-                log::warn!("Failed to perform WebSocket handshake with {} - {}", self.address, e);
+                self.log_error(&format!("Failed to perform WebSocket handshake due to error: {}", e));
             }
         }
     }
@@ -116,7 +105,7 @@ impl Handler {
                 let mut db = self.db_pool.acquire().await.unwrap();
 
                 if let Some(client_id) = client_id_option {
-                    log::debug!("Client {} has existing ID: {}", self.address, client_id);
+                    self.log(&format!("Existing client ID provided: {}", client_id));
 
                     // Get the client their existing player entity (if any) from database:
 
@@ -124,11 +113,10 @@ impl Handler {
                         (client_id, entity_id, entity)
                     }
                     else {
-                        log::warn!(
-                            "Client {} provided {} for which an associate entity could not be found in the database",
-                            self.address,
+                        self.log_warn(&format!(
+                            "Could not find in database a player entity associated with client ID {}",
                             client_id
-                        );
+                        ));
 
                         let (entity_id, entity) = entities::new_player_in_database(client_id, &mut db).await?;
                         (client_id, entity_id, entity)
@@ -136,7 +124,7 @@ impl Handler {
                 }
                 else {
                     let new_id = crate::id::generate_random();
-                    log::debug!("Generated new ID {} for client {}", new_id, self.address);
+                    self.log(&format!("Generated new client ID {}", new_id));
 
                     // Create a new entity for this client and insert into the database:
 
@@ -182,10 +170,7 @@ impl Handler {
             result
         }
         else {
-            log::warn!(
-                "Client {} failed to send 'hello' message after establishing a WebSocket connection",
-                self.address
-            );
+            self.log_error("Did not receive 'hello' message after establishing a WebSocket connection");
             ws.close().await.map_err(Into::into)
         }
     }
@@ -199,19 +184,19 @@ impl Handler {
             tokio::select!(
                 res = ws.receive() => {
                     if let Some(msg) = res? {
-                        log::debug!("Message from client {} - {}", client_id, msg);
+                        self.log(&format!("Message received: {}", msg));
 
                         // Handle and respond to received message:
 
                         let responses = self.handle_message(msg, client_id, player_id).await;
 
                         for response in responses {
-                            log::debug!("Response to client {} - {}", client_id, response);
+                            self.log(&format!("Response message: {}", response));
                             ws.send(&response).await?;
                         }
                     }
                     else {
-                        log::debug!("Connection closed by client {}", client_id);
+                        // Client closed connection.
                         break;
                     }
                 }
@@ -220,24 +205,24 @@ impl Handler {
                     match res {
                         Ok(modification) => {
                             if let Some(response) = self.handle_map_change(modification).await {
-                                log::debug!("Informing client {} of change to game world - {}", client_id, response);
+                                self.log(&format!("Informing client of change to game world: {}", response));
                                 ws.send(&response).await?;
                             }
                         }
 
                         Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
-                            log::warn!("Task for client {} skipped {} messages on the map modification channel", client_id, skipped);
+                            self.log_warn(&format!("Skipped {} messages on the map modification channel", skipped));
                         }
 
                         Err(channel_err) => {
-                            log::warn!("Failed to receive on map modification channel: {}", channel_err);
+                            self.log_error(&format!("Failed to receive on map modification channel: {}", channel_err));
                             break;
                         }
                     }
                 }
 
                 _ = tokio::signal::ctrl_c() => {
-                    log::debug!("Closing connection with client {} due to Ctrl-C signal", client_id);
+                    self.log("Closing connection due to Ctrl-C signal");
                     ws.close().await?;
                     break;
                 }
@@ -253,7 +238,7 @@ impl Handler {
     ) -> Vec<messages::FromServer> {
         match msg {
             messages::ToServer::Hello { .. } => {
-                log::warn!("Client {} sent unexpected 'hello' message: {}", client_id, msg);
+                self.log_warn(&format!("Received unexpected 'hello' message: {}", msg));
                 vec![]
             }
 
@@ -336,12 +321,24 @@ impl Handler {
                 .then(|| messages::FromServer::ProvideEntity(entity_id, entity.clone()))
         }
         else {
-            log::warn!(
-                "Message on map modification channel refers to entity {} yet an entity with that ID could not be found",
+            self.log_warn(&format!(
+                "Received message on map modification channel that refers to entity {} yet an entity with that ID could not be found",
                 entity_id
-            );
+            ));
             None
         }
+    }
+
+    fn log(&self, msg: &str) {
+        log::debug!("Handler for client {} -- {}", self.address, msg);
+    }
+
+    fn log_warn(&self, msg: &str) {
+        log::warn!("Handler for client {} -- {}", self.address, msg);
+    }
+
+    fn log_error(&self, msg: &str) {
+        log::error!("Handler for client {} -- {}", self.address, msg);
     }
 }
 
