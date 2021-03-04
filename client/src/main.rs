@@ -71,7 +71,7 @@ pub enum TextureKey {
 impl asset_management::AssetKey for TextureKey {
     fn path(&self) -> &str {
         match self {
-            TextureKey::Tiles => "tiles.png",
+            TextureKey::Tiles => "tileset.png",
             TextureKey::Entities => "entities.png"
         }
     }
