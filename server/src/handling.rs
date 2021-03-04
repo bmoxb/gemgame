@@ -16,7 +16,7 @@ use crate::{
 
 /// Creates a new `Handler` instance and then calls its `Handler::handle` method.
 pub async fn handle_connection(
-    stream: TcpStream, address: SocketAddr, game_map: Shared<ServerMap>, db_pool: sqlx::SqlitePool,
+    stream: TcpStream, address: SocketAddr, game_map: Shared<ServerMap>, db_pool: sqlx::Pool<sqlx::Any>,
     map_changes_sender: broadcast::Sender<maps::Modification>,
     map_changes_receiver: broadcast::Receiver<maps::Modification>
 ) {
@@ -39,7 +39,7 @@ struct Handler {
     /// Arc mutex containing the game map.
     game_map: Shared<ServerMap>,
     /// The database connection pool.
-    db_pool: sqlx::SqlitePool,
+    db_pool: sqlx::Pool<sqlx::Any>,
     map_changes_sender: broadcast::Sender<maps::Modification>,
     map_changes_receiver: broadcast::Receiver<maps::Modification>,
     // Set used tos track of the coordinates of chunks that this handler believes its remote client has loaded.
@@ -351,3 +351,21 @@ enum Error {
 }
 
 type Result<T> = std::result::Result<T, Error>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    /*fn make_test_handler() -> Handler {
+        super::Handler {
+            address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0),
+            db_pool: sqlx::
+        }
+    }*/
+
+    #[test]
+    fn handle_unexpected_hello_msg() {
+
+    }
+}
