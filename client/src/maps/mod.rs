@@ -1,73 +1,26 @@
 pub mod entities;
 pub mod rendering;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use shared::{
     maps::{
         entities::{Entities, Entity},
-        Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords
+        Chunk, ChunkCoords, Chunks, Map, TileCoords
     },
-    messages, Id
+    Id
 };
-
-use crate::networking::{self, Connection, ConnectionTrait};
 
 pub struct ClientMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
     loaded_chunks: Chunks,
-    /// Set of coordinate pairs for the chunks that are needed (i.e. chunks that are not already loaded but were needed
-    /// to fulfill a call to [`chunk_at`] or [`tile_at`]). When a needed chunk is requested from the sever then its
-    /// coordinates are added to the [`requested_chunks`] set. A chunks's coordinates are not removed from this set
-    /// until the chunk itself is actually recevied.
-    needed_chunks: HashSet<ChunkCoords>,
-    /// Set of coordinate pairs for chunks that have been requested from the server but have not yet been received. A
-    /// chunks's coordinates are remove from both this set and [`needed_chunks`] when the chunk itself is received from
-    /// the server.
-    requested_chunks: HashSet<ChunkCoords>,
     /// All entities (except this client's player entity) that are on this map and within currently loaded chunks.
     entities: Entities
 }
 
 impl ClientMap {
     pub fn new() -> Self {
-        ClientMap {
-            loaded_chunks: HashMap::new(),
-            needed_chunks: HashSet::new(),
-            requested_chunks: HashSet::new(),
-            entities: HashMap::new()
-        }
-    }
-
-    /// Attempt to get the tile at the specified tile coordinates.
-    /// TODO: Remove this method, have server automatically send chunks to client based on player position.
-    pub fn tile_at(&mut self, coords: TileCoords) -> Option<&Tile> {
-        if !self.is_tile_loaded(coords) {
-            let chunk_coords = coords.as_chunk_coords();
-            let was_not_present = self.needed_chunks.insert(chunk_coords);
-
-            if was_not_present {
-                log::trace!(
-                    "Added chunk at {} to list of needed chunks as it contained requested tile at {}",
-                    chunk_coords,
-                    coords
-                );
-            }
-        }
-
-        self.loaded_tile_at(coords)
-    }
-
-    /// TODO: Remove this method, reason as above.
-    pub fn request_needed_chunks_from_server(&mut self, ws: &mut Connection) -> networking::Result<()> {
-        for coords in &self.needed_chunks {
-            if !self.requested_chunks.contains(coords) {
-                ws.send(&messages::ToServer::RequestChunk(*coords))?;
-                self.requested_chunks.insert(*coords);
-            }
-        }
-
-        Ok(())
+        ClientMap { loaded_chunks: HashMap::new(), entities: HashMap::new() }
     }
 
     pub fn set_entity_position_by_id(&mut self, id: Id, new_pos: TileCoords) {
@@ -89,13 +42,12 @@ impl Map for ClientMap {
         self.loaded_chunks.get_mut(&coords)
     }
 
-    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
-        // TODO: Unload chunk(s) should too many be loaded already?
-
-        self.needed_chunks.remove(&coords);
-        self.requested_chunks.remove(&coords);
-
+    fn add_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
         self.loaded_chunks.insert(coords, chunk);
+    }
+
+    fn remove_chunk(&mut self, coords: ChunkCoords) -> Option<Chunk> {
+        self.loaded_chunks.remove(&coords)
     }
 
     fn is_blocking_entity_at(&self, coords: TileCoords) -> bool {

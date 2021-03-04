@@ -53,10 +53,7 @@ pub trait Map {
     }
 
     fn is_blocking_tile_at(&self, coords: TileCoords) -> bool {
-        // TODO: Defaults to false for tiles at coordinates in unloaded chunks so as to allow movement between chunks
-        // before I rework how chunk loading occurs - in future there will always be at least a few chunks surrounding
-        // player in each direction whereas now chunks are only loaded when a player moves between chunks.
-        self.loaded_tile_at(coords).map(|tile| tile.is_blocking()).unwrap_or(false)
+        self.loaded_tile_at(coords).map(|tile| tile.is_blocking()).unwrap_or(true)
     }
 
     fn is_blocking_entity_at(&self, coords: TileCoords) -> bool;
@@ -68,14 +65,16 @@ pub trait Map {
     fn loaded_chunk_at_mut(&mut self, coords: ChunkCoords) -> Option<&mut Chunk>;
 
     /// Have this map include the given chunk in its collection of loaded chunks.
-    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk);
+    fn add_chunk(&mut self, coords: ChunkCoords, chunk: Chunk);
+
+    fn remove_chunk(&mut self, coords: ChunkCoords) -> Option<Chunk>;
 
     /// Return the entity with the specified ID as an optional reference.
     fn entity_by_id(&self, id: Id) -> Option<&Entity>;
 
     /// Add an entity to the map. On client side this method is used to add all entities not controlled by the client
     /// (i.e. both players and AI-controlled entities) while on the server side this method is used to add all
-    /// player-controlled entities (a separate system is used to manage AI-controled entities).
+    /// player-controlled entities (a separate system is used to manage AI-controlled entities).
     fn add_entity(&mut self, id: Id, entity: Entity);
 
     fn remove_entity(&mut self, id: Id) -> Option<Entity>;
