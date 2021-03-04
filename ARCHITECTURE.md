@@ -25,7 +25,7 @@
 * In addition to polling the WebSocket connection, each task must also poll the Tokio broadcast channel in order to check for changes to the game world. If those changes are relevant to that task's client (i.e. they're changes to chunks that that client has loaded) then that task's client must be sent messages via the WebSocket connection informing them of said changes.
 * Whenever a task wishes to modify the game world, it must do two things:
   * Lock the game world mutex for writing and make the desired changes.
-  * Send message(s) on the Tokio broadc
+  * Send message(s) on the Tokio broadcast channel informing other tasks of changes made.
 
 ## Network Protocol
 
