@@ -4,6 +4,7 @@ mod maps;
 mod networking;
 
 use std::{
+    collections::HashSet,
     fs,
     path::PathBuf,
     sync::{Arc, Mutex}
@@ -119,13 +120,13 @@ async fn main() {
         // blocking the broadcasted message queue.
         tokio::select!(
             res = listener.accept() => {
-                let (stream, addr) = res.unwrap();
+                let (stream, address) = res.unwrap();
 
-                log::info!("Incoming connection from: {}", addr);
+                log::info!("Incoming connection from: {}", address);
 
                 tokio::spawn(handling::handle_connection(
                     stream,
-                    addr,
+                    address,
                     Arc::clone(&map),
                     db_pool.clone(),
                     map_changes_sender.clone(),
