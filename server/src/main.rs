@@ -4,7 +4,6 @@ mod maps;
 mod networking;
 
 use std::{
-    collections::HashSet,
     fs,
     path::PathBuf,
     sync::{Arc, Mutex}
