@@ -294,36 +294,29 @@ impl Handler {
                 }
                 else if is_in_loaded {
                     // Entity just moved into the client's loaded chunks:
-                    self.make_provide_entity_msg_if_in_loaded_chunk(entity_id)
+                    self.game_map
+                        .lock()
+                        .unwrap()
+                        .entity_by_id(entity_id)
+                        .map(|entity| messages::FromServer::ProvideEntity(entity_id, entity.clone()))
                 }
                 else {
                     None
                 }
             }
 
-            maps::Modification::EntityAdded(id) => self.make_provide_entity_msg_if_in_loaded_chunk(id),
+            maps::Modification::EntityAdded(entity_id) => {
+                self.game_map.lock().unwrap().entity_by_id(entity_id).and_then(|entity| {
+                    self.remote_loaded_chunk_coords
+                        .contains(&entity.pos.as_chunk_coords())
+                        .then(|| messages::FromServer::ProvideEntity(entity_id, entity.clone()))
+                })
+            }
 
-            maps::Modification::EntityRemoved(id, chunk_coords) => self
+            maps::Modification::EntityRemoved(entity_id, chunk_coords) => self
                 .remote_loaded_chunk_coords
                 .contains(&chunk_coords)
-                .then(|| messages::FromServer::ShouldUnloadEntity(id))
-        }
-    }
-
-    /// Produces a `messages::FromServer::ProvideEntity` message provided the entity with the specified ID is within one
-    /// of the remote client's loaded chunks.
-    fn make_provide_entity_msg_if_in_loaded_chunk(&self, entity_id: Id) -> Option<messages::FromServer> {
-        if let Some(entity) = self.game_map.lock().unwrap().entity_by_id(entity_id) {
-            self.remote_loaded_chunk_coords
-                .contains(&entity.pos.as_chunk_coords())
-                .then(|| messages::FromServer::ProvideEntity(entity_id, entity.clone()))
-        }
-        else {
-            self.log_warn(&format!(
-                "Received message on map modification channel that refers to entity {} yet an entity with that ID could not be found",
-                entity_id
-            ));
-            None
+                .then(|| messages::FromServer::ShouldUnloadEntity(entity_id))
         }
     }
 
@@ -359,15 +352,16 @@ mod tests {
     };
 
     use shared::maps::{
-        entities::{Direction, Entity, Variety},
-        Chunk, ChunkCoords, Tile, TileCoords, CHUNK_TILE_COUNT
+        entities::{Direction, Entity},
+        Chunk, ChunkCoords, Tile, TileCoords, CHUNK_TILE_COUNT, CHUNK_WIDTH
     };
 
     use super::*;
 
     async fn make_test_handler() -> Handler {
         let (map_changes_sender, map_changes_receiver) = broadcast::channel(5);
-        super::Handler {
+
+        let handler = super::Handler {
             address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0),
             db_pool: sqlx::any::AnyPoolOptions::new().connect("sqlite::memory:").await.unwrap(),
             game_map: Arc::new(Mutex::new(ServerMap::new(
@@ -378,6 +372,21 @@ mod tests {
             map_changes_sender,
             map_changes_receiver,
             remote_loaded_chunk_coords: HashSet::new()
+        };
+
+        handler
+    }
+
+    impl Handler {
+        fn add_test_entity(&mut self, pos: TileCoords) -> Id {
+            let entity_id = crate::id::generate_with_timestamp();
+
+            self.game_map
+                .lock()
+                .unwrap()
+                .add_entity(entity_id, Entity { pos, name: "test".to_string(), variety: Default::default() });
+
+            entity_id
         }
     }
 
@@ -401,27 +410,13 @@ mod tests {
         let mut handler = make_test_handler().await;
         let mut other_map_changes_receiver = handler.map_changes_sender.subscribe();
 
-        let player_id = crate::id::generate_with_timestamp();
+        let player_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
 
-        // Add a chunk and a player entity to the game map:
-        {
-            let mut map = handler.game_map.lock().unwrap();
-
-            map.add_chunk(ChunkCoords { x: 0, y: 0 }, Chunk::new([Tile::Ground; CHUNK_TILE_COUNT]));
-
-            map.add_entity(
-                player_id,
-                Entity {
-                    name: "test".to_string(),
-                    pos: TileCoords { x: 5, y: 5 },
-                    variety: Variety::Human {
-                        direction: Direction::Up,
-                        facial_expression: Default::default(),
-                        hair_style: Default::default()
-                    }
-                }
-            );
-        }
+        handler
+            .game_map
+            .lock()
+            .unwrap()
+            .add_chunk(ChunkCoords { x: 0, y: 0 }, Chunk::new([Tile::Ground; CHUNK_TILE_COUNT]));
 
         let msg = messages::ToServer::MoveMyEntity { request_number: 0, direction: Direction::Right };
 
@@ -457,9 +452,83 @@ mod tests {
         // TODO
     }
 
+    /// Ensure that the appropriate map modification channel message is sent when some entity moves within this task's
+    /// remote client's loaded chunks.
     #[tokio::test(flavor = "multi_thread")]
-    async fn handle_entity_moved_change_in_my_loaded_chunks() {
-        // TODO
+    async fn handle_entity_moved_change_within_loaded_chunk() {
+        let mut handler = make_test_handler().await;
+        handler.remote_loaded_chunk_coords.insert(ChunkCoords { x: 0, y: 0 });
+
+        let entity_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
+        let modification = maps::Modification::EntityMoved {
+            entity_id,
+            old_position: TileCoords { x: 5, y: 5 },
+            new_position: TileCoords { x: 6, y: 5 }
+        };
+
+        let response = handler.handle_map_change(modification).await.unwrap();
+
+        assert!(matches!(
+            response,
+            messages::FromServer::MoveEntity(id, TileCoords { x: 6, y: 5 }) if id == entity_id
+        ));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_entity_moved_change_into_loaded_chunk() {
+        let mut handler = make_test_handler().await;
+        handler.remote_loaded_chunk_coords.insert(ChunkCoords { x: 0, y: 0 });
+
+        let entity_id = handler.add_test_entity(TileCoords { x: CHUNK_WIDTH, y: 5 });
+
+        let modification = maps::Modification::EntityMoved {
+            entity_id,
+            old_position: TileCoords { x: CHUNK_WIDTH, y: 5 }, // chunk at 1, 0
+            new_position: TileCoords { x: CHUNK_WIDTH - 1, y: 5 }  // chunk at 0, 0
+        };
+
+        let response = handler.handle_map_change(modification).await.unwrap();
+
+        assert!(matches!(
+            response,
+            messages::FromServer::ProvideEntity(id, _) if id == entity_id
+        ));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_entity_moved_change_leaving_loaded_chunk() {
+        let mut handler = make_test_handler().await;
+        handler.remote_loaded_chunk_coords.insert(ChunkCoords { x: 0, y: 0 });
+
+        let entity_id = handler.add_test_entity(TileCoords { x: 0, y: 5 });
+
+        let modification = maps::Modification::EntityMoved {
+            entity_id,
+            old_position: TileCoords { x: 0, y: 5 },
+            new_position: TileCoords { x: -1, y: 5 }
+        };
+
+        let response = handler.handle_map_change(modification).await.unwrap();
+
+        assert!(matches!(
+            response,
+            messages::FromServer::ShouldUnloadEntity(id) if id == entity_id
+        ));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_entity_moved_change_outside_loaded_chunk() {
+        let mut handler = make_test_handler().await;
+
+        let entity_id = handler.add_test_entity(TileCoords { x: 12, y: 13 });
+
+        let modification = maps::Modification::EntityMoved {
+            entity_id,
+            old_position: TileCoords { x: 12, y: 13 },
+            new_position: TileCoords { x: 13, y: 13 }
+        };
+
+        assert!(handler.handle_map_change(modification).await.is_none());
     }
 
     #[tokio::test(flavor = "multi_thread")]
