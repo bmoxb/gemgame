@@ -176,14 +176,14 @@ impl ServerMap {
         }
     }
 
-    /// Get entity IDs and references to all entities in the chunk at the given chunk coordinates.
-    pub fn entities_in_chunk(&self, coords: ChunkCoords) -> Vec<(Id, &Entity)> {
+    /// Get all entity IDs and entities in the chunk at the given chunk coordinates.
+    pub fn entities_in_chunk(&self, coords: ChunkCoords) -> Vec<(Id, Entity)> {
         let mut entities = Vec::new();
 
         if let Some(set) = self.chunk_coords_to_player_ids.get(&coords) {
             for entity_id in set.iter() {
                 if let Some(entity) = self.player_entities.get(entity_id) {
-                    entities.push((*entity_id, entity));
+                    entities.push((*entity_id, entity.clone()));
                 }
             }
         }

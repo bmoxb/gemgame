@@ -134,13 +134,22 @@ impl Handler {
             };
 
             // Send a 'welcome' message to the client:
-
             ws.send(&messages::FromServer::Welcome {
                 version: shared::VERSION.to_string(),
                 your_client_id: client_id,
                 your_entity_with_id: (player_id, player_entity.clone())
             })
             .await?;
+
+            // Provide all the chunks surrounding the player entity plus any entities that may be in those chunks:
+
+            let chunks_and_entities = self
+                .provide_chunks_at_and_surrounding_with_entities(player_entity.pos.as_chunk_coords(), player_id)
+                .await;
+
+            for msg in chunks_and_entities {
+                ws.send(&msg).await?;
+            }
 
             // Place this client's player entity on the game map:
             self.game_map.lock().unwrap().add_entity(player_id, player_entity);
@@ -241,25 +250,33 @@ impl Handler {
             }
 
             messages::ToServer::MoveMyEntity { request_number, direction } => {
-                let responses = {
-                    // TODO: Prevent player exceeding movement rate.
+                let mut responses = Vec::new();
 
-                    let movement_option = self.game_map.lock().unwrap().move_entity_towards(player_id, direction);
+                // TODO: Prevent player exceeding movement rate.
 
-                    if let Some((old_position, new_position)) = movement_option {
-                        // Inform other tasks of the entity's movement:
+                let movement_option = self.game_map.lock().unwrap().move_entity_towards(player_id, direction);
 
-                        let broadcast_msg =
-                            maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position };
+                if let Some((old_position, new_position)) = movement_option {
+                    // If moving into a new chunk, ensure adjacent chunks are loaded:
 
-                        self.map_changes_sender.send(broadcast_msg).unwrap();
+                    if old_position.as_chunk_coords() != new_position.as_chunk_coords() {
+                        let msgs = self
+                            .provide_chunks_at_and_surrounding_with_entities(new_position.as_chunk_coords(), player_id)
+                            .await;
 
-                        vec![messages::FromServer::YourEntityMoved { request_number, new_position }]
+                        responses.extend(msgs);
                     }
-                    else {
-                        vec![]
-                    }
-                };
+
+                    // Inform other tasks of the entity's movement:
+
+                    let broadcast_msg =
+                        maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position };
+
+                    self.map_changes_sender.send(broadcast_msg).unwrap();
+
+                    // Inform our remote client of the server's decision regarding their player entity's new position:
+                    responses.push(messages::FromServer::YourEntityMoved { request_number, new_position });
+                }
 
                 if !responses.is_empty() {
                     // The broadcast isn't relevant to the task that sent it so immediately receive and discard:
@@ -318,6 +335,55 @@ impl Handler {
                 .contains(&chunk_coords)
                 .then(|| messages::FromServer::ShouldUnloadEntity(entity_id))
         }
+    }
+
+    /// Will begin by ensuring the chunk at the specified coordinates is loaded (i.e. if not already in-memory within
+    /// the game map object, it will either be loaded from disk or newly generated before being added to the game map).
+    /// Messages will then be created to provide the remote client with the chunk as well as any entities in said chunk.
+    /// This method will add the given chunk coordinates to the set of remote loaded chunk coordinates however it is
+    /// the responsiblity of the caller to actually send the messages returned over the network.
+    async fn provide_chunk_with_entities(&mut self, coords: ChunkCoords, player_id: Id) -> Vec<messages::FromServer> {
+        let mut msgs = Vec::new();
+
+        if !self.remote_loaded_chunk_coords.contains(&coords) {
+            let chunk = maps::chunks::get_or_load_or_generate_chunk(&self.game_map, coords).await;
+            msgs.push(messages::FromServer::ProvideChunk(coords, chunk));
+
+            // Get entities in the chunk but filter out this task's own player entity:
+            let entities_in_chunk =
+                self.game_map.lock().unwrap().entities_in_chunk(coords).into_iter().filter(|(id, _)| *id != player_id);
+
+            for (entity_id, entity) in entities_in_chunk {
+                msgs.push(messages::FromServer::ProvideEntity(entity_id, entity));
+            }
+
+            self.remote_loaded_chunk_coords.insert(coords);
+        }
+
+        msgs
+    }
+
+    /// Call `Self::provide_chunk_with_entities` for the specified chunk coordinates as well as the 9 surrounding set
+    /// of coordinates.
+    async fn provide_chunks_at_and_surrounding_with_entities(
+        &mut self, coords: ChunkCoords, player_id: Id
+    ) -> Vec<messages::FromServer> {
+        let mut msgs = Vec::new();
+
+        for x_offset in -1..2 {
+            for y_offset in -1..2 {
+                let msg = self
+                    .provide_chunk_with_entities(
+                        ChunkCoords { x: coords.x + x_offset, y: coords.y + y_offset },
+                        player_id
+                    )
+                    .await;
+
+                msgs.extend(msg);
+            }
+        }
+
+        msgs
     }
 
     fn log(&self, msg: &str) {
