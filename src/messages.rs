@@ -14,7 +14,7 @@ use crate::{
 };
 
 /// Message sent from the client to the server over the WebSocket protocol.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ToServer {
     /// This must be the first message sent by a client to the server after establishing a WebSocket connection.
     Hello {

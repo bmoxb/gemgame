@@ -150,7 +150,7 @@ impl Handler {
             self.map_changes_receiver.recv().await.unwrap();
 
             // Begin main connection loop:
-            let result = self.handle_established_connection(&mut ws, client_id, player_id).await;
+            let result = self.handle_established_connection(&mut ws, player_id).await;
 
             // Remove this client's player entity from the game world and update database with changes to said entity:
             let entity_option = self.game_map.lock().unwrap().remove_entity(player_id);
@@ -177,7 +177,7 @@ impl Handler {
 
     /// A connection is considered 'established' once the WebSocket handshake and the exchange of 'hello' & 'welcome'
     /// messages have completed.
-    async fn handle_established_connection(&mut self, ws: &mut Connection, client_id: Id, player_id: Id) -> Result<()> {
+    async fn handle_established_connection(&mut self, ws: &mut Connection, player_id: Id) -> Result<()> {
         loop {
             // Wait for incoming messages on both the WebSocket connection and the world modifications channel (or close
             // connection on Ctrl-C signal):
@@ -188,7 +188,7 @@ impl Handler {
 
                         // Handle and respond to received message:
 
-                        let responses = self.handle_message(msg, client_id, player_id).await;
+                        let responses = self.handle_message(msg, player_id).await;
 
                         for response in responses {
                             self.log(&format!("Response message: {}", response));
@@ -233,9 +233,7 @@ impl Handler {
     }
 
     /// Produces message(s) that are to be sent to the client in the response to the message they sent to the server.
-    async fn handle_message(
-        &mut self, msg: messages::ToServer, client_id: Id, player_id: Id
-    ) -> Vec<messages::FromServer> {
+    async fn handle_message(&mut self, msg: messages::ToServer, player_id: Id) -> Vec<messages::FromServer> {
         match msg {
             messages::ToServer::Hello { .. } => {
                 self.log_warn(&format!("Received unexpected 'hello' message: {}", msg));
@@ -354,18 +352,123 @@ type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::net::{IpAddr, Ipv4Addr};
+    use std::{
+        net::{IpAddr, Ipv4Addr},
+        path::PathBuf,
+        sync::{Arc, Mutex}
+    };
 
-    /*fn make_test_handler() -> Handler {
+    use shared::maps::{
+        entities::{Direction, Entity, Variety},
+        Chunk, ChunkCoords, Tile, TileCoords, CHUNK_TILE_COUNT
+    };
+
+    use super::*;
+
+    async fn make_test_handler() -> Handler {
+        let (map_changes_sender, map_changes_receiver) = broadcast::channel(5);
         super::Handler {
             address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0),
-            db_pool: sqlx::
+            db_pool: sqlx::any::AnyPoolOptions::new().connect("sqlite::memory:").await.unwrap(),
+            game_map: Arc::new(Mutex::new(ServerMap::new(
+                PathBuf::from("/tmp"),
+                Box::new(maps::generators::DefaultGenerator),
+                0
+            ))),
+            map_changes_sender,
+            map_changes_receiver,
+            remote_loaded_chunk_coords: HashSet::new()
         }
-    }*/
+    }
 
-    #[test]
-    fn handle_unexpected_hello_msg() {
+    /// Ensure that no response is provided when an unexpected (i.e. sent after connection establishment) 'hello'
+    /// message is recevied.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_unexpected_hello_msg() {
+        let mut handler = make_test_handler().await;
 
+        let id = crate::id::generate_random();
+        let msg = messages::ToServer::Hello { client_id_option: None };
+
+        assert!(handler.handle_message(msg, id).await.is_empty());
+    }
+
+    /// Ensure that a 'move my entity' message causes the entity's position on the game map to be appropriately
+    /// updated, a response message is created, and that a message on the map changes broadcast channel is sent to
+    /// inform other tasks of the change.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_move_my_entity() {
+        let mut handler = make_test_handler().await;
+        let mut other_map_changes_receiver = handler.map_changes_sender.subscribe();
+
+        let player_id = crate::id::generate_with_timestamp();
+
+        // Add a chunk and a player entity to the game map:
+        {
+            let mut map = handler.game_map.lock().unwrap();
+
+            map.add_chunk(ChunkCoords { x: 0, y: 0 }, Chunk::new([Tile::Ground; CHUNK_TILE_COUNT]));
+
+            map.add_entity(
+                player_id,
+                Entity {
+                    name: "test".to_string(),
+                    pos: TileCoords { x: 5, y: 5 },
+                    variety: Variety::Human {
+                        direction: Direction::Up,
+                        facial_expression: Default::default(),
+                        hair_style: Default::default()
+                    }
+                }
+            );
+        }
+
+        let msg = messages::ToServer::MoveMyEntity { request_number: 0, direction: Direction::Right };
+
+        let responses = handler.handle_message(msg, player_id).await;
+
+        // Ensure the response message is correct:
+        assert_eq!(responses.len(), 1);
+        assert!(matches!(
+            responses[0],
+            messages::FromServer::YourEntityMoved { request_number: 0, new_position: TileCoords { x: 6, y: 5 } }
+        ));
+
+        // A message should not be broadcast to this task's map changes recevier:
+        assert!(matches!(handler.map_changes_receiver.try_recv(), Err(broadcast::error::TryRecvError::Empty)));
+
+        // A message should have been sent to all the map changes receviers of other tasks:
+        let change = other_map_changes_receiver.recv().await.unwrap();
+
+        assert!(matches!(
+            change,
+            maps::Modification::EntityMoved {
+                old_position: TileCoords { x: 5, y: 5 },
+                new_position: TileCoords { x: 6, y: 5 },
+                entity_id
+            } if entity_id == player_id
+        ));
+    }
+
+    /// Ensure that a 'move my entity' message that would fail due to a blocking tile or entity being in the way does
+    /// not modify the player entity's position, and does *not* send a message on the map modifications channel.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_move_my_entity_blocking() {
+        // TODO
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_entity_moved_change_in_my_loaded_chunks() {
+        // TODO
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_entity_added_change_in_my_loaded_chunks() {
+        // TODO
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn handle_entity_removed_change_in_my_loaded_chunks() {
+        // TODO
     }
 }
