@@ -454,6 +454,15 @@ mod tests {
 
             entity_id
         }
+
+        fn add_test_chunk(&mut self, pos: ChunkCoords) -> Chunk {
+            let chunk = Chunk::new([Tile::Ground; CHUNK_TILE_COUNT]);
+
+            self.game_map.lock().unwrap().add_chunk(pos, chunk.clone());
+            self.remote_loaded_chunk_coords.insert(pos);
+
+            chunk
+        }
     }
 
     /// Ensure that no response is provided when an unexpected (i.e. sent after connection establishment) 'hello'
@@ -476,13 +485,8 @@ mod tests {
         let mut handler = make_test_handler().await;
         let mut other_map_changes_receiver = handler.map_changes_sender.subscribe();
 
+        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
         let player_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
-
-        handler
-            .game_map
-            .lock()
-            .unwrap()
-            .add_chunk(ChunkCoords { x: 0, y: 0 }, Chunk::new([Tile::Ground; CHUNK_TILE_COUNT]));
 
         let msg = messages::ToServer::MoveMyEntity { request_number: 0, direction: Direction::Right };
 
@@ -523,19 +527,18 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn handle_entity_moved_change_within_loaded_chunk() {
         let mut handler = make_test_handler().await;
-        handler.remote_loaded_chunk_coords.insert(ChunkCoords { x: 0, y: 0 });
 
+        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
         let entity_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
+
         let modification = maps::Modification::EntityMoved {
             entity_id,
             old_position: TileCoords { x: 5, y: 5 },
             new_position: TileCoords { x: 6, y: 5 }
         };
 
-        let response = handler.handle_map_change(modification).await.unwrap();
-
         assert!(matches!(
-            response,
+            handler.handle_map_change(modification).await.unwrap(),
             messages::FromServer::MoveEntity(id, TileCoords { x: 6, y: 5 }) if id == entity_id
         ));
     }
@@ -543,8 +546,8 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn handle_entity_moved_change_into_loaded_chunk() {
         let mut handler = make_test_handler().await;
-        handler.remote_loaded_chunk_coords.insert(ChunkCoords { x: 0, y: 0 });
 
+        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
         let entity_id = handler.add_test_entity(TileCoords { x: CHUNK_WIDTH, y: 5 });
 
         let modification = maps::Modification::EntityMoved {
@@ -553,10 +556,8 @@ mod tests {
             new_position: TileCoords { x: CHUNK_WIDTH - 1, y: 5 }  // chunk at 0, 0
         };
 
-        let response = handler.handle_map_change(modification).await.unwrap();
-
         assert!(matches!(
-            response,
+            handler.handle_map_change(modification).await.unwrap(),
             messages::FromServer::ProvideEntity(id, _) if id == entity_id
         ));
     }
@@ -564,8 +565,8 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn handle_entity_moved_change_leaving_loaded_chunk() {
         let mut handler = make_test_handler().await;
-        handler.remote_loaded_chunk_coords.insert(ChunkCoords { x: 0, y: 0 });
 
+        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
         let entity_id = handler.add_test_entity(TileCoords { x: 0, y: 5 });
 
         let modification = maps::Modification::EntityMoved {
@@ -574,10 +575,8 @@ mod tests {
             new_position: TileCoords { x: -1, y: 5 }
         };
 
-        let response = handler.handle_map_change(modification).await.unwrap();
-
         assert!(matches!(
-            response,
+            handler.handle_map_change(modification).await.unwrap(),
             messages::FromServer::ShouldUnloadEntity(id) if id == entity_id
         ));
     }
@@ -598,12 +597,32 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn handle_entity_added_change_in_my_loaded_chunks() {
-        // TODO
+    async fn handle_entity_added_change_within_loaded_chunks() {
+        let mut handler = make_test_handler().await;
+
+        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
+        let entity_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
+
+        let modification = maps::Modification::EntityAdded(entity_id);
+
+        assert!(matches!(
+            handler.handle_map_change(modification).await.unwrap(),
+            messages::FromServer::ProvideEntity(id, _) if id == entity_id
+        ));
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn handle_entity_removed_change_in_my_loaded_chunks() {
-        // TODO
+    async fn handle_entity_removed_change_within_loaded_chunks() {
+        let mut handler = make_test_handler().await;
+
+        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
+        let entity_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
+
+        let modification = maps::Modification::EntityRemoved(entity_id, ChunkCoords { x: 0, y: 0 });
+
+        assert!(matches!(
+            handler.handle_map_change(modification).await.unwrap(),
+            messages::FromServer::ShouldUnloadEntity(id) if id == entity_id
+        ));
     }
 }
