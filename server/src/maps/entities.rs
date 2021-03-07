@@ -8,7 +8,7 @@ use shared::{
 use sqlx::Row;
 
 pub async fn new_player_in_database(
-    client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Sqlite>
+    client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
 ) -> sqlx::Result<(Id, Entity)> {
     let entity_id = crate::id::generate_with_timestamp();
 
@@ -38,7 +38,7 @@ pub async fn new_player_in_database(
 }
 
 pub async fn player_from_database(
-    client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Sqlite>
+    client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
 ) -> sqlx::Result<Option<(Id, Entity)>> {
     let res = sqlx::query(
         "SELECT entity_id, name, tile_x, tile_y
@@ -46,7 +46,7 @@ pub async fn player_from_database(
         WHERE client_id = ?"
     )
     .bind(client_id.encode())
-    .map(|row| {
+    .map(|row: sqlx::any::AnyRow| {
         sqlx::Result::Ok((
             Id::decode(row.try_get("entity_id")?).unwrap(), // TODO: Don't just unwrap.
             Entity {
@@ -68,7 +68,7 @@ pub async fn player_from_database(
 }
 
 pub async fn update_database_for_player(
-    entity: &Entity, client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Sqlite>
+    entity: &Entity, client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
 ) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE client_entities

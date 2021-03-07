@@ -42,7 +42,11 @@ impl GameState {
             }
 
             messages::FromServer::ProvideChunk(coords, chunk) => {
-                self.map.provide_chunk(coords, chunk);
+                self.map.add_chunk(coords, chunk);
+            }
+
+            messages::FromServer::ShouldUnloadChunk(coords) => {
+                self.map.remove_chunk(coords);
             }
 
             messages::FromServer::ChangeTile(coords, tile) => {
@@ -86,8 +90,6 @@ impl State for GameState {
         // Map updates:
 
         self.map_renderer.draw(&mut self.map, assets.texture(TextureKey::Tiles), assets.texture(TextureKey::Entities));
-
-        self.map.request_needed_chunks_from_server(&mut self.connection).unwrap(); // TODO: Don't just unwrap.
 
         // Player entity updates/input handling:
 

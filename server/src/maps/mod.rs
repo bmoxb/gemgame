@@ -149,7 +149,7 @@ impl ServerMap {
             };
 
             let entity_mut = self.player_entities.get_mut(&entity_id).unwrap();
-            
+
             if new_pos_is_free {
                 // Apply the new position:
                 entity_mut.pos = new_pos;
@@ -176,14 +176,14 @@ impl ServerMap {
         }
     }
 
-    /// Get entity IDs and references to all entities in the chunk at the given chunk coordinates.
-    pub fn entities_in_chunk(&self, coords: ChunkCoords) -> Vec<(Id, &Entity)> {
+    /// Get all entity IDs and entities in the chunk at the given chunk coordinates.
+    pub fn entities_in_chunk(&self, coords: ChunkCoords) -> Vec<(Id, Entity)> {
         let mut entities = Vec::new();
 
         if let Some(set) = self.chunk_coords_to_player_ids.get(&coords) {
             for entity_id in set.iter() {
                 if let Some(entity) = self.player_entities.get(entity_id) {
-                    entities.push((*entity_id, entity));
+                    entities.push((*entity_id, entity.clone()));
                 }
             }
         }
@@ -201,12 +201,15 @@ impl Map for ServerMap {
         self.loaded_chunks.get_mut(&coords)
     }
 
-    fn provide_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
+    fn add_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
         self.loaded_chunks.insert(coords, chunk);
         self.chunk_coords_to_player_ids.insert(coords, HashSet::new());
     }
 
-    // TODO: Have remove chunk method which both unloads chunks and the hash sets in chunk_coords_to_player_ids field.
+    fn remove_chunk(&mut self, coords: ChunkCoords) -> Option<Chunk> {
+        self.chunk_coords_to_player_ids.remove(&coords);
+        self.loaded_chunks.remove(&coords)
+    }
 
     fn entity_by_id(&self, id: Id) -> Option<&Entity> {
         self.player_entities.get(&id)
@@ -246,7 +249,9 @@ impl Map for ServerMap {
             // Iterate through the entities in that chunk, checking each entity's position:
             for entity_id in entity_ids_in_chunk {
                 if let Some(entity) = self.entity_by_id(*entity_id) {
-                    if entity.pos == coords { return true; }
+                    if entity.pos == coords {
+                        return true;
+                    }
                 }
             }
         }

@@ -1,7 +1,7 @@
 mod tiles;
 
 use macroquad::prelude as quad;
-use shared::maps::TileCoords;
+use shared::maps::{Map, TileCoords};
 
 /// Handles the drawing of a game map.
 pub struct Renderer {
@@ -48,10 +48,9 @@ impl Renderer {
 
                 // If the tile at the specified coordinates is in a chunk that is already loaded then it will be drawn.
                 // Otherwise, a grey placeholder rectangle will be drawn in its place until the required chunk is
-                // received from the server. Note that the `super::ClientMap::tile_at` method will automatically queue
-                // the required chunk to be fetched as necessary.
+                // received from the server.
 
-                if let Some(tile) = map.tile_at(TileCoords { x: tile_x, y: tile_y }) {
+                if let Some(tile) = map.loaded_tile_at(TileCoords { x: tile_x, y: tile_y }) {
                     tiles::draw(tile, draw_x, draw_y, self.tile_draw_size, self.tile_texture_rect_size, tiles_texture);
                 }
                 else {

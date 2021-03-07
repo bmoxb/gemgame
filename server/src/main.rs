@@ -83,7 +83,7 @@ async fn main() {
 
     let connection_string = format!("sqlite://{}", &options.database_file);
 
-    let db_pool_options = sqlx::sqlite::SqlitePoolOptions::new().max_connections(options.max_database_connections);
+    let db_pool_options = sqlx::any::AnyPoolOptions::new().max_connections(options.max_database_connections);
     let db_pool = db_pool_options.connect(&connection_string).await.expect("Failed to connect to database");
 
     log::info!(
@@ -119,13 +119,13 @@ async fn main() {
         // blocking the broadcasted message queue.
         tokio::select!(
             res = listener.accept() => {
-                let (stream, addr) = res.unwrap();
+                let (stream, address) = res.unwrap();
 
-                log::info!("Incoming connection from: {}", addr);
+                log::info!("Incoming connection from: {}", address);
 
                 tokio::spawn(handling::handle_connection(
                     stream,
-                    addr,
+                    address,
                     Arc::clone(&map),
                     db_pool.clone(),
                     map_changes_sender.clone(),

@@ -67,6 +67,16 @@ impl fmt::Display for Variety {
     }
 }
 
+impl Default for Variety {
+    fn default() -> Self {
+        Variety::Human {
+            direction: Direction::default(),
+            facial_expression: FacialExpression::default(),
+            hair_style: HairStyle::default()
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Direction {
     Up,
