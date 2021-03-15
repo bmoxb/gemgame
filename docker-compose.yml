@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  server:
+    build: .
+    ports:
+      - 5678:5678
+  
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: todo
