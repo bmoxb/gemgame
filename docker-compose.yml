@@ -4,14 +4,14 @@ services:
   server:
     build:
       context: .
-      dockerfile: server.Dockerfile
+      dockerfile: server/Dockerfile
     ports:
       - 5678:5678
   
   client:
     build:
       context: .
-      dockerfile: client.Dockerfile
+      dockerfile: client/Dockerfile
     ports:
       - 80:80
   
