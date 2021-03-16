@@ -8,6 +8,13 @@ services:
     ports:
       - 5678:5678
   
+  client:
+    build:
+      context: .
+      dockerfile: client.Dockerfile
+    ports:
+      - 80:80
+  
   db:
     image: postgres
     restart: always

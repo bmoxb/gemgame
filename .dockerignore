@@ -5,4 +5,5 @@ target/
 .gitignore
 LICENSE
 README.md
+ARCHITECTURE.md
 rustfmt.toml 
