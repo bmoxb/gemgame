@@ -5,6 +5,17 @@
 * As described in the README document, Gem Game is an online multiplayer browser game where players may together explore a procedurally-generated game world in search of precious gems and artefacts.
 * Gameplay takes place in the context of a tile-based game map that spans infinitely in all directions (made possible by splitting the map into 16x16 chunks of tiles which are loaded, unloaded, and procedurally-generated as necessary).
 
+## Infrastructure/Hosting
+
+* The application is containerise using Docker into 3 main components:
+  * Game server application powered by Tokio.
+  * PostgreSQL database.
+  * NGINX server serving WASM client application and asset files.
+* These containers are managed using Docker Compose (`docker-compose up` and `docker-compose down` commands).
+* The 3 containers are hosted on an AWS EC2 t3.micro instance running Ubuntu Server in Stockholm. AWS EBS gp3 will be used for storage.
+* The Europe North region was chosen as it includes the more powerful t3 instance in the AWS free tier. When my free tier expires, the server will probably be moved to either US East or Europe West.
+* The current design would not easily facilitate horizontal scaling, however many concurrently players is unlikely so that (hopefully) will not be an issue.
+
 ## Client
 
 * The client application is written primarily in Rust (compiled to WebAssembly) using the MacroQuad library for rendering. A small amount of JavaScript code is used for the purpose of interfacing with the browser's WebSocket API and for accessing local storage.
