@@ -33,7 +33,7 @@ impl PlayerEntity {
             id,
             next_request_number: 0,
             unverified_movements: HashMap::new(),
-            time_since_last_movement: contained.movement_speed(),
+            time_since_last_movement: contained.movement_time(),
             contained
         }
     }
@@ -48,7 +48,7 @@ impl PlayerEntity {
     ) -> networking::Result<()> {
         // First check if required amount of time has paced since last movement (i.e. don't exceed maximum movement
         // speed:
-        if self.time_since_last_movement >= self.contained.movement_speed() {
+        if self.time_since_last_movement >= self.contained.movement_time() {
             let new_pos = direction.apply(self.contained.pos);
 
             // Check if the position the player wants to move to is free (i.e. not a blocking tile and no other

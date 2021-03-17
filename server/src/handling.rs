@@ -418,7 +418,7 @@ mod tests {
     };
 
     use shared::maps::{
-        entities::{Direction, Entity},
+        entities::{Direction, Entity, Variety},
         Chunk, ChunkCoords, Tile, TileCoords, CHUNK_TILE_COUNT, CHUNK_WIDTH
     };
 
@@ -450,7 +450,7 @@ mod tests {
             self.game_map
                 .lock()
                 .unwrap()
-                .add_entity(entity_id, Entity { pos, name: "test".to_string(), variety: Default::default() });
+                .add_entity(entity_id, Entity { pos, direction: Default::default(), variety: Variety::new_human() });
 
             entity_id
         }

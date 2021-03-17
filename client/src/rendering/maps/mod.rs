@@ -1,7 +1,12 @@
 mod tiles;
 
+use std::collections::HashMap;
+
 use macroquad::prelude as quad;
-use shared::maps::{Map, TileCoords};
+use shared::{
+    maps::{Map, TileCoords},
+    Id
+};
 
 use crate::{maps::ClientMap, AssetManager, TextureKey};
 
@@ -12,12 +17,19 @@ pub struct Renderer {
     /// The width and height (in camera space) that each tile will be draw as.
     tile_draw_size: f32,
     /// The width and height (in pixels) that each individual tile on the tiles texture is.
-    tile_texture_rect_size: u16
+    tile_texture_rect_size: u16,
+    /// Holds the positions of entities that are in the process of moving between tiles.
+    in_between_tiles_entity_draw_positions: HashMap<Id, quad::Vec2>
 }
 
 impl Renderer {
     pub fn new(tile_draw_size: f32, tile_texture_rect_size: u16) -> Self {
-        Renderer { camera: quad::Camera2D::default(), tile_draw_size, tile_texture_rect_size }
+        Renderer {
+            camera: quad::Camera2D::default(),
+            tile_draw_size,
+            tile_texture_rect_size,
+            in_between_tiles_entity_draw_positions: HashMap::new()
+        }
     }
 
     /// Draws the tiles & entities than are within the bounds of the camera's viewport.

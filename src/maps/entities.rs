@@ -8,23 +8,33 @@ use crate::Id;
 /// Type alias for a hash map of entity IDs to entities.
 pub type Entities = HashMap<Id, Entity>;
 
+const STANDARD_HUMAN_MOVEMENT_TIME: f32 = 0.1;
+const RUNNING_HUMAN_MOVEMENT_TIME: f32 = STANDARD_HUMAN_MOVEMENT_TIME * 0.75;
+const BOMB_MOVEMENT_TIME: f32 = 0.025;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Entity {
-    /// The name of this entity.
-    pub name: String,
     /// The position of the entity within its current map.
     pub pos: TileCoords,
+    /// Direction that this entity is facing/travelling towards.
+    pub direction: Direction,
     /// The 'variety' of this entity (e.g. human, monster, etc.)
     pub variety: Variety
 }
 
 impl Entity {
-    /// An entity's movement speed is the amount of time in seconds taken for that entity to move to an adjacent tile.
-    /// Currently, this is determined solely by the entity's variety but in the future certain modifiers may influence
-    /// movement speed.
-    pub fn movement_speed(&self) -> f32 {
+    /// The amount of time in seconds taken for the entity to move to an adjacent tile.
+    pub fn movement_time(&self) -> f32 {
         match self.variety {
-            Variety::Human { .. } => 0.1
+            Variety::Human { has_running_shoes, .. } => {
+                if has_running_shoes {
+                    RUNNING_HUMAN_MOVEMENT_TIME
+                }
+                else {
+                    STANDARD_HUMAN_MOVEMENT_TIME
+                }
+            }
+            Variety::Bomb { .. } => BOMB_MOVEMENT_TIME
         }
     }
 
@@ -37,42 +47,57 @@ impl Entity {
 
 impl fmt::Display for Entity {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "'{}' at {} is a {}", self.name, self.pos, self.variety)
+        write!(f, "entity at {} facing/going {} of variety {}", self.pos, self.direction, self.variety)
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Variety {
     Human {
-        /// Direction that this human entity is facing. Defaults to 'down'.
-        direction: Direction,
+        /// The name of this human entity.
+        name: String,
         /// Emotional expression of this human entity (angry, shocked, etc.) Defaults to a neutral expression.
         facial_expression: FacialExpression,
         /// Style of this human entity's hair. Defaults to a quiff.
-        hair_style: HairStyle
+        hair_style: HairStyle,
+        /// Whether or not this human entity has increased movement speed.
+        has_running_shoes: bool
+    },
+    Bomb {
+        /// Where this bomb entity is travelling to.
+        target_pos: TileCoords,
+        /// ID of the entity that threw this bomb.
+        thrown_by: Id
+    }
+}
+
+impl Variety {
+    pub fn new_human() -> Self {
+        Variety::Human {
+            name: "abc".to_string(), // TODO: Generate human names.
+            facial_expression: FacialExpression::default(),
+            hair_style: HairStyle::default(),
+            has_running_shoes: false
+        }
     }
 }
 
 impl fmt::Display for Variety {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Variety::Human { direction, facial_expression, hair_style } => {
+            Variety::Human { name, facial_expression, hair_style, has_running_shoes } => {
                 write!(
                     f,
-                    "human with hair style {} facing {} with {} facial expression",
-                    hair_style, direction, facial_expression
+                    "human called '{}' with hair style {} with {} facial expression {} running shoes",
+                    name,
+                    hair_style,
+                    facial_expression,
+                    if *has_running_shoes { "with" } else { "without" }
                 )
             }
-        }
-    }
-}
-
-impl Default for Variety {
-    fn default() -> Self {
-        Variety::Human {
-            direction: Direction::default(),
-            facial_expression: FacialExpression::default(),
-            hair_style: HairStyle::default()
+            Variety::Bomb { target_pos, thrown_by } => {
+                write!(f, "bomb targeting {} thrown by entity wth ID {}", target_pos, thrown_by)
+            }
         }
     }
 }
