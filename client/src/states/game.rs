@@ -8,7 +8,7 @@ use super::State;
 use crate::{
     maps::{self, entities::PlayerEntity},
     networking::{self, ConnectionTrait},
-    AssetManager, TextureKey
+    rendering, AssetManager, TextureKey
 };
 
 pub struct GameState {
@@ -18,17 +18,17 @@ pub struct GameState {
     player_entity: PlayerEntity,
     /// The current world map that the player entity is in.
     map: maps::ClientMap,
-    /// The rendering system used to draw the current world map to the screen.
-    map_renderer: maps::rendering::Renderer
+    /// The rendering system used to draw the game map to the screen.
+    map_renderer: rendering::maps::Renderer
 }
 
 impl GameState {
     pub fn new(connection: networking::Connection, player_entity: PlayerEntity) -> Self {
         GameState {
             connection,
+            player_entity,
             map: maps::ClientMap::new(),
-            map_renderer: maps::rendering::Renderer::new(0.08, 16),
-            player_entity
+            map_renderer: rendering::maps::Renderer::new(0.08, 16)
         }
     }
 }
@@ -87,9 +87,10 @@ impl State for GameState {
     }
 
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
-        // Map updates:
+        // Rendering:
 
-        self.map_renderer.draw(&mut self.map, assets.texture(TextureKey::Tiles), assets.texture(TextureKey::Entities));
+        self.map_renderer.draw(self.player_entity.position(), &self.map, assets);
+        //self.ui_renderer.draw(...);
 
         // Player entity updates/input handling:
 

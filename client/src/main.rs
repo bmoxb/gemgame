@@ -1,6 +1,7 @@
 mod asset_management;
 mod maps;
 mod networking;
+mod rendering;
 mod sessions;
 mod states;
 

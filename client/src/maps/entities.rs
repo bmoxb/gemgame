@@ -105,4 +105,8 @@ impl PlayerEntity {
 
         self.unverified_movements.remove(&request_number);
     }
+
+    pub fn position(&self) -> TileCoords {
+        self.contained.pos
+    }
 }
