@@ -15,6 +15,7 @@ services:
       dockerfile: client/Dockerfile
     image: wiredsound/gemgame-client
     ports:
+      - 80:80
       - 443:443
     environment:
       CERTBOT_EMAIL: maxoblack@yahoo.com
