@@ -15,11 +15,13 @@ RUN cd client/ && ~/.cargo/bin/cargo build --release --target wasm32-unknown-unk
 RUN cd client/web/public/ && wget https://not-fl3.github.io/miniquad-samples/gl.js \
     && wget https://not-fl3.github.io/miniquad-samples/sapp_jsutils.js --output-document jsutils.js
 
-FROM nginx
+FROM jonasal/nginx-certbot:latest
 
-COPY --from=builder /usr/src/gemgame-client/client/web/nginx.conf etc/nginx/nginx.conf
+COPY --from=builder /usr/src/gemgame-client/client/web/nginx.conf etc/nginx/conf.d/default.conf
 
 WORKDIR /usr/share/nginx/html
 COPY --from=builder /usr/src/gemgame-client/target/wasm32-unknown-unknown/release/gemgame-client.wasm client.wasm
 COPY --from=builder /usr/src/gemgame-client/client/web/public/ .
 COPY --from=builder /usr/src/gemgame-client/client/assets/ assets/
+
+RUN ls /etc/letsencrypt/
