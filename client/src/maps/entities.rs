@@ -42,7 +42,8 @@ impl PlayerEntity {
         self.time_since_last_movement += delta;
     }
 
-    ///
+    /// Will attempt to move the player entity in the specified direction but will fail if moving now would exceed the
+    /// movement speed limit, or if the destination tile is occupied/blocking, or if unable to contact the server.
     pub fn move_towards_checked(
         &mut self, direction: Direction, map: &mut ClientMap, connection: &mut networking::Connection
     ) -> networking::Result<()> {

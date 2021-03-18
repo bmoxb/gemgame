@@ -8,33 +8,39 @@ use crate::Id;
 /// Type alias for a hash map of entity IDs to entities.
 pub type Entities = HashMap<Id, Entity>;
 
-const STANDARD_HUMAN_MOVEMENT_TIME: f32 = 0.1;
-const RUNNING_HUMAN_MOVEMENT_TIME: f32 = STANDARD_HUMAN_MOVEMENT_TIME * 0.75;
-const BOMB_MOVEMENT_TIME: f32 = 0.025;
+const STANDARD_MOVEMENT_TIME: f32 = 0.1;
+const RUNNING_MOVEMENT_TIME: f32 = STANDARD_MOVEMENT_TIME * 0.75;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+/// An 'entity' in the context of the GemGame codebase refers specifically to the player characters that exist within
+/// the game world.
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Entity {
     /// The position of the entity within its current map.
     pub pos: TileCoords,
     /// Direction that this entity is facing/travelling towards.
     pub direction: Direction,
-    /// The 'variety' of this entity (e.g. human, monster, etc.)
-    pub variety: Variety
+    /// The name of this human entity.
+    pub name: String,
+    /// Emotional expression of this human entity (angry, shocked, etc.) Defaults to a neutral expression.
+    pub facial_expression: FacialExpression,
+    /// Style of this human entity's hair. Defaults to a quiff.
+    pub hair_style: HairStyle,
+    /// Whether or not this human entity has increased movement speed.
+    pub has_running_shoes: bool
 }
 
 impl Entity {
+    pub fn default_with_name(name: String) -> Self {
+        Entity { name, ..Default::default() }
+    }
+
     /// The amount of time in seconds taken for the entity to move to an adjacent tile.
     pub fn movement_time(&self) -> f32 {
-        match self.variety {
-            Variety::Human { has_running_shoes, .. } => {
-                if has_running_shoes {
-                    RUNNING_HUMAN_MOVEMENT_TIME
-                }
-                else {
-                    STANDARD_HUMAN_MOVEMENT_TIME
-                }
-            }
-            Variety::Bomb { .. } => BOMB_MOVEMENT_TIME
+        if self.has_running_shoes {
+            RUNNING_MOVEMENT_TIME
+        }
+        else {
+            STANDARD_MOVEMENT_TIME
         }
     }
 
@@ -47,58 +53,16 @@ impl Entity {
 
 impl fmt::Display for Entity {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "entity at {} facing/going {} of variety {}", self.pos, self.direction, self.variety)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum Variety {
-    Human {
-        /// The name of this human entity.
-        name: String,
-        /// Emotional expression of this human entity (angry, shocked, etc.) Defaults to a neutral expression.
-        facial_expression: FacialExpression,
-        /// Style of this human entity's hair. Defaults to a quiff.
-        hair_style: HairStyle,
-        /// Whether or not this human entity has increased movement speed.
-        has_running_shoes: bool
-    },
-    Bomb {
-        /// Where this bomb entity is travelling to.
-        target_pos: TileCoords,
-        /// ID of the entity that threw this bomb.
-        thrown_by: Id
-    }
-}
-
-impl Variety {
-    pub fn new_human() -> Self {
-        Variety::Human {
-            name: "abc".to_string(), // TODO: Generate human names.
-            facial_expression: FacialExpression::default(),
-            hair_style: HairStyle::default(),
-            has_running_shoes: false
-        }
-    }
-}
-
-impl fmt::Display for Variety {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Variety::Human { name, facial_expression, hair_style, has_running_shoes } => {
-                write!(
-                    f,
-                    "human called '{}' with hair style {} with {} facial expression {} running shoes",
-                    name,
-                    hair_style,
-                    facial_expression,
-                    if *has_running_shoes { "with" } else { "without" }
-                )
-            }
-            Variety::Bomb { target_pos, thrown_by } => {
-                write!(f, "bomb targeting {} thrown by entity wth ID {}", target_pos, thrown_by)
-            }
-        }
+        write!(
+            f,
+            "'{} 'at {} facing {} with facial expression {} with hair style {} {} running shoes",
+            self.name,
+            self.pos,
+            self.direction,
+            self.facial_expression,
+            self.hair_style,
+            if self.has_running_shoes { "with" } else { "without" }
+        )
     }
 }
 

@@ -418,7 +418,7 @@ mod tests {
     };
 
     use shared::maps::{
-        entities::{Direction, Entity, Variety},
+        entities::{Direction, Entity},
         Chunk, ChunkCoords, Tile, TileCoords, CHUNK_TILE_COUNT, CHUNK_WIDTH
     };
 
@@ -447,10 +447,7 @@ mod tests {
         fn add_test_entity(&mut self, pos: TileCoords) -> Id {
             let entity_id = crate::id::generate_with_timestamp();
 
-            self.game_map
-                .lock()
-                .unwrap()
-                .add_entity(entity_id, Entity { pos, direction: Default::default(), variety: Variety::new_human() });
+            self.game_map.lock().unwrap().add_entity(entity_id, Entity::default());
 
             entity_id
         }

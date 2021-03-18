@@ -1,8 +1,5 @@
 use shared::{
-    maps::{
-        entities::{Entity, Variety},
-        TileCoords
-    },
+    maps::{entities::Entity, TileCoords},
     Id
 };
 use sqlx::Row;
@@ -12,7 +9,8 @@ pub async fn new_player_in_database(
 ) -> sqlx::Result<(Id, Entity)> {
     let entity_id = crate::id::generate_with_timestamp();
 
-    let entity = Entity { pos: TileCoords::default(), direction: Default::default(), variety: Variety::new_human() };
+    // TODO: Randomly select entity names from a list.
+    let entity = Entity::default_with_name("unnamed".to_string());
 
     sqlx::query(
         "INSERT INTO client_entities (client_id, entity_id, name, tile_x, tile_y)
@@ -43,13 +41,9 @@ pub async fn player_from_database(
             Id::decode(row.try_get("entity_id")?).unwrap(), // TODO: Don't just unwrap.
             Entity {
                 pos: TileCoords { x: row.try_get("tile_x")?, y: row.try_get("tile_y")? },
-                direction: Default::default(),
-                variety: Variety::Human {
-                    name: row.try_get("name")?,
-                    hair_style: Default::default(), // TODO: From database.
-                    facial_expression: Default::default(),
-                    has_running_shoes: false
-                }
+                name: row.try_get("name")?,
+                hair_style: Default::default(), // TODO: From database.
+                ..Default::default()
             }
         ))
     })
