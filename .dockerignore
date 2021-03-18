@@ -6,4 +6,4 @@ target/
 LICENSE
 README.md
 ARCHITECTURE.md
-rustfmt.toml 
+rustfmt.toml

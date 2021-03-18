@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: server/Dockerfile
+    image: wiredsound/gemgame-server
     ports:
       - 5678:5678
   
@@ -12,8 +13,10 @@ services:
     build:
       context: .
       dockerfile: client/Dockerfile
+    image: wiredsound/gemgame-client
     ports:
       - 80:80
+      - 443:443
   
   db:
     image: postgres
