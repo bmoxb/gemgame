@@ -11,7 +11,8 @@ use shared::{
 use super::ClientMap;
 use crate::networking::{self, ConnectionTrait};
 
-pub struct PlayerEntity {
+/// The entity controlled by this client program.
+pub struct MyEntity {
     id: Id,
     contained: Entity,
     /// Request number value to be used for the next [`shared::messages::ToServer::MoveMyEntity`] message. Incremented
@@ -27,9 +28,9 @@ pub struct PlayerEntity {
     time_since_last_movement: f32
 }
 
-impl PlayerEntity {
+impl MyEntity {
     pub fn new(id: Id, contained: Entity) -> Self {
-        PlayerEntity {
+        MyEntity {
             id,
             next_request_number: 0,
             unverified_movements: HashMap::new(),
