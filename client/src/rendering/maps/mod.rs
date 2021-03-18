@@ -1,7 +1,14 @@
 mod tiles;
 
+use std::collections::HashMap;
+
 use macroquad::prelude as quad;
-use shared::maps::{Map, TileCoords};
+use shared::{
+    maps::{Map, TileCoords},
+    Id
+};
+
+use crate::{maps::ClientMap, AssetManager, TextureKey};
 
 /// Handles the drawing of a game map.
 pub struct Renderer {
@@ -10,19 +17,25 @@ pub struct Renderer {
     /// The width and height (in camera space) that each tile will be draw as.
     tile_draw_size: f32,
     /// The width and height (in pixels) that each individual tile on the tiles texture is.
-    tile_texture_rect_size: u16
+    tile_texture_rect_size: u16,
+    /// Holds the positions of entities that are in the process of moving between tiles.
+    in_between_tiles_entity_draw_positions: HashMap<Id, quad::Vec2>
 }
 
 impl Renderer {
     pub fn new(tile_draw_size: f32, tile_texture_rect_size: u16) -> Self {
-        Renderer { camera: quad::Camera2D::default(), tile_draw_size, tile_texture_rect_size }
+        Renderer {
+            camera: quad::Camera2D::default(),
+            tile_draw_size,
+            tile_texture_rect_size,
+            in_between_tiles_entity_draw_positions: HashMap::new()
+        }
     }
 
     /// Draws the tiles & entities than are within the bounds of the camera's viewport.
-    pub fn draw(
-        &mut self, map: &mut super::ClientMap, tiles_texture: quad::Texture2D, _entities_texture: quad::Texture2D
-    ) {
+    pub fn draw(&mut self, player_coords: TileCoords, map: &ClientMap, assets: &AssetManager) {
         // Adjust camera zoom so that textures don't become distorted when the screen is resized:
+
         self.camera.zoom = {
             if quad::screen_width() > quad::screen_height() {
                 quad::vec2(1.0, quad::screen_width() / quad::screen_height())
@@ -31,6 +44,12 @@ impl Renderer {
                 quad::vec2(quad::screen_height() / quad::screen_width(), 1.0)
             }
         };
+
+        // Have camera centre on player entity:
+
+        // TODO: Smooth camera movement.
+        self.camera.target.x = player_coords.x as f32 * self.tile_draw_size;
+        self.camera.target.y = player_coords.y as f32 * self.tile_draw_size;
 
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
@@ -51,7 +70,14 @@ impl Renderer {
                 // received from the server.
 
                 if let Some(tile) = map.loaded_tile_at(TileCoords { x: tile_x, y: tile_y }) {
-                    tiles::draw(tile, draw_x, draw_y, self.tile_draw_size, self.tile_texture_rect_size, tiles_texture);
+                    tiles::draw(
+                        tile,
+                        draw_x,
+                        draw_y,
+                        self.tile_draw_size,
+                        self.tile_texture_rect_size,
+                        assets.texture(TextureKey::Tiles)
+                    );
                 }
                 else {
                     tiles::draw_pending_tile(draw_x, draw_y, self.tile_draw_size);
@@ -61,9 +87,6 @@ impl Renderer {
 
         // Entities:
 
-        // ...
-
-        // Return to drawing in screen space:
-        quad::set_default_camera();
+        // TODO: Draw entities.
     }
 }

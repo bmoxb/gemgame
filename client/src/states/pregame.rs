@@ -3,7 +3,7 @@ use shared::{messages, WEBSOCKET_CONNECTION_PORT};
 
 use super::State;
 use crate::{
-    maps::entities::PlayerEntity,
+    maps::entities::MyEntity,
     networking::{self, ConnectionTrait, PendingConnectionTrait},
     sessions, AssetManager
 };
@@ -113,9 +113,9 @@ impl State for ConnectedState {
 
                                 log::debug!("Given player entity: {} - {}", entity, entity_id);
 
-                                let player_entity = PlayerEntity::new(entity_id, entity);
+                                let my_entity = MyEntity::new(entity_id, entity);
                                 let taken_connection = self.connection.take().unwrap();
-                                let game_state = super::game::GameState::new(taken_connection, player_entity);
+                                let game_state = super::game::GameState::new(taken_connection, my_entity);
 
                                 return Some(Box::new(game_state));
                             }

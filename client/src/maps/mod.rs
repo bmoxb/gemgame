@@ -1,5 +1,4 @@
 pub mod entities;
-pub mod rendering;
 
 use std::collections::HashMap;
 

@@ -1,8 +1,5 @@
 use shared::{
-    maps::{
-        entities::{Entity, Variety},
-        TileCoords
-    },
+    maps::{entities::Entity, TileCoords},
     Id
 };
 use sqlx::Row;
@@ -12,15 +9,8 @@ pub async fn new_player_in_database(
 ) -> sqlx::Result<(Id, Entity)> {
     let entity_id = crate::id::generate_with_timestamp();
 
-    let entity = Entity {
-        name: "unnamed".to_string(),
-        pos: TileCoords::default(),
-        variety: Variety::Human {
-            direction: Default::default(),
-            facial_expression: Default::default(),
-            hair_style: Default::default()
-        }
-    };
+    // TODO: Randomly select entity names from a list.
+    let entity = Entity::default_with_name("unnamed".to_string());
 
     sqlx::query(
         "INSERT INTO client_entities (client_id, entity_id, name, tile_x, tile_y)
@@ -28,7 +18,7 @@ pub async fn new_player_in_database(
     )
     .bind(client_id.encode())
     .bind(entity_id.encode())
-    .bind(&entity.name)
+    .bind("") // TODO: Store player name and hair style.
     .bind(entity.pos.x)
     .bind(entity.pos.y)
     .execute(db)
@@ -50,13 +40,10 @@ pub async fn player_from_database(
         sqlx::Result::Ok((
             Id::decode(row.try_get("entity_id")?).unwrap(), // TODO: Don't just unwrap.
             Entity {
-                name: row.try_get("name")?,
                 pos: TileCoords { x: row.try_get("tile_x")?, y: row.try_get("tile_y")? },
-                variety: Variety::Human {
-                    direction: Default::default(),
-                    facial_expression: Default::default(),
-                    hair_style: Default::default() // TODO: From database.
-                }
+                name: row.try_get("name")?,
+                hair_style: Default::default(), // TODO: From database.
+                ..Default::default()
             }
         ))
     })
@@ -70,12 +57,13 @@ pub async fn player_from_database(
 pub async fn update_database_for_player(
     entity: &Entity, client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
 ) -> sqlx::Result<()> {
+    // TODO: Update name and hair style in database.
+
     sqlx::query(
         "UPDATE client_entities
-        SET name = ?, tile_x = ?, tile_y = ?
+        SET tile_x = ?, tile_y = ?
         WHERE client_id = ?"
     )
-    .bind(&entity.name)
     .bind(entity.pos.x)
     .bind(entity.pos.y)
     .bind(client_id.encode())

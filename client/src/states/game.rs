@@ -6,29 +6,29 @@ use shared::{
 
 use super::State;
 use crate::{
-    maps::{self, entities::PlayerEntity},
+    maps::{self, entities::MyEntity},
     networking::{self, ConnectionTrait},
-    AssetManager, TextureKey
+    rendering, AssetManager, TextureKey
 };
 
 pub struct GameState {
     /// Connection with the remote server.
     connection: networking::Connection,
-    /// The player character entity.
-    player_entity: PlayerEntity,
+    /// This client's player character entity.
+    my_entity: MyEntity,
     /// The current world map that the player entity is in.
     map: maps::ClientMap,
-    /// The rendering system used to draw the current world map to the screen.
-    map_renderer: maps::rendering::Renderer
+    /// The rendering system used to draw the game map to the screen.
+    map_renderer: rendering::maps::Renderer
 }
 
 impl GameState {
-    pub fn new(connection: networking::Connection, player_entity: PlayerEntity) -> Self {
+    pub fn new(connection: networking::Connection, my_entity: MyEntity) -> Self {
         GameState {
             connection,
+            my_entity,
             map: maps::ClientMap::new(),
-            map_renderer: maps::rendering::Renderer::new(0.08, 16),
-            player_entity
+            map_renderer: rendering::maps::Renderer::new(0.08, 16)
         }
     }
 }
@@ -63,7 +63,7 @@ impl GameState {
             }
 
             messages::FromServer::YourEntityMoved { request_number, new_position } => {
-                self.player_entity.received_movement_reconciliation(request_number, new_position);
+                self.my_entity.received_movement_reconciliation(request_number, new_position);
             }
 
             messages::FromServer::MoveEntity(id, pos) => {
@@ -87,13 +87,14 @@ impl State for GameState {
     }
 
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
-        // Map updates:
+        // Rendering:
 
-        self.map_renderer.draw(&mut self.map, assets.texture(TextureKey::Tiles), assets.texture(TextureKey::Entities));
+        self.map_renderer.draw(self.my_entity.position(), &self.map, assets);
+        //self.ui_renderer.draw(...);
 
         // Player entity updates/input handling:
 
-        self.player_entity.update(delta);
+        self.my_entity.update(delta);
 
         let direction_option = {
             if quad::is_key_down(quad::KeyCode::W) {
@@ -115,7 +116,7 @@ impl State for GameState {
 
         if let Some(direction) = direction_option {
             // TODO: Don't just unwrap.
-            self.player_entity.move_towards_checked(direction, &mut self.map, &mut self.connection).unwrap();
+            self.my_entity.move_towards_checked(direction, &mut self.map, &mut self.connection).unwrap();
         }
 
         // Networking:

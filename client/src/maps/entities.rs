@@ -11,7 +11,8 @@ use shared::{
 use super::ClientMap;
 use crate::networking::{self, ConnectionTrait};
 
-pub struct PlayerEntity {
+/// The entity controlled by this client program.
+pub struct MyEntity {
     id: Id,
     contained: Entity,
     /// Request number value to be used for the next [`shared::messages::ToServer::MoveMyEntity`] message. Incremented
@@ -27,13 +28,13 @@ pub struct PlayerEntity {
     time_since_last_movement: f32
 }
 
-impl PlayerEntity {
+impl MyEntity {
     pub fn new(id: Id, contained: Entity) -> Self {
-        PlayerEntity {
+        MyEntity {
             id,
             next_request_number: 0,
             unverified_movements: HashMap::new(),
-            time_since_last_movement: contained.movement_speed(),
+            time_since_last_movement: contained.movement_time(),
             contained
         }
     }
@@ -42,13 +43,14 @@ impl PlayerEntity {
         self.time_since_last_movement += delta;
     }
 
-    ///
+    /// Will attempt to move the player entity in the specified direction but will fail if moving now would exceed the
+    /// movement speed limit, or if the destination tile is occupied/blocking, or if unable to contact the server.
     pub fn move_towards_checked(
         &mut self, direction: Direction, map: &mut ClientMap, connection: &mut networking::Connection
     ) -> networking::Result<()> {
         // First check if required amount of time has paced since last movement (i.e. don't exceed maximum movement
         // speed:
-        if self.time_since_last_movement >= self.contained.movement_speed() {
+        if self.time_since_last_movement >= self.contained.movement_time() {
             let new_pos = direction.apply(self.contained.pos);
 
             // Check if the position the player wants to move to is free (i.e. not a blocking tile and no other
@@ -104,5 +106,9 @@ impl PlayerEntity {
         }
 
         self.unverified_movements.remove(&request_number);
+    }
+
+    pub fn position(&self) -> TileCoords {
+        self.contained.pos
     }
 }

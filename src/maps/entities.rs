@@ -8,23 +8,39 @@ use crate::Id;
 /// Type alias for a hash map of entity IDs to entities.
 pub type Entities = HashMap<Id, Entity>;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+const STANDARD_MOVEMENT_TIME: f32 = 0.1;
+const RUNNING_MOVEMENT_TIME: f32 = STANDARD_MOVEMENT_TIME * 0.75;
+
+/// An 'entity' in the context of the GemGame codebase refers specifically to the player characters that exist within
+/// the game world.
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct Entity {
-    /// The name of this entity.
-    pub name: String,
     /// The position of the entity within its current map.
     pub pos: TileCoords,
-    /// The 'variety' of this entity (e.g. human, monster, etc.)
-    pub variety: Variety
+    /// Direction that this entity is facing/travelling towards.
+    pub direction: Direction,
+    /// The name of this human entity.
+    pub name: String,
+    /// Emotional expression of this human entity (angry, shocked, etc.) Defaults to a neutral expression.
+    pub facial_expression: FacialExpression,
+    /// Style of this human entity's hair. Defaults to a quiff.
+    pub hair_style: HairStyle,
+    /// Whether or not this human entity has increased movement speed.
+    pub has_running_shoes: bool
 }
 
 impl Entity {
-    /// An entity's movement speed is the amount of time in seconds taken for that entity to move to an adjacent tile.
-    /// Currently, this is determined solely by the entity's variety but in the future certain modifiers may influence
-    /// movement speed.
-    pub fn movement_speed(&self) -> f32 {
-        match self.variety {
-            Variety::Human { .. } => 0.1
+    pub fn default_with_name(name: String) -> Self {
+        Entity { name, ..Default::default() }
+    }
+
+    /// The amount of time in seconds taken for the entity to move to an adjacent tile.
+    pub fn movement_time(&self) -> f32 {
+        if self.has_running_shoes {
+            RUNNING_MOVEMENT_TIME
+        }
+        else {
+            STANDARD_MOVEMENT_TIME
         }
     }
 
@@ -37,43 +53,16 @@ impl Entity {
 
 impl fmt::Display for Entity {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "'{}' at {} is a {}", self.name, self.pos, self.variety)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-pub enum Variety {
-    Human {
-        /// Direction that this human entity is facing. Defaults to 'down'.
-        direction: Direction,
-        /// Emotional expression of this human entity (angry, shocked, etc.) Defaults to a neutral expression.
-        facial_expression: FacialExpression,
-        /// Style of this human entity's hair. Defaults to a quiff.
-        hair_style: HairStyle
-    }
-}
-
-impl fmt::Display for Variety {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Variety::Human { direction, facial_expression, hair_style } => {
-                write!(
-                    f,
-                    "human with hair style {} facing {} with {} facial expression",
-                    hair_style, direction, facial_expression
-                )
-            }
-        }
-    }
-}
-
-impl Default for Variety {
-    fn default() -> Self {
-        Variety::Human {
-            direction: Direction::default(),
-            facial_expression: FacialExpression::default(),
-            hair_style: HairStyle::default()
-        }
+        write!(
+            f,
+            "'{} 'at {} facing {} with facial expression {} with hair style {} {} running shoes",
+            self.name,
+            self.pos,
+            self.direction,
+            self.facial_expression,
+            self.hair_style,
+            if self.has_running_shoes { "with" } else { "without" }
+        )
     }
 }
 

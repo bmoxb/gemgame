@@ -447,10 +447,9 @@ mod tests {
         fn add_test_entity(&mut self, pos: TileCoords) -> Id {
             let entity_id = crate::id::generate_with_timestamp();
 
-            self.game_map
-                .lock()
-                .unwrap()
-                .add_entity(entity_id, Entity { pos, name: "test".to_string(), variety: Default::default() });
+            let mut entity = Entity::default();
+            entity.pos = pos;
+            self.game_map.lock().unwrap().add_entity(entity_id, entity);
 
             entity_id
         }
