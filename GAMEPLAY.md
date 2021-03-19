@@ -24,8 +24,9 @@ This document describes the high-level gameplay and intended user experience of 
 * Items can be bought at any point during the game.
 * Traps appear as gems to other players and are single-use (i.e. can only be triggered once).
 * Items:
+  * Energy Drink (10 emeralds) - Increases movement speed by 50% (ignoring the effect of running shoes if any) for 10 seconds. This effect does not stack.
   * Running Shoes (25 emeralds) - Increases movement speed by 25%.
-  * Bomb (5 rubies) - Can be throw at other players with a direct hit causing death (when a player dies they will loose some amount of gems before respawning) and an indirect hit resulting in hit players being temporarily unable to move.
+  * Bomb (5 rubies) - Can be placed and later detonated. Detonation directly next to a player will cause them to die (when a player dies they will loose some amount of gems before respawning) while any player within the larger blast radius will become temporarily unable to move. Multiple bombs can be placed and then detonated simultaneously.
   * Speed Trap (2 diamonds) - Halves the movement speed of any player who steps on this trap.
   * Theft Trap (5 diamonds) - Takes 25% of the emeralds held by any player that steps on this trap and gives them to the player who set the trap.
 
