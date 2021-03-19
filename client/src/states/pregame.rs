@@ -1,5 +1,5 @@
 use macroquad::prelude as quad;
-use shared::{messages, WEBSOCKET_CONNECTION_PORT};
+use shared::{messages, WEBSOCKET_PORT};
 
 use super::State;
 use crate::{
@@ -8,8 +8,8 @@ use crate::{
     sessions, AssetManager
 };
 
-const SERVER_ADDRESS: &str = "localhost";
-const SECURE_CONNECTION: bool = false;
+const WEBSOCKET_ADDRESS: &str = "gemgame.mblack.dev";
+const WEBSOCKET_SECURE: bool = false; // TODO: Set up TLS for WebSocket connections.
 
 const CONNECTING_TEXT: &str = "Connecting...";
 const FAILED_TEXT: &str = "Failed to connect to server :(";
@@ -26,9 +26,9 @@ pub struct ConnectingState {
 
 impl ConnectingState {
     pub fn new() -> Self {
-        log::info!("Connecting to '{}' on port {}...", SERVER_ADDRESS, WEBSOCKET_CONNECTION_PORT);
+        log::info!("Connecting to '{}' on port {}...", WEBSOCKET_ADDRESS, WEBSOCKET_PORT);
         ConnectingState {
-            pending_connection: networking::connect(SERVER_ADDRESS, WEBSOCKET_CONNECTION_PORT, SECURE_CONNECTION),
+            pending_connection: networking::connect(WEBSOCKET_ADDRESS, WEBSOCKET_PORT, WEBSOCKET_SECURE),
             text: CONNECTING_TEXT
         }
     }

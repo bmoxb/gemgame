@@ -10,7 +10,7 @@ use std::{
 };
 
 use maps::ServerMap;
-use shared::WEBSOCKET_CONNECTION_PORT;
+use shared::WEBSOCKET_PORT;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
 
@@ -20,7 +20,7 @@ async fn main() {
 
     let mut options = Options::from_args();
     if options.port == 0 {
-        options.port = WEBSOCKET_CONNECTION_PORT;
+        options.port = WEBSOCKET_PORT;
     }
 
     // Logger initialisation:
