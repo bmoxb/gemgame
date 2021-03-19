@@ -35,6 +35,7 @@ impl<TextureKey: AssetKey> AssetManager<TextureKey> {
     }
 
     pub async fn require_texture(&mut self, key: TextureKey) {
+        #[allow(clippy::map_entry)]
         if !self.loaded_textures.contains_key(&key) {
             let path = self.textures_directory.join(key.path());
 

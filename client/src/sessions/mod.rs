@@ -1,11 +1,12 @@
 #[cfg(target_arch = "wasm32")]
 mod browser;
-
 #[cfg(not(target_arch = "wasm32"))]
 mod desktop;
 
-const KEY: &str = "client_id";
-const FILE_PATH: &str = "client id.txt";
+#[cfg(target_arch = "wasm32")]
+const LOCAL_STORAGE_KEY: &str = "clientid";
+#[cfg(not(target_arch = "wasm32"))]
+const FILE_PATH: &str = "clientid.txt";
 
 use shared::Id;
 
