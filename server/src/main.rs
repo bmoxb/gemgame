@@ -10,9 +10,10 @@ use std::{
 };
 
 use maps::ServerMap;
-use shared::WEBSOCKET_PORT;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
+
+pub const WEBSOCKET_PORT: u16 = 5678;
 
 #[tokio::main]
 async fn main() {

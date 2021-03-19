@@ -16,8 +16,8 @@ const IO_ERROR_MSG: &str = "Please see the browser console for error message";
 pub struct PendingConnection;
 
 impl super::PendingConnectionTrait<Connection> for PendingConnection {
-    fn new(full_url: String) -> Self {
-        let obj = JsObject::string(&full_url);
+    fn new(connection_str: &'static str) -> Self {
+        let obj = JsObject::string(connection_str);
         unsafe { ws_connect(obj) };
 
         PendingConnection

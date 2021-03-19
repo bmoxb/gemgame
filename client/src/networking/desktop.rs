@@ -9,13 +9,13 @@ pub struct PendingConnection {
 }
 
 impl super::PendingConnectionTrait<Connection> for PendingConnection {
-    fn new(full_url: String) -> Self {
+    fn new(connection_str: &'static str) -> Self {
         let (thread_sender, thread_receiver) = mpsc::channel();
 
         thread::spawn(move || {
-            let result = match ws2::connect(&full_url) {
+            let result = match ws2::connect(connection_str) {
                 Ok((ws, _)) => {
-                    log::debug!("Established WebSocket connection to URL: '{}'", full_url);
+                    log::debug!("Established WebSocket connection to: '{}'", connection_str);
 
                     let tcp_socket = match ws.get_ref() {
                         ws2::stream::Stream::Plain(tcp) => tcp,

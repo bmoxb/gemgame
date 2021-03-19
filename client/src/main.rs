@@ -7,6 +7,11 @@ mod states;
 
 use macroquad::prelude as quad;
 
+#[cfg(debug_assertions)]
+const CONNECTION_STR: &str = "ws://localhost:5678";
+#[cfg(not(debug_assertions))]
+const CONNECTION_STR: &str = "wss://gemgame.mblack.dev/wss";
+
 #[macroquad::main("Client")]
 async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
@@ -16,7 +21,7 @@ async fn main() {
 
     log::info!("Prepared the asset manager");
 
-    let mut current_state: Box<dyn states::State> = Box::new(states::pregame::ConnectingState::new());
+    let mut current_state: Box<dyn states::State> = Box::new(states::pregame::ConnectingState::new(CONNECTION_STR));
     assets.required_textures(current_state.required_textures()).await;
 
     log::info!("Created initial state '{}' - beginning main loop...", current_state.title());

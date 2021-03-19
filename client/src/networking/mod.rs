@@ -12,20 +12,15 @@ use std::{convert, fmt};
 pub use desktop::*;
 use serde::{de::DeserializeOwned, Serialize};
 
-pub fn connect(addr: &str, port: u16, secure: bool) -> PendingConnection {
-    PendingConnection::new(addr_port_to_url(secure, addr, port))
-}
-
-/// Simple helper function that builds a WebSocket URL given an address, port, and a boolean indicating whether the
-/// connection will be secure or not.
-fn addr_port_to_url(secure: bool, addr: &str, port: u16) -> String {
-    format!("{}://{}:{}", if secure { "wss" } else { "ws" }, addr, port)
+pub fn connect(connection_str: &'static str) -> PendingConnection {
+    //PendingConnection::new(addr_port_to_url(secure, addr, port))
+    PendingConnection::new(connection_str)
 }
 
 /// Represents a connection that has not yet been fully established (i.e. still performing handshake).
 pub trait PendingConnectionTrait<T: ConnectionTrait> {
     /// Establishes an intent to connect to a specified URL (non-blocking).
-    fn new(full_url: String) -> Self
+    fn new(connection_str: &'static str) -> Self
     where Self: Sized;
 
     /// Check if the connection has been established. Will return `Ok(None)` when no errors have been encountered but
