@@ -6,7 +6,7 @@ This document describes the high-level gameplay and intended user experience of 
 
 * As described in the `README.md` document, GemGame gameplay is centred around the collection of precious gemstones found around a procedurally-generated grid-based game world.
 * Gems can be exchanged for items that allow the player to collect gems at a faster rate or slow the rate at which other players can collect gems.
-* Every 30 minutes the player with the most gems is declared the winner and the game resets (gems and items belonging to each player are removed and the game map is regenerated).
+* Every week the player with the most gems is declared the winner and the game resets (gems and items belonging to each player are removed and the game map is regenerated).
 
 ## Gems
 
