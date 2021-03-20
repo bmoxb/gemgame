@@ -10,6 +10,8 @@ use shared::{
     Id
 };
 
+use super::rendering;
+
 pub struct ClientMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
     loaded_chunks: Chunks,
@@ -22,9 +24,15 @@ impl ClientMap {
         ClientMap { loaded_chunks: HashMap::new(), entities: HashMap::new() }
     }
 
-    pub fn set_entity_position_by_id(&mut self, id: Id, new_pos: TileCoords) {
+    pub fn set_remote_entity_position(
+        &mut self, id: Id, new_pos: TileCoords, renderer: &mut rendering::maps::Renderer
+    ) {
         if let Some(entity) = self.entities.get_mut(&id) {
+            // Set position:
             entity.pos = new_pos;
+
+            // Update renderer:
+            renderer.remote_entity_moved();
         }
         else {
             log::warn!("Cannot set position of entity {} as it is not loaded", id);

@@ -63,11 +63,11 @@ impl GameState {
             }
 
             messages::FromServer::YourEntityMoved { request_number, new_position } => {
-                self.my_entity.received_movement_reconciliation(request_number, new_position);
+                self.my_entity.received_movement_reconciliation(request_number, new_position, &mut self.map_renderer);
             }
 
             messages::FromServer::MoveEntity(id, pos) => {
-                self.map.set_entity_position_by_id(id, pos);
+                self.map.set_remote_entity_position(id, pos, &mut self.map_renderer);
             }
 
             messages::FromServer::ProvideEntity(id, entity) => {
@@ -89,7 +89,7 @@ impl State for GameState {
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
         // Rendering:
 
-        self.map_renderer.draw(self.my_entity.position(), &self.map, assets);
+        self.map_renderer.draw(&self.map, assets);
         //self.ui_renderer.draw(...);
 
         // Player entity updates/input handling:
@@ -116,7 +116,9 @@ impl State for GameState {
 
         if let Some(direction) = direction_option {
             // TODO: Don't just unwrap.
-            self.my_entity.move_towards_checked(direction, &mut self.map, &mut self.connection).unwrap();
+            self.my_entity
+                .move_towards_checked(direction, &mut self.map, &mut self.connection, &mut self.map_renderer)
+                .unwrap();
         }
 
         // Networking:

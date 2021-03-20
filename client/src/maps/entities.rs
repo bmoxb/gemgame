@@ -9,7 +9,10 @@ use shared::{
 };
 
 use super::ClientMap;
-use crate::networking::{self, ConnectionTrait};
+use crate::{
+    networking::{self, ConnectionTrait},
+    rendering
+};
 
 /// The entity controlled by this client program.
 pub struct MyEntity {
@@ -46,7 +49,8 @@ impl MyEntity {
     /// Will attempt to move the player entity in the specified direction but will fail if moving now would exceed the
     /// movement speed limit, or if the destination tile is occupied/blocking, or if unable to contact the server.
     pub fn move_towards_checked(
-        &mut self, direction: Direction, map: &mut ClientMap, connection: &mut networking::Connection
+        &mut self, direction: Direction, map: &mut ClientMap, connection: &mut networking::Connection,
+        renderer: &mut rendering::maps::Renderer
     ) -> networking::Result<()> {
         // First check if required amount of time has paced since last movement (i.e. don't exceed maximum movement
         // speed:
@@ -64,6 +68,9 @@ impl MyEntity {
                 // Inform server that this client's player entity wants to move in a given direction:
                 let msg = messages::ToServer::MoveMyEntity { request_number: self.next_request_number, direction };
                 connection.send(&msg)?;
+
+                // Update the map renderer:
+                renderer.my_entity_moved();
 
                 // Add to collection of movement predictions awaiting confirmation from the server:
                 self.unverified_movements.insert(self.next_request_number, self.contained.pos);
@@ -86,7 +93,9 @@ impl MyEntity {
     /// This method is called from the main game state whenever a [`shared::messages::FromSever::YourEntityMoved`]
     /// message is received. It is the role of this method to ensure that previous predictions regarding player
     /// entity position after movement were correct.
-    pub fn received_movement_reconciliation(&mut self, request_number: u32, position: TileCoords) {
+    pub fn received_movement_reconciliation(
+        &mut self, request_number: u32, position: TileCoords, renderer: &mut rendering::maps::Renderer
+    ) {
         if let Some(predicted_position) = self.unverified_movements.get(&request_number) {
             if *predicted_position != position {
                 log::warn!(
@@ -95,7 +104,12 @@ impl MyEntity {
                     predicted_position,
                     position
                 );
+
+                // Correct position:
                 self.contained.pos = position;
+
+                // Update map renderer:
+                renderer.my_entity_position_corrected();
             }
         }
         else {
@@ -106,9 +120,5 @@ impl MyEntity {
         }
 
         self.unverified_movements.remove(&request_number);
-    }
-
-    pub fn position(&self) -> TileCoords {
-        self.contained.pos
     }
 }

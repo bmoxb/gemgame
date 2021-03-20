@@ -33,7 +33,7 @@ impl Renderer {
     }
 
     /// Draws the tiles & entities than are within the bounds of the camera's viewport.
-    pub fn draw(&mut self, player_coords: TileCoords, map: &ClientMap, assets: &AssetManager) {
+    pub fn draw(&mut self, map: &ClientMap, assets: &AssetManager) {
         // Adjust camera zoom so that textures don't become distorted when the screen is resized:
 
         self.camera.zoom = {
@@ -44,12 +44,6 @@ impl Renderer {
                 quad::vec2(quad::screen_height() / quad::screen_width(), 1.0)
             }
         };
-
-        // Have camera centre on player entity:
-
-        // TODO: Smooth camera movement.
-        self.camera.target.x = player_coords.x as f32 * self.tile_draw_size;
-        self.camera.target.y = player_coords.y as f32 * self.tile_draw_size;
 
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
@@ -89,4 +83,16 @@ impl Renderer {
 
         // TODO: Draw entities.
     }
+
+    /// Begin the animated movement of this client's player entity to the specified position. This method is to be
+    /// called by the [`crate::maps::entities::MyEntity::move_towards_checked`] method.
+    pub fn my_entity_moved(&mut self) {}
+
+    /// Begin a shorter animation of this client's entity to the specified position. This method is to be called by the
+    /// [`crate::maps::entities::MyEntity::received_movement_reconciliation'] method.
+    pub fn my_entity_position_corrected(&mut self) {}
+
+    /// Begin the animated movement of the specified remote entity to the given position. This method is to be called by
+    /// the [`ClientMap::set_remote_entity_position`].
+    pub fn remote_entity_moved(&mut self) {}
 }
