@@ -24,11 +24,12 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(connection: networking::Connection, my_entity: MyEntity) -> Self {
+        let my_entity_pos = my_entity.contained.pos;
         GameState {
             connection,
             my_entity,
             map: maps::ClientMap::new(),
-            map_renderer: rendering::maps::Renderer::new(0.08, 16)
+            map_renderer: rendering::maps::Renderer::new(0.08, 16, my_entity_pos)
         }
     }
 }
@@ -71,10 +72,12 @@ impl GameState {
             }
 
             messages::FromServer::ProvideEntity(id, entity) => {
+                self.map_renderer.add_remove_entity(id, entity.pos);
                 self.map.add_entity(id, entity);
             }
 
             messages::FromServer::ShouldUnloadEntity(id) => {
+                self.map_renderer.remove_remote_entity(id);
                 self.map.remove_entity(id);
             }
         }
@@ -89,7 +92,7 @@ impl State for GameState {
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
         // Rendering:
 
-        self.map_renderer.draw(&self.map, assets, delta);
+        self.map_renderer.draw(&self.map, &self.my_entity.contained, assets, delta);
         //self.ui_renderer.draw(...);
 
         // Player entity updates/input handling:

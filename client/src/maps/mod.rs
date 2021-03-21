@@ -28,11 +28,11 @@ impl ClientMap {
         &mut self, id: Id, new_pos: TileCoords, renderer: &mut rendering::maps::Renderer
     ) {
         if let Some(entity) = self.entities.get_mut(&id) {
+            // Update renderer:
+            renderer.remote_entity_moved(id, entity.pos, new_pos, entity.movement_time());
+
             // Set position:
             entity.pos = new_pos;
-
-            // Update renderer:
-            // TODO: renderer.remote_entity_moved();
         }
         else {
             log::warn!("Cannot set position of entity {} as it is not loaded", id);

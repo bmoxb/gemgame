@@ -17,7 +17,7 @@ use crate::{
 /// The entity controlled by this client program.
 pub struct MyEntity {
     id: Id,
-    contained: Entity,
+    pub contained: Entity,
     /// Request number value to be used for the next [`shared::messages::ToServer::MoveMyEntity`] message. Incremented
     /// after the sending of each message.
     next_request_number: u32,
@@ -105,11 +105,11 @@ impl MyEntity {
                     position
                 );
 
+                // Update map renderer:
+                renderer.my_entity_position_corrected(self.contained.pos, position);
+
                 // Correct position:
                 self.contained.pos = position;
-
-                // Update map renderer:
-                // TODO: renderer.my_entity_position_corrected();
             }
         }
         else {
