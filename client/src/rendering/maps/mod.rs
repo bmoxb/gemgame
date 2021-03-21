@@ -18,8 +18,8 @@ pub struct Renderer {
     tile_draw_size: f32,
     /// The width and height (in pixels) that each individual tile on the tiles texture is.
     tile_texture_rect_size: u16,
-    /// Holds the positions of entities that are in the process of moving between tiles.
-    in_between_tiles_entity_draw_positions: HashMap<Id, quad::Vec2>
+    my_entity_movement: Option<EntityMovement>,
+    remote_entity_movements: HashMap<Id, EntityMovement>
 }
 
 impl Renderer {
@@ -28,7 +28,8 @@ impl Renderer {
             camera: quad::Camera2D::default(),
             tile_draw_size,
             tile_texture_rect_size,
-            in_between_tiles_entity_draw_positions: HashMap::new()
+            my_entity_movement: None,
+            remote_entity_movements: HashMap::new()
         }
     }
 
@@ -86,13 +87,33 @@ impl Renderer {
 
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
     /// called by the [`crate::maps::entities::MyEntity::move_towards_checked`] method.
-    pub fn my_entity_moved(&mut self) {}
+    pub fn my_entity_moved(&mut self, from_pos: TileCoords, to_pos: TileCoords, movement_time: f32) {}
 
     /// Begin a shorter animation of this client's entity to the specified position. This method is to be called by the
     /// [`crate::maps::entities::MyEntity::received_movement_reconciliation'] method.
-    pub fn my_entity_position_corrected(&mut self) {}
+    pub fn my_entity_position_corrected(&mut self, incorrect_pos: TileCoords, correct_pos: TileCoords) {}
 
     /// Begin the animated movement of the specified remote entity to the given position. This method is to be called by
     /// the [`ClientMap::set_remote_entity_position`].
-    pub fn remote_entity_moved(&mut self) {}
+    pub fn remote_entity_moved(&mut self, entity_id: Id, from_pos: TileCoords, to_pos: TileCoords, movement_time: f32) {
+    }
+}
+
+struct EntityMovement {
+    destination_pos: quad::Vec2,
+    movement: quad::Vec2,
+    current_pos: quad::Vec2,
+    current_time: f32,
+    movement_time: f32
+}
+
+impl EntityMovement {
+    fn update(&mut self, delta: f32) {
+        self.current_time += delta;
+        self.current_pos += self.movement * delta;
+
+        if self.current_time >= self.movement_time {
+            self.current_pos = self.destination_pos;
+        }
+    }
 }
