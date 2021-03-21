@@ -62,15 +62,15 @@ impl MyEntity {
             if map.is_position_free(new_pos) {
                 log::trace!("Moving player entity in direction {} to {}", direction, new_pos);
 
+                // Update the map renderer:
+                renderer.my_entity_moved(self.contained.pos, new_pos, self.contained.movement_time());
+
                 // Locally modify player entity's coordinates:
                 self.contained.pos = new_pos;
 
                 // Inform server that this client's player entity wants to move in a given direction:
                 let msg = messages::ToServer::MoveMyEntity { request_number: self.next_request_number, direction };
                 connection.send(&msg)?;
-
-                // Update the map renderer:
-                renderer.my_entity_moved();
 
                 // Add to collection of movement predictions awaiting confirmation from the server:
                 self.unverified_movements.insert(self.next_request_number, self.contained.pos);
@@ -109,7 +109,7 @@ impl MyEntity {
                 self.contained.pos = position;
 
                 // Update map renderer:
-                renderer.my_entity_position_corrected();
+                // TODO: renderer.my_entity_position_corrected();
             }
         }
         else {

@@ -34,7 +34,7 @@ impl Renderer {
     }
 
     /// Draws the tiles & entities than are within the bounds of the camera's viewport.
-    pub fn draw(&mut self, map: &ClientMap, assets: &AssetManager) {
+    pub fn draw(&mut self, map: &ClientMap, assets: &AssetManager, delta: f32) {
         // Adjust camera zoom so that textures don't become distorted when the screen is resized:
 
         self.camera.zoom = {
@@ -45,6 +45,8 @@ impl Renderer {
                 quad::vec2(quad::screen_height() / quad::screen_width(), 1.0)
             }
         };
+
+        // TODO: Camera follow player movement.
 
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
@@ -82,12 +84,33 @@ impl Renderer {
 
         // Entities:
 
-        // TODO: Draw entities.
+        if let Some(movement) = &mut self.my_entity_movement {
+            movement.update(delta);
+            //quad::draw_circle(movement.current_pos.x, movement.current_pos.y, 0.1, quad::RED);
+            quad::draw_rectangle(
+                movement.current_pos.x,
+                movement.current_pos.y,
+                self.tile_draw_size,
+                self.tile_draw_size,
+                quad::RED
+            );
+        }
     }
 
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
     /// called by the [`crate::maps::entities::MyEntity::move_towards_checked`] method.
-    pub fn my_entity_moved(&mut self, from_pos: TileCoords, to_pos: TileCoords, movement_time: f32) {}
+    pub fn my_entity_moved(&mut self, from_pos: TileCoords, to_pos: TileCoords, movement_time: f32) {
+        let start_pos = self.tile_coords_to_vec2(from_pos);
+        let destination_pos = self.tile_coords_to_vec2(to_pos);
+
+        self.my_entity_movement = Some(EntityMovement {
+            current_pos: start_pos,
+            destination_pos,
+            movement: (destination_pos - start_pos) / movement_time,
+            current_time: 0.0,
+            movement_time
+        });
+    }
 
     /// Begin a shorter animation of this client's entity to the specified position. This method is to be called by the
     /// [`crate::maps::entities::MyEntity::received_movement_reconciliation'] method.
@@ -97,23 +120,31 @@ impl Renderer {
     /// the [`ClientMap::set_remote_entity_position`].
     pub fn remote_entity_moved(&mut self, entity_id: Id, from_pos: TileCoords, to_pos: TileCoords, movement_time: f32) {
     }
+
+    fn tile_coords_to_vec2(&self, coords: TileCoords) -> quad::Vec2 {
+        quad::vec2(coords.x as f32 * self.tile_draw_size, coords.y as f32 * self.tile_draw_size)
+    }
 }
 
 struct EntityMovement {
+    current_pos: quad::Vec2,
     destination_pos: quad::Vec2,
     movement: quad::Vec2,
-    current_pos: quad::Vec2,
     current_time: f32,
     movement_time: f32
 }
 
 impl EntityMovement {
-    fn update(&mut self, delta: f32) {
+    /// Updates the draw position of the entity. Will return true should the entity have reached their destination, and
+    /// false otherwise.
+    fn update(&mut self, delta: f32) -> bool {
         self.current_time += delta;
         self.current_pos += self.movement * delta;
 
         if self.current_time >= self.movement_time {
             self.current_pos = self.destination_pos;
+            return true;
         }
+        false
     }
 }

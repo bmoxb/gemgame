@@ -32,7 +32,7 @@ impl ClientMap {
             entity.pos = new_pos;
 
             // Update renderer:
-            renderer.remote_entity_moved();
+            // TODO: renderer.remote_entity_moved();
         }
         else {
             log::warn!("Cannot set position of entity {} as it is not loaded", id);
