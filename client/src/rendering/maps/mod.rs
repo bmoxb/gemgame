@@ -165,7 +165,7 @@ impl Renderer {
             .insert(entity_id, EntityRendering::new(from_coords, to_coords, movement_time, self.tile_draw_size));
     }
 
-    pub fn add_remove_entity(&mut self, entity_id: Id, coords: TileCoords) {
+    pub fn add_remote_entity(&mut self, entity_id: Id, coords: TileCoords) {
         self.remote_entity_rendering
             .insert(entity_id, EntityRendering::with_static_position(coords, self.tile_draw_size));
     }

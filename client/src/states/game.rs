@@ -72,7 +72,7 @@ impl GameState {
             }
 
             messages::FromServer::ProvideEntity(id, entity) => {
-                self.map_renderer.add_remove_entity(id, entity.pos);
+                self.map_renderer.add_remote_entity(id, entity.pos);
                 self.map.add_entity(id, entity);
             }
 
