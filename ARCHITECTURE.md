@@ -22,6 +22,19 @@ This document provides a description of the design of the GemGame software from 
 
 * The client application is written primarily in Rust (compiled to WebAssembly) using the MacroQuad library for rendering. A small amount of JavaScript code is used for the purpose of interfacing with the browser's WebSocket API and for accessing local storage.
 
+### Map Rendering
+
+* Each frame, only the tiles and entities that are on-screen are rendered.
+* For the rendering of tile, each tile is iteratively drawn using the MacroQuad texture drawing functions with MacroQuad left to handle geometry batching, etc.
+* The rendering of entities is slightly more complex:
+  * All player entity bodies are drawn are drawn at the origin of each entity first. This is done separately to the rendering of entity heads, hair, etc. so as to prevent the head of an entity directly in front of another entity from being drawn behind the other entity's body (entities are 1.5 tiles tall).
+  * Next the upper halves of player entities are drawn.
+    * Note that if the entity in question is moving and at an animation frame where an arm is shown extended forward then the following should all be drawn a sixteenth of a tile lower than specified.
+    * First an entity's head and hands are drawn a quarter of a tile above the entity's origin. This draw is coloured based on the player's skin colour choice.
+    * Hair is drawn half a tile above the origin and is coloured based on the player's choice of hair colour.
+    * Next the left eye is drawn 3 quarters of the tile above the origin while the right eye is flipped and position 1 quarter of a tile right of the left eye. These draws are to be coloured based on the player's choice of hair colour.
+    * An entity's mouth is drawn a quarter of a tile above and an eighth of a tile right of the entity's origin point.
+
 ## Server
 
 * The server is built on top of Tokio using Tungstenite for handling WebSocket connections.
@@ -34,11 +47,11 @@ This document provides a description of the design of the GemGame software from 
 
 ### Tracking Map Changes
 
-* The game map is stored and shared between all connection tasks/threads using a mutex wrapped inside of an atomically reference counted wrapped.
-* In addition to polling the WebSocket connection, each task must also poll the Tokio broadcast channel in order to check for changes to the game world. If those changes are relevant to that task's client (i.e. they're changes to chunks that that client has loaded) then that task's client must be sent messages via the WebSocket connection informing them of said changes.
+* The game map is stored and shared between all connection tasks/threads using a mutex wrapped inside of an atomically reference-counted object (`std::sync::Arc`).
 * Whenever a task wishes to modify the game world, it must do two things:
   * Lock the game world mutex for writing and make the desired changes.
   * Send message(s) on the Tokio broadcast channel informing other tasks of changes made.
+* In addition to polling the WebSocket connection, each task must also poll the Tokio broadcast channel in order to check for changes to the game world. If those changes are relevant to that task's client (i.e. they're changes to chunks that that client has loaded) then that task's client must be sent messages via the WebSocket connection informing them of said changes.
 
 ## Network Protocol
 
