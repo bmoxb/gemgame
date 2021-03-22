@@ -2,7 +2,7 @@ use macroquad::prelude as quad;
 use shared::maps::Tile;
 
 /// Draw the given tile at the specified coordinates.
-pub fn draw(tile: &Tile, x: f32, y: f32, draw_size: f32, texture_rect_size: u16, texture: quad::Texture2D) {
+pub fn draw(tile: &Tile, draw_pos: quad::Vec2, draw_size: f32, texture_rect_size: u16, texture: quad::Texture2D) {
     let rect = tile_texture_rect(tile, texture_rect_size);
     let tint = tile_colour_tint(tile);
 
@@ -15,16 +15,16 @@ pub fn draw(tile: &Tile, x: f32, y: f32, draw_size: f32, texture_rect_size: u16,
         flip_y: false
     };
 
-    quad::draw_texture_ex(texture, x, y, tint, params);
+    quad::draw_texture_ex(texture, draw_pos.x, draw_pos.y, tint, params);
 }
 
 /// Draw a grey square at the specified coordinates. This is to act as a place holder while the necessary data is being
 /// fetched from the server.
-pub fn draw_pending_tile(x: f32, y: f32, draw_size: f32) {
+pub fn draw_pending_tile(draw_pos: quad::Vec2, draw_size: f32) {
     let offset = draw_size * 0.2;
     let reduced_size = draw_size - (offset * 2.0);
 
-    quad::draw_rectangle(x + offset, y + offset, reduced_size, reduced_size, quad::DARKGRAY);
+    quad::draw_rectangle(draw_pos.x + offset, draw_pos.y + offset, reduced_size, reduced_size, quad::DARKGRAY);
 }
 
 /// Get the rectangle for the given tile within the context of the full tiles texture.

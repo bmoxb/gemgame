@@ -48,21 +48,27 @@ impl Renderer {
             }
         };
 
-        // TODO: Camera follow player movement.
+        // Update this client's entity and centre camera around it:
+
+        self.my_entity_rendering.update(delta);
+        self.camera.target = self.my_entity_rendering.current_pos;
 
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
 
-        // Tiles:
+        // Establish the tile area of the map that is actually on-screen:
 
-        for tile_x in ((self.camera.target.x - 1.0) / self.tile_draw_size).floor() as i32
-            ..((self.camera.target.x + 1.0) / self.tile_draw_size).ceil() as i32
-        {
-            for tile_y in ((self.camera.target.y - 1.0) / self.tile_draw_size).floor() as i32
-                ..((self.camera.target.y + 1.0) / self.tile_draw_size).ceil() as i32
-            {
-                let draw_x = tile_x as f32 * self.tile_draw_size;
-                let draw_y = tile_y as f32 * self.tile_draw_size;
+        let on_screen_tiles_left_boundary = ((self.camera.target.x - 1.0) / self.tile_draw_size).floor() as i32;
+        let on_screen_tiles_right_boundary = ((self.camera.target.x + 1.0) / self.tile_draw_size).ceil() as i32;
+        let on_screen_tiles_bottom_boundary = ((self.camera.target.y - 1.0) / self.tile_draw_size).floor() as i32;
+        let on_screen_tiles_top_boundary = ((self.camera.target.y + 1.0) / self.tile_draw_size).ceil() as i32;
+
+        // Draw tiles:
+
+        let mut draw_pos;
+        for tile_x in on_screen_tiles_left_boundary..on_screen_tiles_right_boundary {
+            for tile_y in on_screen_tiles_bottom_boundary..on_screen_tiles_top_boundary {
+                draw_pos = tile_coords_to_vec2(TileCoords { x: tile_x, y: tile_y }, self.tile_draw_size);
 
                 // If the tile at the specified coordinates is in a chunk that is already loaded then it will be drawn.
                 // Otherwise, a grey placeholder rectangle will be drawn in its place until the required chunk is
@@ -71,38 +77,66 @@ impl Renderer {
                 if let Some(tile) = map.loaded_tile_at(TileCoords { x: tile_x, y: tile_y }) {
                     tiles::draw(
                         tile,
-                        draw_x,
-                        draw_y,
+                        draw_pos,
                         self.tile_draw_size,
                         self.tile_texture_rect_size,
                         assets.texture(TextureKey::Tiles)
                     );
                 }
                 else {
-                    tiles::draw_pending_tile(draw_x, draw_y, self.tile_draw_size);
+                    tiles::draw_pending_tile(draw_pos, self.tile_draw_size);
                 }
             }
         }
 
-        // Entities:
+        // Update remote entities:
 
-        for (entity_id, entity_rendering) in &mut self.remote_entity_rendering {
-            if let Some(entity) = map.entity_by_id(*entity_id) {
-                entity_rendering.update_and_draw(
-                    delta,
-                    entity,
-                    assets.texture(TextureKey::Entities),
-                    self.tile_draw_size
-                );
-            }
+        for renderer in self.remote_entity_rendering.values_mut() {
+            renderer.update(delta);
         }
 
-        self.my_entity_rendering.update_and_draw(
-            delta,
+        // Draw remote entities:
+
+        let remote_entities_to_draw: Vec<(&Entity, &EntityRendering)> = self
+            .remote_entity_rendering
+            .iter()
+            .filter_map(|(id, rendering)| {
+                if let Some(entity) = map.entity_by_id(*id) {
+                    // Is the entity actually on screen?
+                    if on_screen_tiles_left_boundary <= entity.pos.x
+                        && entity.pos.x <= on_screen_tiles_right_boundary
+                        && on_screen_tiles_bottom_boundary <= entity.pos.y
+                        && entity.pos.y <= on_screen_tiles_top_boundary
+                    {
+                        return Some((entity, rendering));
+                    }
+                }
+                None
+            })
+            .collect();
+
+        // Draw lower portion of each on-screen entity:
+        for (entity, rendering) in &remote_entities_to_draw {
+            rendering.draw_lower(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
+        }
+        // Draw upper portion of each on-screen entity:
+        for (entity, rendering) in &remote_entities_to_draw {
+            rendering.draw_upper(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
+        }
+
+        // Draw this client's entity:
+
+        self.my_entity_rendering.draw_lower(
             my_entity_contained,
             assets.texture(TextureKey::Entities),
             self.tile_draw_size
         );
+
+        self.my_entity_rendering.draw_upper(
+            my_entity_contained,
+            assets.texture(TextureKey::Entities),
+            self.tile_draw_size
+        )
     }
 
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
@@ -167,20 +201,25 @@ impl EntityRendering {
         EntityRendering::new(coords, coords, 0.0, tile_draw_size)
     }
 
-    fn update_and_draw(
-        &mut self, delta: f32, _entity: &Entity, _entities_texture: quad::Texture2D, tile_draw_size: f32
-    ) {
-        // Update draw position:
-
+    /// Update draw position and animations.
+    fn update(&mut self, delta: f32) {
         self.current_time += delta;
         self.current_pos += self.movement * delta;
 
         if self.current_time >= self.movement_time {
             self.current_pos = self.destination_pos;
         }
+    }
 
-        // TODO: Draw entity.
+    /// Draw the lower portion of the entity (the body).
+    fn draw_lower(&self, _entity: &Entity, _entities_texture: quad::Texture2D, tile_draw_size: f32) {
+        // TODO
         quad::draw_rectangle(self.current_pos.x, self.current_pos.y, tile_draw_size, tile_draw_size, quad::RED);
+    }
+
+    /// Draw the upper portion of the entity (head, face, hands, etc.)
+    fn draw_upper(&self, _entity: &Entity, _entities_texture: quad::Texture2D, tile_draw_size: f32) {
+        // TODO
     }
 }
 
