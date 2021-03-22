@@ -1,3 +1,4 @@
+mod entities;
 mod tiles;
 
 use std::collections::HashMap;
@@ -10,7 +11,7 @@ use shared::{
 
 use crate::{maps::ClientMap, AssetManager, TextureKey};
 
-const POSITION_CORRECTED_MOVEMENT_TIME: f32 = 0.025;
+const ENTITY_POSITION_CORRECTED_MOVEMENT_TIME: f32 = 0.025;
 
 /// Handles the drawing of a game map.
 pub struct Renderer {
@@ -20,8 +21,8 @@ pub struct Renderer {
     tile_draw_size: f32,
     /// The width and height (in pixels) that each individual tile on the tiles texture is.
     tile_texture_rect_size: u16,
-    my_entity_rendering: EntityRendering,
-    remote_entity_rendering: HashMap<Id, EntityRendering>
+    my_entity_renderer: entities::Renderer,
+    remote_entity_renderers: HashMap<Id, entities::Renderer>
 }
 
 impl Renderer {
@@ -30,8 +31,8 @@ impl Renderer {
             camera: quad::Camera2D::default(),
             tile_draw_size,
             tile_texture_rect_size,
-            my_entity_rendering: EntityRendering::with_static_position(my_entity_pos, tile_draw_size),
-            remote_entity_rendering: HashMap::new()
+            my_entity_renderer: entities::Renderer::with_static_position(my_entity_pos, tile_draw_size),
+            remote_entity_renderers: HashMap::new()
         }
     }
 
@@ -50,8 +51,8 @@ impl Renderer {
 
         // Update this client's entity and centre camera around it:
 
-        self.my_entity_rendering.update(delta);
-        self.camera.target = self.my_entity_rendering.current_pos;
+        self.my_entity_renderer.update(delta);
+        self.camera.target = self.my_entity_renderer.current_pos;
 
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
@@ -91,16 +92,16 @@ impl Renderer {
 
         // Update remote entities:
 
-        for renderer in self.remote_entity_rendering.values_mut() {
+        for renderer in self.remote_entity_renderers.values_mut() {
             renderer.update(delta);
         }
 
         // Draw remote entities:
 
-        let remote_entities_to_draw: Vec<(&Entity, &EntityRendering)> = self
-            .remote_entity_rendering
+        let remote_entities_to_draw: Vec<(&Entity, &entities::Renderer)> = self
+            .remote_entity_renderers
             .iter()
-            .filter_map(|(id, rendering)| {
+            .filter_map(|(id, renderer)| {
                 if let Some(entity) = map.entity_by_id(*id) {
                     // Is the entity actually on screen?
                     if on_screen_tiles_left_boundary <= entity.pos.x
@@ -108,7 +109,7 @@ impl Renderer {
                         && on_screen_tiles_bottom_boundary <= entity.pos.y
                         && entity.pos.y <= on_screen_tiles_top_boundary
                     {
-                        return Some((entity, rendering));
+                        return Some((entity, renderer));
                     }
                 }
                 None
@@ -116,23 +117,23 @@ impl Renderer {
             .collect();
 
         // Draw lower portion of each on-screen entity:
-        for (entity, rendering) in &remote_entities_to_draw {
-            rendering.draw_lower(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
+        for (entity, renderer) in &remote_entities_to_draw {
+            renderer.draw_lower(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
         }
         // Draw upper portion of each on-screen entity:
-        for (entity, rendering) in &remote_entities_to_draw {
-            rendering.draw_upper(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
+        for (entity, renderer) in &remote_entities_to_draw {
+            renderer.draw_upper(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
         }
 
         // Draw this client's entity:
 
-        self.my_entity_rendering.draw_lower(
+        self.my_entity_renderer.draw_lower(
             my_entity_contained,
             assets.texture(TextureKey::Entities),
             self.tile_draw_size
         );
 
-        self.my_entity_rendering.draw_upper(
+        self.my_entity_renderer.draw_upper(
             my_entity_contained,
             assets.texture(TextureKey::Entities),
             self.tile_draw_size
@@ -142,16 +143,16 @@ impl Renderer {
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
     /// called by the [`crate::maps::entities::MyEntity::move_towards_checked`] method.
     pub fn my_entity_moved(&mut self, from_coords: TileCoords, to_coords: TileCoords, movement_time: f32) {
-        self.my_entity_rendering = EntityRendering::new(from_coords, to_coords, movement_time, self.tile_draw_size);
+        self.my_entity_renderer = entities::Renderer::new(from_coords, to_coords, movement_time, self.tile_draw_size);
     }
 
     /// Begin a shorter animation of this client's entity to the specified position. This method is to be called by the
     /// [`crate::maps::entities::MyEntity::received_movement_reconciliation'] method.
     pub fn my_entity_position_corrected(&mut self, incorrect_coords: TileCoords, correct_coords: TileCoords) {
-        self.my_entity_rendering = EntityRendering::new(
+        self.my_entity_renderer = entities::Renderer::new(
             incorrect_coords,
             correct_coords,
-            POSITION_CORRECTED_MOVEMENT_TIME,
+            ENTITY_POSITION_CORRECTED_MOVEMENT_TIME,
             self.tile_draw_size
         );
     }
@@ -161,65 +162,17 @@ impl Renderer {
     pub fn remote_entity_moved(
         &mut self, entity_id: Id, from_coords: TileCoords, to_coords: TileCoords, movement_time: f32
     ) {
-        self.remote_entity_rendering
-            .insert(entity_id, EntityRendering::new(from_coords, to_coords, movement_time, self.tile_draw_size));
+        self.remote_entity_renderers
+            .insert(entity_id, entities::Renderer::new(from_coords, to_coords, movement_time, self.tile_draw_size));
     }
 
     pub fn add_remote_entity(&mut self, entity_id: Id, coords: TileCoords) {
-        self.remote_entity_rendering
-            .insert(entity_id, EntityRendering::with_static_position(coords, self.tile_draw_size));
+        self.remote_entity_renderers
+            .insert(entity_id, entities::Renderer::with_static_position(coords, self.tile_draw_size));
     }
 
     pub fn remove_remote_entity(&mut self, entity_id: Id) {
-        self.remote_entity_rendering.remove(&entity_id);
-    }
-}
-
-struct EntityRendering {
-    current_pos: quad::Vec2,
-    destination_pos: quad::Vec2,
-    movement: quad::Vec2,
-    current_time: f32,
-    movement_time: f32
-}
-
-impl EntityRendering {
-    fn new(from_coords: TileCoords, to_coords: TileCoords, movement_time: f32, tile_draw_size: f32) -> Self {
-        let start_pos = tile_coords_to_vec2(from_coords, tile_draw_size);
-        let destination_pos = tile_coords_to_vec2(to_coords, tile_draw_size);
-
-        EntityRendering {
-            current_pos: start_pos,
-            destination_pos,
-            movement: (destination_pos - start_pos) / movement_time,
-            current_time: 0.0,
-            movement_time
-        }
-    }
-
-    fn with_static_position(coords: TileCoords, tile_draw_size: f32) -> Self {
-        EntityRendering::new(coords, coords, 0.0, tile_draw_size)
-    }
-
-    /// Update draw position and animations.
-    fn update(&mut self, delta: f32) {
-        self.current_time += delta;
-        self.current_pos += self.movement * delta;
-
-        if self.current_time >= self.movement_time {
-            self.current_pos = self.destination_pos;
-        }
-    }
-
-    /// Draw the lower portion of the entity (the body).
-    fn draw_lower(&self, _entity: &Entity, _entities_texture: quad::Texture2D, tile_draw_size: f32) {
-        // TODO
-        quad::draw_rectangle(self.current_pos.x, self.current_pos.y, tile_draw_size, tile_draw_size, quad::RED);
-    }
-
-    /// Draw the upper portion of the entity (head, face, hands, etc.)
-    fn draw_upper(&self, _entity: &Entity, _entities_texture: quad::Texture2D, tile_draw_size: f32) {
-        // TODO
+        self.remote_entity_renderers.remove(&entity_id);
     }
 }
 
