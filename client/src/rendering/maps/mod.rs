@@ -20,18 +20,18 @@ pub struct Renderer {
     /// The width and height (in camera space) that each tile will be draw as.
     tile_draw_size: f32,
     /// The width and height (in pixels) that each individual tile on the tiles texture is.
-    tile_texture_rect_size: u16,
+    tile_texture_size: u16,
     my_entity_renderer: entities::Renderer,
     remote_entity_renderers: HashMap<Id, entities::Renderer>
 }
 
 impl Renderer {
-    pub fn new(tile_draw_size: f32, tile_texture_rect_size: u16, my_entity_pos: TileCoords) -> Self {
+    pub fn new(tile_draw_size: f32, tile_texture_size: u16, my_entity_pos: TileCoords) -> Self {
         Renderer {
             camera: quad::Camera2D::default(),
             tile_draw_size,
-            tile_texture_rect_size,
-            my_entity_renderer: entities::Renderer::with_static_position(my_entity_pos, tile_draw_size),
+            tile_texture_size,
+            my_entity_renderer: entities::Renderer::new(my_entity_pos, tile_draw_size),
             remote_entity_renderers: HashMap::new()
         }
     }
@@ -80,7 +80,7 @@ impl Renderer {
                         tile,
                         draw_pos,
                         self.tile_draw_size,
-                        self.tile_texture_rect_size,
+                        self.tile_texture_size,
                         assets.texture(TextureKey::Tiles)
                     );
                 }
@@ -118,11 +118,21 @@ impl Renderer {
 
         // Draw lower portion of each on-screen entity:
         for (entity, renderer) in &remote_entities_to_draw {
-            renderer.draw_lower(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
+            renderer.draw_lower(
+                entity,
+                assets.texture(TextureKey::Entities),
+                self.tile_draw_size,
+                self.tile_texture_size
+            );
         }
         // Draw upper portion of each on-screen entity:
         for (entity, renderer) in &remote_entities_to_draw {
-            renderer.draw_upper(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
+            renderer.draw_upper(
+                entity,
+                assets.texture(TextureKey::Entities),
+                self.tile_draw_size,
+                self.tile_texture_size
+            );
         }
 
         // Draw this client's entity:
@@ -130,26 +140,28 @@ impl Renderer {
         self.my_entity_renderer.draw_lower(
             my_entity_contained,
             assets.texture(TextureKey::Entities),
-            self.tile_draw_size
+            self.tile_draw_size,
+            self.tile_texture_size
         );
 
         self.my_entity_renderer.draw_upper(
             my_entity_contained,
             assets.texture(TextureKey::Entities),
-            self.tile_draw_size
+            self.tile_draw_size,
+            self.tile_texture_size
         )
     }
 
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
     /// called by the [`crate::maps::entities::MyEntity::move_towards_checked`] method.
     pub fn my_entity_moved(&mut self, from_coords: TileCoords, to_coords: TileCoords, movement_time: f32) {
-        self.my_entity_renderer = entities::Renderer::new(from_coords, to_coords, movement_time, self.tile_draw_size);
+        self.my_entity_renderer.do_movement(from_coords, to_coords, movement_time, self.tile_draw_size);
     }
 
     /// Begin a shorter animation of this client's entity to the specified position. This method is to be called by the
     /// [`crate::maps::entities::MyEntity::received_movement_reconciliation'] method.
     pub fn my_entity_position_corrected(&mut self, incorrect_coords: TileCoords, correct_coords: TileCoords) {
-        self.my_entity_renderer = entities::Renderer::new(
+        self.my_entity_renderer.do_movement(
             incorrect_coords,
             correct_coords,
             ENTITY_POSITION_CORRECTED_MOVEMENT_TIME,
@@ -162,13 +174,16 @@ impl Renderer {
     pub fn remote_entity_moved(
         &mut self, entity_id: Id, from_coords: TileCoords, to_coords: TileCoords, movement_time: f32
     ) {
-        self.remote_entity_renderers
-            .insert(entity_id, entities::Renderer::new(from_coords, to_coords, movement_time, self.tile_draw_size));
+        self.remote_entity_renderers.entry(entity_id).or_default().do_movement(
+            from_coords,
+            to_coords,
+            movement_time,
+            self.tile_draw_size
+        );
     }
 
     pub fn add_remote_entity(&mut self, entity_id: Id, coords: TileCoords) {
-        self.remote_entity_renderers
-            .insert(entity_id, entities::Renderer::with_static_position(coords, self.tile_draw_size));
+        self.remote_entity_renderers.insert(entity_id, entities::Renderer::new(coords, self.tile_draw_size));
     }
 
     pub fn remove_remote_entity(&mut self, entity_id: Id) {

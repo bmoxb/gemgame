@@ -2,17 +2,15 @@ use macroquad::prelude as quad;
 use shared::maps::Tile;
 
 /// Draw the given tile at the specified coordinates.
-pub fn draw(tile: &Tile, draw_pos: quad::Vec2, draw_size: f32, texture_rect_size: u16, texture: quad::Texture2D) {
-    let rect = tile_texture_rect(tile, texture_rect_size);
-    let tint = tile_colour_tint(tile);
+pub fn draw(tile: &Tile, draw_pos: quad::Vec2, draw_size: f32, texture_size: u16, texture: quad::Texture2D) {
+    let rect = texture_rect(tile, texture_size);
+    let tint = colour_tint(tile);
 
     let params = quad::DrawTextureParams {
         dest_size: Some(quad::vec2(draw_size, draw_size)),
         source: Some(rect),
-        rotation: 0.0,
-        pivot: None,
-        flip_x: false,
-        flip_y: false
+        flip_y: true,
+        ..Default::default()
     };
 
     quad::draw_texture_ex(texture, draw_pos.x, draw_pos.y, tint, params);
@@ -28,27 +26,27 @@ pub fn draw_pending_tile(draw_pos: quad::Vec2, draw_size: f32) {
 }
 
 /// Get the rectangle for the given tile within the context of the full tiles texture.
-fn tile_texture_rect(tile: &Tile, texture_rec_size: u16) -> quad::Rect {
-    let (relative_x, relative_y) = tile_texture_pos_relative(tile);
+fn texture_rect(tile: &Tile, texture_size: u16) -> quad::Rect {
+    let (relative_x, relative_y) = texture_pos_relative(tile);
 
     quad::Rect {
-        x: (relative_x * texture_rec_size) as f32,
-        y: (relative_y * texture_rec_size) as f32,
-        w: texture_rec_size as f32,
-        h: texture_rec_size as f32
+        x: (relative_x * texture_size) as f32,
+        y: (relative_y * texture_size) as f32,
+        w: texture_size as f32,
+        h: texture_size as f32
     }
 }
 
 /// Get the texture rectangle coordinates for the given tile relative to the size in pixels of each indivdual tile
 /// texture.
-fn tile_texture_pos_relative(tile: &Tile) -> (u16, u16) {
+fn texture_pos_relative(tile: &Tile) -> (u16, u16) {
     match tile {
         Tile::Ground => (0, 0)
     }
 }
 
 /// Get the colour/tint for the given tile.
-fn tile_colour_tint(tile: &Tile) -> quad::Color {
+fn colour_tint(tile: &Tile) -> quad::Color {
     match tile {
         Tile::Ground => quad::WHITE
     }
