@@ -31,9 +31,9 @@ This document provides a description of the design of the GemGame software from 
   * Next the upper halves of player entities are drawn.
     * Note that if the entity in question is moving and at an animation frame where an arm is shown extended forward then the following should all be drawn a sixteenth of a tile lower than specified.
     * First an entity's head and hands are drawn a quarter of a tile above the entity's origin. This draw is coloured based on the player's skin colour choice.
-    * Hair is drawn half a tile above the origin and is coloured based on the player's choice of hair colour.
-    * Next the left eye is drawn 3 quarters of the tile above the origin while the right eye is flipped and position 1 quarter of a tile right of the left eye. These draws are to be coloured based on the player's choice of hair colour.
-    * An entity's mouth is drawn a quarter of a tile above and an eighth of a tile right of the entity's origin point.
+    * Hair is drawn 7 eighths a tile above the origin and is coloured based on the player's choice of hair colour.
+    * Next the right eye is drawn 3 quarters of the tile above the origin while the left eye is flipped and position half a tile right of the left eye. These draws are to be coloured based on the player's choice of hair colour.
+    * An entity's mouth is drawn 3 fifths of a tile above and an eighth of a tile right of the entity's origin point.
 
 ## Server
 

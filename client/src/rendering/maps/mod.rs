@@ -96,7 +96,7 @@ impl Renderer {
             renderer.update(delta);
         }
 
-        // Draw remote entities:
+        // Draw entities:
 
         let remote_entities_to_draw: Vec<(&Entity, &entities::Renderer)> = self
             .remote_entity_renderers
@@ -125,6 +125,13 @@ impl Renderer {
                 self.tile_texture_size
             );
         }
+        self.my_entity_renderer.draw_lower(
+            my_entity_contained,
+            assets.texture(TextureKey::Entities),
+            self.tile_draw_size,
+            self.tile_texture_size
+        );
+
         // Draw upper portion of each on-screen entity:
         for (entity, renderer) in &remote_entities_to_draw {
             renderer.draw_upper(
@@ -134,16 +141,6 @@ impl Renderer {
                 self.tile_texture_size
             );
         }
-
-        // Draw this client's entity:
-
-        self.my_entity_renderer.draw_lower(
-            my_entity_contained,
-            assets.texture(TextureKey::Entities),
-            self.tile_draw_size,
-            self.tile_texture_size
-        );
-
         self.my_entity_renderer.draw_upper(
             my_entity_contained,
             assets.texture(TextureKey::Entities),
