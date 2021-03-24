@@ -113,8 +113,8 @@ impl Renderer {
         // Mouth:
         quad::draw_texture_ex(
             entities_texture,
-            self.current_pos.x + (tile_draw_size * 0.125),
-            self.current_pos.y + (tile_draw_size * 0.6) + y_offset,
+            self.current_pos.x + (tile_draw_size * 0.25),
+            self.current_pos.y + (tile_draw_size * 0.25) + y_offset,
             quad::WHITE,
             mouth_draw_params(entity, tile_draw_size, tile_texture_size)
         );
@@ -199,7 +199,7 @@ fn hair_draw_params(entity: &Entity, tile_draw_size: f32, tile_texture_size: u16
         dest_size: Some(quad::vec2(tile_draw_size, tile_draw_size / 2.0)),
         source: Some(quad::Rect {
             x: (x_offset * tile_texture_size) as f32,
-            y: tile_texture_size as f32,
+            y: (tile_texture_size * 3) as f32,
             w: tile_texture_size as f32,
             h: (tile_texture_size / 2) as f32
         }),
@@ -229,7 +229,7 @@ fn eye_draw_params(
 
     quad::DrawTextureParams {
         dest_size: Some(quad::vec2(tile_draw_size / 2.0, tile_draw_size / 2.0)),
-        source: Some(eye_or_mouth_texture_rect(x_relative, tile_texture_size)),
+        source: Some(eye_or_mouth_texture_rect(x_relative, 1.0, tile_texture_size)),
         flip_x: left_eye,
         flip_y: true,
         ..Default::default()
@@ -238,22 +238,22 @@ fn eye_draw_params(
 
 fn mouth_draw_params(entity: &Entity, tile_draw_size: f32, tile_texture_size: u16) -> quad::DrawTextureParams {
     let x_relative = match entity.facial_expression {
-        FacialExpression::Shocked => 5,
-        _ => 3
+        FacialExpression::Shocked => 1,
+        _ => 0
     };
 
     quad::DrawTextureParams {
         dest_size: Some(quad::vec2(tile_draw_size / 2.0, tile_draw_size / 2.0)),
-        source: Some(eye_or_mouth_texture_rect(x_relative, tile_texture_size)),
+        source: Some(eye_or_mouth_texture_rect(x_relative, 1.5, tile_texture_size)),
         flip_y: true,
         ..Default::default()
     }
 }
 
-fn eye_or_mouth_texture_rect(x_relative: u16, tile_texture_size: u16) -> quad::Rect {
+fn eye_or_mouth_texture_rect(x_relative: u16, y_multipler: f32, tile_texture_size: u16) -> quad::Rect {
     quad::Rect {
-        x: (x_relative * (tile_texture_size / 2)) as f32,
-        y: tile_texture_size as f32 * 1.5,
+        x: ((x_relative + 4) * (tile_texture_size / 2)) as f32,
+        y: tile_texture_size as f32 * y_multipler,
         w: (tile_texture_size / 2) as f32,
         h: (tile_texture_size / 2) as f32
     }
