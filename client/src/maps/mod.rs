@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use shared::{
     maps::{
-        entities::{Entities, Entity},
+        entities::{Direction, Entities, Entity},
         Chunk, ChunkCoords, Chunks, Map, TileCoords
     },
     Id
@@ -24,15 +24,16 @@ impl ClientMap {
         ClientMap { loaded_chunks: HashMap::new(), entities: HashMap::new() }
     }
 
-    pub fn set_remote_entity_position(
-        &mut self, id: Id, new_pos: TileCoords, renderer: &mut rendering::maps::Renderer
+    pub fn move_remote_entity(
+        &mut self, id: Id, new_pos: TileCoords, direction: Direction, renderer: &mut rendering::maps::Renderer
     ) {
         if let Some(entity) = self.entities.get_mut(&id) {
             // Update renderer:
             renderer.remote_entity_moved(id, entity.pos, new_pos, entity.movement_time());
 
-            // Set position:
+            // Set position & direction:
             entity.pos = new_pos;
+            entity.direction = direction;
         }
         else {
             log::warn!("Cannot set position of entity {} as it is not loaded", id);

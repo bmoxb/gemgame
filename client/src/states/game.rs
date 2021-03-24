@@ -67,8 +67,8 @@ impl GameState {
                 self.my_entity.received_movement_reconciliation(request_number, new_position, &mut self.map_renderer);
             }
 
-            messages::FromServer::MoveEntity(id, pos) => {
-                self.map.set_remote_entity_position(id, pos, &mut self.map_renderer);
+            messages::FromServer::MoveEntity(id, pos, direction) => {
+                self.map.move_remote_entity(id, pos, direction, &mut self.map_renderer);
             }
 
             messages::FromServer::ProvideEntity(id, entity) => {

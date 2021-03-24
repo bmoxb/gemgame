@@ -65,8 +65,9 @@ impl MyEntity {
                 // Update the map renderer:
                 renderer.my_entity_moved(self.contained.pos, new_pos, self.contained.movement_time());
 
-                // Locally modify player entity's coordinates:
+                // Locally modify player entity's coordinates & direction:
                 self.contained.pos = new_pos;
+                self.contained.direction = direction;
 
                 // Inform server that this client's player entity wants to move in a given direction:
                 let msg = messages::ToServer::MoveMyEntity { request_number: self.next_request_number, direction };

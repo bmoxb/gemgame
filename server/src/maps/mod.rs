@@ -151,8 +151,9 @@ impl ServerMap {
             let entity_mut = self.player_entities.get_mut(&entity_id).unwrap();
 
             if new_pos_is_free {
-                // Apply the new position:
+                // Apply the new position & direction:
                 entity_mut.pos = new_pos;
+                entity_mut.direction = direction;
 
                 let old_pos_chunk_coords = old_pos.as_chunk_coords();
                 let new_pos_chunk_coords = new_pos.as_chunk_coords();
@@ -279,7 +280,9 @@ pub enum Modification {
         /// The previous position of the entity (i.e. before the movement that this message describes).
         old_position: TileCoords,
         /// The new position of the entity that moved.
-        new_position: TileCoords
+        new_position: TileCoords,
+        /// The direction in which the movement occurred.
+        direction: Direction
     },
 
     /// Indicates a new entity has been added to the map (in the case of a player entity, this means that a player just
@@ -299,8 +302,12 @@ impl fmt::Display for Modification {
             Modification::TileChanged(position, change_to) => {
                 write!(f, "tile changed at {} to {:?}", position, change_to)
             }
-            Modification::EntityMoved { entity_id, old_position, new_position } => {
-                write!(f, "entity {} moved from {} to {}", entity_id, old_position, new_position)
+            Modification::EntityMoved { entity_id, old_position, new_position, direction } => {
+                write!(
+                    f,
+                    "entity {} moved from {} to {} in direction {}",
+                    entity_id, old_position, new_position, direction
+                )
             }
             Modification::EntityAdded(id) => write!(f, "entity {} added to map", id),
             Modification::EntityRemoved(id, coords) => {

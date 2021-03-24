@@ -270,7 +270,7 @@ impl Handler {
                     // Inform other tasks of the entity's movement:
 
                     let broadcast_msg =
-                        maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position };
+                        maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position, direction };
 
                     self.map_changes_sender.send(broadcast_msg).unwrap();
 
@@ -297,13 +297,13 @@ impl Handler {
                 is_position_loaded.then(|| messages::FromServer::ChangeTile(position, tile))
             }
 
-            maps::Modification::EntityMoved { entity_id, old_position, new_position } => {
+            maps::Modification::EntityMoved { entity_id, old_position, new_position, direction } => {
                 let was_in_loaded = self.remote_loaded_chunk_coords.contains(&old_position.as_chunk_coords());
                 let is_in_loaded = self.remote_loaded_chunk_coords.contains(&new_position.as_chunk_coords());
 
                 if was_in_loaded && is_in_loaded {
                     // Entity moving within the bounds of the client's loaded chunks:
-                    Some(messages::FromServer::MoveEntity(entity_id, new_position))
+                    Some(messages::FromServer::MoveEntity(entity_id, new_position, direction))
                 }
                 else if was_in_loaded {
                     // Entity moved out of the client's loaded chunks:
@@ -506,9 +506,10 @@ mod tests {
         assert!(matches!(
             change,
             maps::Modification::EntityMoved {
+                entity_id,
                 old_position: TileCoords { x: 5, y: 5 },
                 new_position: TileCoords { x: 6, y: 5 },
-                entity_id
+                direction: _
             } if entity_id == player_id
         ));
     }
@@ -532,12 +533,13 @@ mod tests {
         let modification = maps::Modification::EntityMoved {
             entity_id,
             old_position: TileCoords { x: 5, y: 5 },
-            new_position: TileCoords { x: 6, y: 5 }
+            new_position: TileCoords { x: 6, y: 5 },
+            direction: Direction::Right
         };
 
         assert!(matches!(
             handler.handle_map_change(modification).await.unwrap(),
-            messages::FromServer::MoveEntity(id, TileCoords { x: 6, y: 5 }) if id == entity_id
+            messages::FromServer::MoveEntity(id, TileCoords { x: 6, y: 5 }, _) if id == entity_id
         ));
     }
 
@@ -551,7 +553,8 @@ mod tests {
         let modification = maps::Modification::EntityMoved {
             entity_id,
             old_position: TileCoords { x: CHUNK_WIDTH, y: 5 }, // chunk at 1, 0
-            new_position: TileCoords { x: CHUNK_WIDTH - 1, y: 5 }  // chunk at 0, 0
+            new_position: TileCoords { x: CHUNK_WIDTH - 1, y: 5 }, // chunk at 0, 0
+            direction: Direction::Left
         };
 
         assert!(matches!(
@@ -570,7 +573,8 @@ mod tests {
         let modification = maps::Modification::EntityMoved {
             entity_id,
             old_position: TileCoords { x: 0, y: 5 },
-            new_position: TileCoords { x: -1, y: 5 }
+            new_position: TileCoords { x: -1, y: 5 },
+            direction: Direction::Left
         };
 
         assert!(matches!(
@@ -588,7 +592,8 @@ mod tests {
         let modification = maps::Modification::EntityMoved {
             entity_id,
             old_position: TileCoords { x: 12, y: 13 },
-            new_position: TileCoords { x: 13, y: 13 }
+            new_position: TileCoords { x: 13, y: 13 },
+            direction: Direction::Left
         };
 
         assert!(handler.handle_map_change(modification).await.is_none());

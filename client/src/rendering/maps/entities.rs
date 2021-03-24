@@ -1,6 +1,6 @@
 use macroquad::prelude as quad;
 use shared::maps::{
-    entities::{Entity, FacialExpression, HairStyle},
+    entities::{Direction, Entity, FacialExpression, HairStyle},
     TileCoords
 };
 
@@ -52,14 +52,14 @@ impl Renderer {
 
     /// Draw the lower portion of the entity (the body).
     pub fn draw_lower(
-        &self, _entity: &Entity, entities_texture: quad::Texture2D, tile_draw_size: f32, tile_texture_size: u16
+        &self, entity: &Entity, entities_texture: quad::Texture2D, tile_draw_size: f32, tile_texture_size: u16
     ) {
         quad::draw_texture_ex(
             entities_texture,
             self.current_pos.x,
             self.current_pos.y,
             quad::Color::from_rgba(125, 125, 255, 255),
-            body_draw_params(self.walk_frame, tile_draw_size, tile_texture_size)
+            body_draw_params(entity, self.walk_frame, tile_draw_size, tile_texture_size)
         );
     }
 
@@ -73,7 +73,7 @@ impl Renderer {
             self.current_pos.x,
             self.current_pos.y + (tile_draw_size * 0.25),
             quad::WHITE,
-            head_draw_params(self.walk_frame, tile_draw_size, tile_texture_size)
+            head_draw_params(entity, self.walk_frame, tile_draw_size, tile_texture_size)
         );
 
         // Determine whether an addition y position offset needs to be applied to the entity's hair and facial features
@@ -156,18 +156,27 @@ impl Default for WalkCycle {
 
 /// Returns the texture rectangle of the appropriate entity body animation frame. The Boolean value indicates whether or
 /// not the draw should be horizontally flipped or not.
-fn body_draw_params(walk_frame: WalkCycle, tile_draw_size: f32, tile_texture_size: u16) -> quad::DrawTextureParams {
-    let (x_offset, flip) = match walk_frame {
+fn body_draw_params(
+    entity: &Entity, walk_frame: WalkCycle, tile_draw_size: f32, tile_texture_size: u16
+) -> quad::DrawTextureParams {
+    let (x_offset, walk_frame_flip) = match walk_frame {
         WalkCycle::BeforeRight | WalkCycle::BeforeLeft => (0, false),
         WalkCycle::Right => (1, false),
         WalkCycle::Left => (1, true)
+    };
+
+    let (y_offset, flip) = match entity.direction {
+        Direction::Down => (0, walk_frame_flip),
+        Direction::Up => (1, !walk_frame_flip),
+        Direction::Left => (2, !walk_frame_flip),
+        Direction::Right => (2, walk_frame_flip)
     };
 
     quad::DrawTextureParams {
         dest_size: Some(quad::vec2(tile_draw_size, tile_draw_size)),
         source: Some(quad::Rect {
             x: (x_offset * tile_texture_size) as f32,
-            y: 0.0,
+            y: (y_offset * tile_texture_size) as f32,
             w: tile_texture_size as f32,
             h: tile_texture_size as f32
         }),
@@ -177,12 +186,21 @@ fn body_draw_params(walk_frame: WalkCycle, tile_draw_size: f32, tile_texture_siz
     }
 }
 
-fn head_draw_params(walk_frame: WalkCycle, tile_draw_size: f32, tile_texture_size: u16) -> quad::DrawTextureParams {
-    let mut params = body_draw_params(walk_frame, tile_draw_size, tile_texture_size);
+fn head_draw_params(
+    entity: &Entity, walk_frame: WalkCycle, tile_draw_size: f32, tile_texture_size: u16
+) -> quad::DrawTextureParams {
+    let mut params = body_draw_params(entity, walk_frame, tile_draw_size, tile_texture_size);
 
     if let Some(src) = &mut params.source {
         // The texture rects for entity heads are positioned 2 tiles to the right of the body texture rects:
         src.x += (2 * tile_texture_size) as f32;
+
+        // There are no separate texture rects for the heads of entities facing upwards - the ones for entities facing
+        // forward are used but flipped:
+        if entity.direction == Direction::Up {
+            src.y = 0.0;
+            params.flip_x = !params.flip_x;
+        }
     }
 
     params

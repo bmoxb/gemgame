@@ -81,7 +81,7 @@ pub enum FromServer {
 
     /// Inform a client that an entity that is not the player entity that they control has moved within the bounds of
     /// that client's loaded chunks.
-    MoveEntity(Id, maps::TileCoords),
+    MoveEntity(Id, maps::TileCoords, entities::Direction),
 
     /// Provide a client with some entity. This message is sent to a client whenever one of the following occurs:
     /// * The client requests a chunk which has an entity present in it.
@@ -113,7 +113,9 @@ impl fmt::Display for FromServer {
             FromServer::YourEntityMoved { request_number, new_position } => {
                 write!(f, "your entity moved to {} (request #{})", new_position, request_number)
             }
-            FromServer::MoveEntity(id, pos) => write!(f, "move entity {} to {}", id, pos),
+            FromServer::MoveEntity(id, pos, direction) => {
+                write!(f, "move entity {} to {} in direction {}", id, pos, direction)
+            }
             FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id),
             FromServer::ShouldUnloadEntity(id) => write!(f, "should unload entity {}", id)
         }
