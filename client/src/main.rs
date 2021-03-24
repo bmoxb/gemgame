@@ -26,8 +26,6 @@ async fn main() {
 
     log::info!("Created initial state '{}' - beginning main loop...", current_state.title());
 
-    let version_text = format!("Version: {}", shared::VERSION);
-
     loop {
         // Update game logic and draw:
 
@@ -36,7 +34,6 @@ async fn main() {
         let delta = quad::get_frame_time();
         let potential_state_change = current_state.update_and_draw(&assets, delta);
 
-        quad::draw_text(&version_text, 0.0, 0.0, 32.0, quad::GRAY);
         #[cfg(debug_assertions)]
         draw_debug_text(32.0, quad::PURPLE, current_state.as_ref(), &assets);
 
@@ -54,7 +51,10 @@ async fn main() {
 
 #[cfg(debug_assertions)]
 fn draw_debug_text(font_size: f32, font_colour: quad::Color, current_state: &dyn states::State, assets: &AssetManager) {
+    quad::set_default_camera();
+
     let msgs = &[
+        format!("Version: {}", shared::VERSION),
         format!("Frames: {}/sec", quad::get_fps()),
         format!("Delta: {:.2}ms", quad::get_frame_time() * 1000.0),
         format!("Textures loaded: {}", assets.count_loaded_textures()),
