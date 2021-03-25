@@ -27,7 +27,6 @@ pub struct MyEntity {
     /// has not yet been received so it is not yet known whether the predicted coordinates align with those on the
     /// server side.
     unverified_movements: HashMap<u32, TileCoords>,
-    ///
     time_since_last_movement: f32
 }
 

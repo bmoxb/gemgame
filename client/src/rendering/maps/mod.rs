@@ -52,7 +52,8 @@ impl Renderer {
         // Update this client's entity and centre camera around it:
 
         self.my_entity_renderer.update(delta);
-        self.camera.target = self.my_entity_renderer.current_pos;
+        self.camera.target =
+            self.my_entity_renderer.current_pos + quad::vec2(self.tile_draw_size / 2.0, self.tile_draw_size / 2.0);
 
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
