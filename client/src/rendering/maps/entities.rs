@@ -58,7 +58,7 @@ impl Renderer {
             entities_texture,
             self.current_pos.x,
             self.current_pos.y,
-            quad::Color::from_rgba(125, 125, 255, 255),
+            quad::Color::from_rgba(160, 160, 255, 255),
             body_draw_params(entity, self.walk_frame, tile_draw_size, tile_texture_size)
         );
     }
@@ -88,7 +88,7 @@ impl Renderer {
             entities_texture,
             self.current_pos.x,
             self.current_pos.y + (tile_draw_size * 0.875) + y_offset,
-            quad::RED,
+            quad::BROWN,
             hair_draw_params(entity, tile_draw_size, tile_texture_size)
         );
 
@@ -97,7 +97,7 @@ impl Renderer {
             entities_texture,
             self.current_pos.x,
             self.current_pos.y + (tile_draw_size * 0.75) + y_offset,
-            quad::RED,
+            quad::BROWN,
             eye_draw_params(entity, false, tile_draw_size, tile_texture_size)
         );
 
@@ -106,7 +106,7 @@ impl Renderer {
             entities_texture,
             self.current_pos.x + (tile_draw_size * 0.5),
             self.current_pos.y + (tile_draw_size * 0.75) + y_offset,
-            quad::RED,
+            quad::BROWN,
             eye_draw_params(entity, true, tile_draw_size, tile_texture_size)
         );
 
