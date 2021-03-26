@@ -77,9 +77,8 @@ async fn main() {
         db_pool_options.connect(&options.database_connection_string).await.expect("Failed to connect to database");
 
     log::info!(
-        "Created connection pool with maximum of {} simultaneous connections to database: {}",
-        options.max_database_connections,
-        options.database_connection_string
+        "Created connection pool with maximum of {} simultaneous connections to database",
+        options.max_database_connections
     );
 
     let create_table_query = sqlx::query(
