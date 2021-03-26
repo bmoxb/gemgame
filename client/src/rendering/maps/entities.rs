@@ -22,6 +22,7 @@ impl Renderer {
         Renderer { current_pos: pos, destination_pos: pos, ..Default::default() }
     }
 
+    // Begin animated movement of the entity from the given coordinates to the specified destination coordinates.
     pub fn do_movement(
         &mut self, from_coords: TileCoords, to_coords: TileCoords, movement_time: f32, tile_draw_size: f32
     ) {
@@ -132,6 +133,7 @@ impl Renderer {
         }
     }
 
+    /// Draw a component of the entity (hair, eye, etc.) using the specified drawing parameters.
     fn draw_part(
         &self, texture: quad::Texture2D, x_offset: f32, y_offset: f32, colour: quad::Color,
         params: quad::DrawTextureParams
@@ -149,6 +151,7 @@ enum WalkCycle {
 }
 
 impl WalkCycle {
+    /// Returns the next element in the cycle.
     fn next(&self) -> WalkCycle {
         match self {
             WalkCycle::BeforeRight => WalkCycle::Right,
@@ -158,6 +161,7 @@ impl WalkCycle {
         }
     }
 
+    /// Returns the next stationary element (i.e. the entity not mid-step) in the cycle.
     fn stationary(&self) -> WalkCycle {
         match self {
             WalkCycle::Left => WalkCycle::BeforeRight,
