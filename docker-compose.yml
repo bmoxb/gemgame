@@ -8,6 +8,8 @@ services:
     image: wiredsound/gemgame-server
     ports:
       - 5678:5678
+    environment:
+      - DB_PASSWORD
   
   client:
     build:
@@ -21,7 +23,8 @@ services:
       CERTBOT_EMAIL: maxoblack@yahoo.com
   
   db:
-    image: postgres
+    image: postgres:alpine
     restart: always
     environment:
-      POSTGRES_PASSWORD: todo
+      POSTGRES_DB: gemgame
+      POSTGRES_PASSWORD: ${DB_PASSWORD}

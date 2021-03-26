@@ -23,5 +23,3 @@ WORKDIR /usr/share/nginx/html
 COPY --from=builder /usr/src/gemgame-client/target/wasm32-unknown-unknown/release/gemgame-client.wasm client.wasm
 COPY --from=builder /usr/src/gemgame-client/client/web/public/ .
 COPY --from=builder /usr/src/gemgame-client/client/assets/ assets/
-
-RUN ls /etc/letsencrypt/
