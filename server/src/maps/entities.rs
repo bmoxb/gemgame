@@ -28,9 +28,10 @@ pub async fn new_player_in_database(
 
     sqlx::query(
         "INSERT INTO client_entities (
-            client_id, entity_id, tile_x, tile_y, hair_style, clothing_colour, skin_colour, hair_colour, has_running_shoes
+            client_id, entity_id, tile_x, tile_y, hair_style, clothing_colour, skin_colour, hair_colour,
+            has_running_shoes
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);"
     )
     .bind(client_id.encode())
     .bind(entity_id.encode())
@@ -46,33 +47,30 @@ pub async fn new_player_in_database(
 
     Ok((entity_id, entity))
 }
+
 pub async fn player_from_database(
     client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
 ) -> sqlx::Result<Option<(Id, Entity)>> {
-    let res = sqlx::query(
-        "SELECT entity_id, tile_x, tile_y, hair_style, clothing_colour, skin_colour, hair_colour, has_running_shoes
-        FROM client_entities
-        WHERE client_id = ?"
-    )
-    .bind(client_id.encode())
-    .map(|row: sqlx::any::AnyRow| {
-        sqlx::Result::Ok((
-            Id::decode(row.try_get("entity_id")?).unwrap(), // TODO: Don't just unwrap.
-            Entity {
-                pos: TileCoords { x: row.try_get("tile_x")?, y: row.try_get("tile_y")? },
-                direction: Direction::Down,
-                facial_expression: FacialExpression::Neutral,
-                hair_style: decode_enum(row.try_get("hair_style")?, || HairStyle::Quiff), // TODO: Random default.
-                clothing_colour: decode_enum(row.try_get("clothing_colour")?, || ClothingColour::Green),
-                skin_colour: decode_enum(row.try_get("skin_colour")?, || SkinColour::White),
-                hair_colour: decode_enum(row.try_get("hair_colour")?, || HairColour::Green),
-                has_running_shoes: row.try_get("has_running_shoes")?
-            }
-        ))
-    })
-    .fetch_optional(db)
-    .await?
-    .transpose();
+    let res = sqlx::query("SELECT * FROM client_entities WHERE client_id = $1")
+        .bind(client_id.encode())
+        .map(|row: sqlx::any::AnyRow| {
+            sqlx::Result::Ok((
+                Id::decode(row.try_get("entity_id")?).unwrap(), // TODO: Don't just unwrap.
+                Entity {
+                    pos: TileCoords { x: row.try_get("tile_x")?, y: row.try_get("tile_y")? },
+                    direction: Direction::Down,
+                    facial_expression: FacialExpression::Neutral,
+                    hair_style: decode_enum(row.try_get("hair_style")?, || HairStyle::Quiff), // TODO: Random default.
+                    clothing_colour: decode_enum(row.try_get("clothing_colour")?, || ClothingColour::Green),
+                    skin_colour: decode_enum(row.try_get("skin_colour")?, || SkinColour::White),
+                    hair_colour: decode_enum(row.try_get("hair_colour")?, || HairColour::Green),
+                    has_running_shoes: row.try_get("has_running_shoes")?
+                }
+            ))
+        })
+        .fetch_optional(db)
+        .await?
+        .transpose();
 
     res
 }
@@ -82,8 +80,9 @@ pub async fn update_database_for_player(
 ) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE client_entities
-        SET tile_x = ?, tile_y = ?, hair_style = ?, clothing_colour = ?, skin_colour = ?, hair_colour = ?, has_running_shoes = ?
-        WHERE client_id = ?"
+        SET tile_x = $1, tile_y = $2, hair_style = $3, clothing_colour = $4, skin_colour = $5, hair_colour = $6,
+            has_running_shoes = $7
+        WHERE client_id = $8"
     )
     .bind(entity.pos.x)
     .bind(entity.pos.y)
@@ -98,7 +97,11 @@ pub async fn update_database_for_player(
     .map(|result| {
         let rows_changed = result.rows_affected();
         if rows_changed != 1 {
-            log::warn!("Modified {} rows when update player entity data for client with ID {}", rows_changed, client_id);
+            log::warn!(
+                "Modified {} rows when update player entity data for client with ID {}",
+                rows_changed,
+                client_id
+            );
         }
     })
 }
