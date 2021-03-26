@@ -8,7 +8,7 @@ use crate::Id;
 /// Type alias for a hash map of entity IDs to entities.
 pub type Entities = HashMap<Id, Entity>;
 
-const STANDARD_MOVEMENT_TIME: f32 = 0.1;
+const STANDARD_MOVEMENT_TIME: f32 = 0.11;
 const RUNNING_MOVEMENT_TIME: f32 = STANDARD_MOVEMENT_TIME * 0.75;
 
 /// An 'entity' in the context of the GemGame codebase refers specifically to the player characters that exist within
