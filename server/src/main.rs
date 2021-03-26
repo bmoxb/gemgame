@@ -93,10 +93,10 @@ async fn main() {
             entity_id TEXT NOT NULL UNIQUE,
             tile_x INTEGER NOT NULL,
             tile_y INTEGER NOT NULL,
-            hair_style BYTEA NOT NULL,
-            clothing_colour BYTEA NOT NULL,
-            skin_colour BYTEA NOT NULL,
-            hair_colour BYTEA NOT NULL,
+            hair_style INTEGER NOT NULL,
+            clothing_colour INTEGER NOT NULL,
+            skin_colour INTEGER NOT NULL,
+            hair_colour INTEGER NOT NULL,
             has_running_shoes BOOLEAN NOT NULL
         )"
     );
@@ -160,7 +160,7 @@ struct Options {
     map_directory: PathBuf,
 
     /// Specify how to connect to the database.
-    #[structopt(long, default_value = "postgres://db/gemgame")]
+    #[structopt(long, default_value = "postgres://localhost/gemgame")]
     database_connection_string: String,
 
     /// Specify the maximum number of connections that the database connection pool is able to have open
