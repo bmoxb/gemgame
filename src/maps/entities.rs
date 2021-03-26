@@ -13,27 +13,24 @@ const RUNNING_MOVEMENT_TIME: f32 = STANDARD_MOVEMENT_TIME * 0.75;
 
 /// An 'entity' in the context of the GemGame codebase refers specifically to the player characters that exist within
 /// the game world.
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Entity {
     /// The position of the entity within its current map.
     pub pos: TileCoords,
     /// Direction that this entity is facing/travelling towards.
     pub direction: Direction,
-    /// The name of this human entity.
-    pub name: String,
     /// Emotional expression of this human entity (angry, shocked, etc.) Defaults to a neutral expression.
     pub facial_expression: FacialExpression,
     /// Style of this human entity's hair. Defaults to a quiff.
     pub hair_style: HairStyle,
+    pub clothing_colour: ClothingColour,
+    pub skin_colour: SkinColour,
+    pub hair_colour: HairColour,
     /// Whether or not this human entity has increased movement speed.
     pub has_running_shoes: bool
 }
 
 impl Entity {
-    pub fn default_with_name(name: String) -> Self {
-        Entity { name, ..Default::default() }
-    }
-
     /// The amount of time in seconds taken for the entity to move to an adjacent tile.
     pub fn movement_time(&self) -> f32 {
         if self.has_running_shoes {
@@ -55,8 +52,7 @@ impl fmt::Display for Entity {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "'{} 'at {} facing {} with facial expression {} with hair style {} {} running shoes",
-            self.name,
+            "entity at {} facing {} with facial expression {} with hair style {} {} running shoes",
             self.pos,
             self.direction,
             self.facial_expression,
@@ -97,12 +93,6 @@ impl fmt::Display for Direction {
     }
 }
 
-impl Default for Direction {
-    fn default() -> Self {
-        Direction::Down
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum HairStyle {
     Quiff,
@@ -117,12 +107,6 @@ impl fmt::Display for HairStyle {
             HairStyle::Mohawk => write!(f, "edgy mohawk"),
             HairStyle::Fringe => write!(f, "simple fringe")
         }
-    }
-}
-
-impl Default for HairStyle {
-    fn default() -> Self {
-        HairStyle::Quiff
     }
 }
 
@@ -149,8 +133,29 @@ impl fmt::Display for FacialExpression {
     }
 }
 
-impl Default for FacialExpression {
-    fn default() -> Self {
-        FacialExpression::Neutral
-    }
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum ClothingColour {
+    Grey,
+    White,
+    Red,
+    Blue,
+    Green
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum SkinColour {
+    Black,
+    Brown,
+    Pale,
+    White
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum HairColour {
+    Black,
+    Brown,
+    Blonde,
+    White,
+    Blue,
+    Red
 }
