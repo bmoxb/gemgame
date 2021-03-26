@@ -138,8 +138,8 @@ pub enum ClothingColour {
     Grey,
     White,
     Red,
-    Blue,
-    Green
+    Green,
+    Blue
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -156,6 +156,7 @@ pub enum HairColour {
     Brown,
     Blonde,
     White,
-    Blue,
-    Red
+    Red,
+    Green,
+    Blue
 }

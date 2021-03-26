@@ -418,7 +418,7 @@ mod tests {
     };
 
     use shared::maps::{
-        entities::{Direction, Entity},
+        entities::{ClothingColour, Direction, Entity, FacialExpression, HairColour, HairStyle, SkinColour},
         Chunk, ChunkCoords, Tile, TileCoords, CHUNK_TILE_COUNT, CHUNK_WIDTH
     };
 
@@ -447,7 +447,16 @@ mod tests {
         fn add_test_entity(&mut self, pos: TileCoords) -> Id {
             let entity_id = crate::id::generate_with_timestamp();
 
-            let entity = Entity { pos, ..Default::default() };
+            let entity = Entity {
+                pos,
+                direction: Direction::Down,
+                facial_expression: FacialExpression::Neutral,
+                hair_style: HairStyle::Quiff,
+                clothing_colour: ClothingColour::Grey,
+                skin_colour: SkinColour::Black,
+                hair_colour: HairColour::Black,
+                has_running_shoes: false
+            };
             self.game_map.lock().unwrap().add_entity(entity_id, entity);
 
             entity_id

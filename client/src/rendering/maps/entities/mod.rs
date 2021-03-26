@@ -1,3 +1,5 @@
+mod colours;
+
 use macroquad::prelude as quad;
 use shared::maps::{
     entities::{Direction, Entity, FacialExpression, HairStyle},
@@ -57,19 +59,22 @@ impl Renderer {
             texture,
             0.0,
             0.0,
-            quad::Color::from_rgba(160, 160, 255, 255),
+            colours::clothing(entity.clothing_colour),
             body_draw_params(entity, self.walk_frame, tile_draw_size, tile_texture_size)
         );
     }
 
     /// Draw the upper portion of the entity (head, face, hands, etc.)
     pub fn draw_upper(&self, entity: &Entity, texture: quad::Texture2D, tile_draw_size: f32, tile_texture_size: u16) {
+        let skin_colour = colours::skin(entity.skin_colour);
+        let hair_colour = colours::hair(entity.hair_colour);
+
         // Head:
         self.draw_part(
             texture,
             0.0,
             tile_draw_size * 0.25,
-            quad::WHITE,
+            skin_colour,
             head_draw_params(entity, self.walk_frame, tile_draw_size, tile_texture_size)
         );
 
@@ -86,7 +91,7 @@ impl Renderer {
             texture,
             0.0,
             (tile_draw_size * 0.875) + head_bob,
-            quad::BROWN,
+            hair_colour,
             hair_draw_params(entity, tile_draw_size, tile_texture_size)
         );
 
@@ -107,7 +112,7 @@ impl Renderer {
                 texture,
                 x_offset,
                 eye_y_offset,
-                quad::BROWN,
+                hair_colour,
                 eye_draw_params(entity, false, tile_draw_size, tile_texture_size)
             );
         }
@@ -117,7 +122,7 @@ impl Renderer {
                 texture,
                 x_offset,
                 eye_y_offset,
-                quad::BROWN,
+                hair_colour,
                 eye_draw_params(entity, true, tile_draw_size, tile_texture_size)
             );
         }
@@ -127,7 +132,7 @@ impl Renderer {
                 texture,
                 self.current_pos.x + (tile_draw_size * 0.25),
                 self.current_pos.y + (tile_draw_size * 0.25) + head_bob,
-                quad::WHITE,
+                skin_colour,
                 mouth_draw_params(entity, tile_draw_size, tile_texture_size)
             );
         }

@@ -1,5 +1,8 @@
 use shared::{
-    maps::{entities::Entity, TileCoords},
+    maps::{
+        entities::{ClothingColour, Direction, Entity, FacialExpression, HairColour, HairStyle, SkinColour},
+        TileCoords
+    },
     Id
 };
 use sqlx::Row;
@@ -9,29 +12,37 @@ pub async fn new_player_in_database(
 ) -> sqlx::Result<(Id, Entity)> {
     let entity_id = crate::id::generate_with_timestamp();
 
-    // TODO: Randomly select entity names from a list.
-    let entity = Entity::default_with_name("unnamed".to_string());
+    // TODO: Randomly select entity features from a list.
+    let entity = Entity {
+        pos: TileCoords { x: 0, y: 0 }, // TODO: Nearest free position.
+        direction: Direction::Down,
+        facial_expression: FacialExpression::Neutral,
+        hair_style: HairStyle::Quiff,
+        clothing_colour: ClothingColour::Red,
+        skin_colour: SkinColour::Pale,
+        hair_colour: HairColour::Black,
+        has_running_shoes: false
+    };
 
     sqlx::query(
-        "INSERT INTO client_entities (client_id, entity_id, name, tile_x, tile_y)
+        "INSERT INTO client_entities (client_id, entity_id, tile_x, tile_y)
         VALUES (?, ?, ?, ?, ?)"
     )
     .bind(client_id.encode())
     .bind(entity_id.encode())
-    .bind("") // TODO: Store player name and hair style.
     .bind(entity.pos.x)
     .bind(entity.pos.y)
     .execute(db)
     .await?;
+    // TODO: Store entity hair style & colour, skin colour, clothing colour, whether or not they have running shoes.
 
     Ok((entity_id, entity))
 }
-
 pub async fn player_from_database(
     client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
 ) -> sqlx::Result<Option<(Id, Entity)>> {
     let res = sqlx::query(
-        "SELECT entity_id, name, tile_x, tile_y
+        "SELECT entity_id, tile_x, tile_y
         FROM client_entities
         WHERE client_id = ?"
     )
@@ -41,9 +52,13 @@ pub async fn player_from_database(
             Id::decode(row.try_get("entity_id")?).unwrap(), // TODO: Don't just unwrap.
             Entity {
                 pos: TileCoords { x: row.try_get("tile_x")?, y: row.try_get("tile_y")? },
-                name: row.try_get("name")?,
-                hair_style: Default::default(), // TODO: From database.
-                ..Default::default()
+                direction: Direction::Down,
+                facial_expression: FacialExpression::Neutral,
+                hair_style: HairStyle::Quiff, // TODO: From database.
+                clothing_colour: ClothingColour::Red,
+                skin_colour: SkinColour::Pale,
+                hair_colour: HairColour::Black,
+                has_running_shoes: false
             }
         ))
     })
