@@ -545,6 +545,7 @@ dependencies = [
  "futures-util",
  "log",
  "noise",
+ "parking_lot",
  "rand 0.8.3",
  "serde",
  "serde_json",

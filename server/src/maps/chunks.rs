@@ -15,7 +15,7 @@ use crate::Shared;
 /// This function is not a method of `super::ServerMap` so that the mutex that that object is contained in is locked for
 /// only shortest required period of time.
 pub async fn get_or_load_or_generate_chunk(map: &Shared<super::ServerMap>, coords: ChunkCoords) -> Chunk {
-    let loaded_chunk_option = map.lock().unwrap().loaded_chunk_at(coords).cloned();
+    let loaded_chunk_option = map.lock().loaded_chunk_at(coords).cloned();
 
     if let Some(loaded_chunk) = loaded_chunk_option {
         log::debug!("Chunk at {} already loaded", coords);
@@ -26,10 +26,10 @@ pub async fn get_or_load_or_generate_chunk(map: &Shared<super::ServerMap>, coord
         // Chunk is not already in memory so needs to either be read from disk or newly generated before being loaded
         // into the map.
 
-        let directory = map.lock().unwrap().directory.clone();
+        let directory = map.lock().directory.clone();
 
         let new_chunk = load_chunk(&directory, coords).await.unwrap_or_else(|_| {
-            let generator = &map.lock().unwrap().generator;
+            let generator = &map.lock().generator;
 
             log::debug!(
                 "Chunk at {} could not be found on disk so will be newly generated using generator '{}'",
@@ -41,7 +41,7 @@ pub async fn get_or_load_or_generate_chunk(map: &Shared<super::ServerMap>, coord
         });
 
         // Add the new chunk to map's loaded chunks:
-        map.lock().unwrap().add_chunk(coords, new_chunk.clone());
+        map.lock().add_chunk(coords, new_chunk.clone());
 
         new_chunk
     }

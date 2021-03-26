@@ -3,13 +3,10 @@ mod id;
 mod maps;
 mod networking;
 
-use std::{
-    fs,
-    path::PathBuf,
-    sync::{Arc, Mutex}
-};
+use std::{path::PathBuf, sync::Arc};
 
 use maps::ServerMap;
+use parking_lot::Mutex;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
 
@@ -141,7 +138,7 @@ async fn main() {
 
     log::info!("No longer listening for connections");
 
-    let contained_map = Arc::try_unwrap(map).ok().unwrap().into_inner().unwrap();
+    let contained_map = Arc::try_unwrap(map).ok().unwrap().into_inner();
     if let Err(e) = contained_map.save_all().await {
         log::error!("Failed to save game map before exiting due to error: {}", e);
     }

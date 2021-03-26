@@ -152,7 +152,7 @@ impl Handler {
             }
 
             // Place this client's player entity on the game map:
-            self.game_map.lock().unwrap().add_entity(player_id, player_entity);
+            self.game_map.lock().add_entity(player_id, player_entity);
 
             // Inform other tasks that a new entity now exists on the game map:
             self.map_changes_sender.send(maps::Modification::EntityAdded(player_id)).unwrap();
@@ -162,7 +162,7 @@ impl Handler {
             let result = self.handle_established_connection(&mut ws, player_id).await;
 
             // Remove this client's player entity from the game world and update database with changes to said entity:
-            let entity_option = self.game_map.lock().unwrap().remove_entity(player_id);
+            let entity_option = self.game_map.lock().remove_entity(player_id);
             if let Some(player_entity) = entity_option {
                 {
                     let mut db = self.db_pool.acquire().await.unwrap();
@@ -254,7 +254,7 @@ impl Handler {
 
                 // TODO: Prevent player exceeding movement rate.
 
-                let movement_option = self.game_map.lock().unwrap().move_entity_towards(player_id, direction);
+                let movement_option = self.game_map.lock().move_entity_towards(player_id, direction);
 
                 if let Some((old_position, new_position)) = movement_option {
                     // If moving into a new chunk, ensure adjacent chunks are loaded:
@@ -313,7 +313,6 @@ impl Handler {
                     // Entity just moved into the client's loaded chunks:
                     self.game_map
                         .lock()
-                        .unwrap()
                         .entity_by_id(entity_id)
                         .map(|entity| messages::FromServer::ProvideEntity(entity_id, entity.clone()))
                 }
@@ -323,7 +322,7 @@ impl Handler {
             }
 
             maps::Modification::EntityAdded(entity_id) => {
-                self.game_map.lock().unwrap().entity_by_id(entity_id).and_then(|entity| {
+                self.game_map.lock().entity_by_id(entity_id).and_then(|entity| {
                     self.remote_loaded_chunk_coords
                         .contains(&entity.pos.as_chunk_coords())
                         .then(|| messages::FromServer::ProvideEntity(entity_id, entity.clone()))
@@ -351,7 +350,7 @@ impl Handler {
 
             // Get entities in the chunk but filter out this task's own player entity:
             let entities_in_chunk =
-                self.game_map.lock().unwrap().entities_in_chunk(coords).into_iter().filter(|(id, _)| *id != player_id);
+                self.game_map.lock().entities_in_chunk(coords).into_iter().filter(|(id, _)| *id != player_id);
 
             for (entity_id, entity) in entities_in_chunk {
                 msgs.push(messages::FromServer::ProvideEntity(entity_id, entity));
@@ -414,9 +413,10 @@ mod tests {
     use std::{
         net::{IpAddr, Ipv4Addr},
         path::PathBuf,
-        sync::{Arc, Mutex}
+        sync::Arc
     };
 
+    use parking_lot::Mutex;
     use shared::maps::{
         entities::{ClothingColour, Direction, Entity, FacialExpression, HairColour, HairStyle, SkinColour},
         Chunk, ChunkCoords, Tile, TileCoords, CHUNK_TILE_COUNT, CHUNK_WIDTH
@@ -457,7 +457,7 @@ mod tests {
                 hair_colour: HairColour::Black,
                 has_running_shoes: false
             };
-            self.game_map.lock().unwrap().add_entity(entity_id, entity);
+            self.game_map.lock().add_entity(entity_id, entity);
 
             entity_id
         }
@@ -465,7 +465,7 @@ mod tests {
         fn add_test_chunk(&mut self, pos: ChunkCoords) -> Chunk {
             let chunk = Chunk::new([Tile::Ground; CHUNK_TILE_COUNT]);
 
-            self.game_map.lock().unwrap().add_chunk(pos, chunk.clone());
+            self.game_map.lock().add_chunk(pos, chunk.clone());
             self.remote_loaded_chunk_coords.insert(pos);
 
             chunk
