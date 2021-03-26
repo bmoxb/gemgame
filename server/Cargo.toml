@@ -17,7 +17,7 @@ futures-util = "0.3"
 tokio-tungstenite = "0.13"
 
 # To use main sqlx repo when pull request merged.
-sqlx = { git = "https://github.com/launchbadge/sqlx.git", features = ["runtime-tokio-native-tls", "sqlite", "any"] }
+sqlx = { git = "https://github.com/launchbadge/sqlx.git", features = ["runtime-tokio-native-tls", "postgres", "any"] }
 
 thiserror = "1.0"
 

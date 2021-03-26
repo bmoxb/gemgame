@@ -80,26 +80,27 @@ async fn main() {
 
     // Connect to database:
 
-    let _ = fs::OpenOptions::new().append(true).create(true).open(&options.database_file); // Create file if not exists.
-
-    let connection_string = format!("sqlite://{}", &options.database_file);
-
     let db_pool_options = sqlx::any::AnyPoolOptions::new().max_connections(options.max_database_connections);
-    let db_pool = db_pool_options.connect(&connection_string).await.expect("Failed to connect to database");
+    let db_pool =
+        db_pool_options.connect(&options.database_connection_string).await.expect("Failed to connect to database");
 
     log::info!(
         "Created connection pool with maximum of {} simultaneous connections to database: {}",
         options.max_database_connections,
-        connection_string
+        options.database_connection_string
     );
 
     let create_table_query = sqlx::query(
         "CREATE TABLE IF NOT EXISTS client_entities (
             client_id TEXT PRIMARY KEY,
             entity_id TEXT NOT NULL UNIQUE,
-            name TEXT NOT NULL,
             tile_x INTEGER NOT NULL,
-            tile_y INTEGER NOT NULL
+            tile_y INTEGER NOT NULL,
+            hair_style BYTEA NOT NULL,
+            clothing_colour BYTEA NOT NULL,
+            skin_colour BYTEA NOT NULL,
+            hair_colour BYTEA NOT NULL,
+            has_running_shoes BOOLEAN NOT NULL
         )"
     );
     create_table_query.execute(&db_pool).await.expect("Failed to create required table in database");
@@ -161,9 +162,9 @@ struct Options {
     #[structopt(long, default_value = "map/", parse(from_os_str))]
     map_directory: PathBuf,
 
-    /// The database file in which to store client/player data.
-    #[structopt(long, default_value = "clients.db")]
-    database_file: String,
+    /// Specify how to connect to the database.
+    #[structopt(long, default_value = "postgres://db/gemgame")]
+    database_connection_string: String,
 
     /// Specify the maximum number of connections that the database connection pool is able to have open
     /// simultaneously.
