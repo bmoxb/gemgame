@@ -44,80 +44,99 @@ impl Renderer {
         if self.current_time >= self.movement_time {
             self.current_pos = self.destination_pos;
         }
-        // Almost immediately completing a tile movement, reset the walk cycle frame:
+        // Almost immediately after completing a tile movement, reset the walk cycle frame:
         if self.current_time >= self.movement_time * 1.2 {
             self.walk_frame = self.walk_frame.stationary();
         }
     }
 
     /// Draw the lower portion of the entity (the body).
-    pub fn draw_lower(
-        &self, entity: &Entity, entities_texture: quad::Texture2D, tile_draw_size: f32, tile_texture_size: u16
-    ) {
-        quad::draw_texture_ex(
-            entities_texture,
-            self.current_pos.x,
-            self.current_pos.y,
+    pub fn draw_lower(&self, entity: &Entity, texture: quad::Texture2D, tile_draw_size: f32, tile_texture_size: u16) {
+        self.draw_part(
+            texture,
+            0.0,
+            0.0,
             quad::Color::from_rgba(160, 160, 255, 255),
             body_draw_params(entity, self.walk_frame, tile_draw_size, tile_texture_size)
         );
     }
 
     /// Draw the upper portion of the entity (head, face, hands, etc.)
-    pub fn draw_upper(
-        &self, entity: &Entity, entities_texture: quad::Texture2D, tile_draw_size: f32, tile_texture_size: u16
-    ) {
+    pub fn draw_upper(&self, entity: &Entity, texture: quad::Texture2D, tile_draw_size: f32, tile_texture_size: u16) {
         // Head:
-        quad::draw_texture_ex(
-            entities_texture,
-            self.current_pos.x,
-            self.current_pos.y + (tile_draw_size * 0.25),
+        self.draw_part(
+            texture,
+            0.0,
+            tile_draw_size * 0.25,
             quad::WHITE,
             head_draw_params(entity, self.walk_frame, tile_draw_size, tile_texture_size)
         );
 
         // Determine whether an addition y position offset needs to be applied to the entity's hair and facial features
         // based on position in the walk cycle (needed to create the bobbing head effect as an entity moves):
-        let y_offset = match self.walk_frame {
+        let head_bob = match self.walk_frame {
             WalkCycle::Left | WalkCycle::Right => -(tile_draw_size * 0.0625),
             _ => 0.0
         };
 
         // Hair:
-        quad::draw_texture_ex(
-            entities_texture,
-            self.current_pos.x,
-            self.current_pos.y + (tile_draw_size * 0.875) + y_offset,
+
+        self.draw_part(
+            texture,
+            0.0,
+            (tile_draw_size * 0.875) + head_bob,
             quad::BROWN,
             hair_draw_params(entity, tile_draw_size, tile_texture_size)
         );
 
+        // Face:
+
+        let (right_eye, left_eye, mouth) = match entity.direction {
+            Direction::Down => (Some(0.0), Some(tile_draw_size * 0.5), true),
+            Direction::Left => (None, Some(tile_draw_size * 0.25), false),
+            Direction::Right => (Some(tile_draw_size * 0.25), None, false),
+            Direction::Up => (None, None, false)
+        };
+
+        let eye_y_offset = (tile_draw_size * 0.75) + head_bob;
+
         // Right eye:
-        quad::draw_texture_ex(
-            entities_texture,
-            self.current_pos.x,
-            self.current_pos.y + (tile_draw_size * 0.75) + y_offset,
-            quad::BROWN,
-            eye_draw_params(entity, false, tile_draw_size, tile_texture_size)
-        );
-
+        if let Some(x_offset) = right_eye {
+            self.draw_part(
+                texture,
+                x_offset,
+                eye_y_offset,
+                quad::BROWN,
+                eye_draw_params(entity, false, tile_draw_size, tile_texture_size)
+            );
+        }
         // Left eye:
-        quad::draw_texture_ex(
-            entities_texture,
-            self.current_pos.x + (tile_draw_size * 0.5),
-            self.current_pos.y + (tile_draw_size * 0.75) + y_offset,
-            quad::BROWN,
-            eye_draw_params(entity, true, tile_draw_size, tile_texture_size)
-        );
-
+        if let Some(x_offset) = left_eye {
+            self.draw_part(
+                texture,
+                x_offset,
+                eye_y_offset,
+                quad::BROWN,
+                eye_draw_params(entity, true, tile_draw_size, tile_texture_size)
+            );
+        }
         // Mouth:
-        quad::draw_texture_ex(
-            entities_texture,
-            self.current_pos.x + (tile_draw_size * 0.25),
-            self.current_pos.y + (tile_draw_size * 0.25) + y_offset,
-            quad::WHITE,
-            mouth_draw_params(entity, tile_draw_size, tile_texture_size)
-        );
+        if mouth {
+            quad::draw_texture_ex(
+                texture,
+                self.current_pos.x + (tile_draw_size * 0.25),
+                self.current_pos.y + (tile_draw_size * 0.25) + head_bob,
+                quad::WHITE,
+                mouth_draw_params(entity, tile_draw_size, tile_texture_size)
+            );
+        }
+    }
+
+    fn draw_part(
+        &self, texture: quad::Texture2D, x_offset: f32, y_offset: f32, colour: quad::Color,
+        params: quad::DrawTextureParams
+    ) {
+        quad::draw_texture_ex(texture, self.current_pos.x + x_offset, self.current_pos.y + y_offset, colour, params);
     }
 }
 
@@ -213,14 +232,22 @@ fn hair_draw_params(entity: &Entity, tile_draw_size: f32, tile_texture_size: u16
         HairStyle::Fringe => 3
     };
 
+    let (y_offset, flip) = match entity.direction {
+        Direction::Down => (0, false),
+        Direction::Up => (0, true),
+        Direction::Right => (1, false),
+        Direction::Left => (1, true)
+    };
+
     quad::DrawTextureParams {
         dest_size: Some(quad::vec2(tile_draw_size, tile_draw_size / 2.0)),
         source: Some(quad::Rect {
             x: (x_offset * tile_texture_size) as f32,
-            y: (tile_texture_size * 3) as f32,
+            y: ((6 + y_offset) * (tile_texture_size / 2)) as f32,
             w: tile_texture_size as f32,
             h: (tile_texture_size / 2) as f32
         }),
+        flip_x: flip,
         flip_y: true,
         ..Default::default()
     }
@@ -229,7 +256,7 @@ fn hair_draw_params(entity: &Entity, tile_draw_size: f32, tile_texture_size: u16
 fn eye_draw_params(
     entity: &Entity, left_eye: bool, tile_draw_size: f32, tile_texture_size: u16
 ) -> quad::DrawTextureParams {
-    let x_relative = match entity.facial_expression {
+    let x_offset = match entity.facial_expression {
         FacialExpression::Neutral => 0,
         FacialExpression::Shocked => 1,
         FacialExpression::Skeptical => {
@@ -247,7 +274,7 @@ fn eye_draw_params(
 
     quad::DrawTextureParams {
         dest_size: Some(quad::vec2(tile_draw_size / 2.0, tile_draw_size / 2.0)),
-        source: Some(eye_or_mouth_texture_rect(x_relative, 1.0, tile_texture_size)),
+        source: Some(eye_or_mouth_texture_rect(x_offset, 0, tile_texture_size)),
         flip_x: left_eye,
         flip_y: true,
         ..Default::default()
@@ -262,16 +289,16 @@ fn mouth_draw_params(entity: &Entity, tile_draw_size: f32, tile_texture_size: u1
 
     quad::DrawTextureParams {
         dest_size: Some(quad::vec2(tile_draw_size / 2.0, tile_draw_size / 2.0)),
-        source: Some(eye_or_mouth_texture_rect(x_relative, 1.5, tile_texture_size)),
+        source: Some(eye_or_mouth_texture_rect(x_relative, 1, tile_texture_size)),
         flip_y: true,
         ..Default::default()
     }
 }
 
-fn eye_or_mouth_texture_rect(x_relative: u16, y_multipler: f32, tile_texture_size: u16) -> quad::Rect {
+fn eye_or_mouth_texture_rect(x_relative: u16, y_relative: u16, tile_texture_size: u16) -> quad::Rect {
     quad::Rect {
         x: ((x_relative + 4) * (tile_texture_size / 2)) as f32,
-        y: tile_texture_size as f32 * y_multipler,
+        y: ((y_relative + 2) * (tile_texture_size / 2)) as f32,
         w: (tile_texture_size / 2) as f32,
         h: (tile_texture_size / 2) as f32
     }
