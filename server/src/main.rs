@@ -10,16 +10,11 @@ use parking_lot::Mutex;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
 
-pub const WEBSOCKET_PORT: u16 = 5678;
-
 #[tokio::main]
 async fn main() {
     // Command-line arguments:
 
-    let mut options = Options::from_args();
-    if options.port == 0 {
-        options.port = WEBSOCKET_PORT;
-    }
+    let options = Options::from_args();
 
     // Logger initialisation:
 
@@ -146,13 +141,12 @@ async fn main() {
 
 type Shared<T> = Arc<Mutex<T>>;
 
-// TODO: When Clap version 3 is stable, use that instead?
-/// Server application for not-yet-named web MMO roguelike.
+/// Server application for GemGame.
 #[derive(StructOpt, Debug)]
-#[structopt(name = "MMO Server")]
+#[structopt(name = "GemGame Server")]
 struct Options {
     /// The port on which listen for incoming connections.
-    #[structopt(short, long, default_value = "0")]
+    #[structopt(short, long, default_value = "5678")]
     port: u16,
 
     /// Directory containing game map data.
