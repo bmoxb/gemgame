@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt};
 
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 
 use super::TileCoords;
 use crate::Id;
@@ -93,7 +94,7 @@ impl fmt::Display for Direction {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(Serialize, Deserialize, EnumIter, Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum HairStyle {
     Quiff,
     Mohawk,
@@ -133,16 +134,16 @@ impl fmt::Display for FacialExpression {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(Serialize, Deserialize, EnumIter, Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum ClothingColour {
-    Grey,
     White,
+    Grey,
     Red,
     Green,
     Blue
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(Serialize, Deserialize, EnumIter, Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum SkinColour {
     Black,
     Brown,
@@ -150,7 +151,7 @@ pub enum SkinColour {
     White
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(Serialize, Deserialize, EnumIter, Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum HairColour {
     Black,
     Brown,

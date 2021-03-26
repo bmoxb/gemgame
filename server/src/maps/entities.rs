@@ -1,28 +1,27 @@
-use std::convert::TryInto;
-
+use rand::seq::IteratorRandom;
 use shared::{
     maps::{
-        entities::{ClothingColour, Direction, Entity, FacialExpression, HairColour, HairStyle, SkinColour},
+        entities::{Direction, Entity, FacialExpression},
         TileCoords
     },
     Id
 };
 use sqlx::Row;
+use strum::IntoEnumIterator;
 
 pub async fn new_player_in_database(
     client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
 ) -> sqlx::Result<(Id, Entity)> {
     let entity_id = crate::id::generate_with_timestamp();
 
-    // TODO: Randomly select entity features like hair style, skin colour, etc.
     let entity = Entity {
         pos: TileCoords { x: 0, y: 0 }, // TODO: Nearest free position.
         direction: Direction::Down,
         facial_expression: FacialExpression::Neutral,
-        hair_style: HairStyle::Quiff,
-        clothing_colour: ClothingColour::Red,
-        skin_colour: SkinColour::Pale,
-        hair_colour: HairColour::Black,
+        hair_style: random_variant(),
+        clothing_colour: random_variant(),
+        skin_colour: random_variant(),
+        hair_colour: random_variant(),
         has_running_shoes: false
     };
 
@@ -37,10 +36,10 @@ pub async fn new_player_in_database(
     .bind(entity_id.encode())
     .bind(entity.pos.x)
     .bind(entity.pos.y)
-    .bind(encode_enum(entity.hair_style))
-    .bind(encode_enum(entity.clothing_colour))
-    .bind(encode_enum(entity.skin_colour))
-    .bind(encode_enum(entity.hair_colour))
+    .bind(encode_variant(entity.hair_style))
+    .bind(encode_variant(entity.clothing_colour))
+    .bind(encode_variant(entity.skin_colour))
+    .bind(encode_variant(entity.hair_colour))
     .bind(entity.has_running_shoes)
     .execute(db)
     .await?;
@@ -60,10 +59,10 @@ pub async fn player_from_database(
                     pos: TileCoords { x: row.try_get("tile_x")?, y: row.try_get("tile_y")? },
                     direction: Direction::Down,
                     facial_expression: FacialExpression::Neutral,
-                    hair_style: decode_enum(row.try_get("hair_style")?, || HairStyle::Quiff), // TODO: Random default.
-                    clothing_colour: decode_enum(row.try_get("clothing_colour")?, || ClothingColour::Green),
-                    skin_colour: decode_enum(row.try_get("skin_colour")?, || SkinColour::White),
-                    hair_colour: decode_enum(row.try_get("hair_colour")?, || HairColour::Green),
+                    hair_style: decode_variant(row.try_get("hair_style")?),
+                    clothing_colour: decode_variant(row.try_get("clothing_colour")?),
+                    skin_colour: decode_variant(row.try_get("skin_colour")?),
+                    hair_colour: decode_variant(row.try_get("hair_colour")?),
                     has_running_shoes: row.try_get("has_running_shoes")?
                 }
             ))
@@ -86,10 +85,10 @@ pub async fn update_database_for_player(
     )
     .bind(entity.pos.x)
     .bind(entity.pos.y)
-    .bind(encode_enum(entity.hair_style))
-    .bind(encode_enum(entity.clothing_colour))
-    .bind(encode_enum(entity.skin_colour))
-    .bind(encode_enum(entity.hair_colour))
+    .bind(encode_variant(entity.hair_style))
+    .bind(encode_variant(entity.clothing_colour))
+    .bind(encode_variant(entity.skin_colour))
+    .bind(encode_variant(entity.hair_colour))
     .bind(entity.has_running_shoes)
     .bind(client_id.encode())
     .execute(db)
@@ -106,15 +105,22 @@ pub async fn update_database_for_player(
     })
 }
 
-/// Uses Bincode to encode an enum variant as a 32-bit integer.
-fn encode_enum<T: serde::Serialize>(val: T) -> i32 {
-    i32::from_le_bytes(bincode::serialize(&val).unwrap().try_into().unwrap())
+/// Encode an enum variant as a 32-bit integer.
+/// Ideally, this function and [`decode_variant`] would return `i16` and `SMALLINT` would be used as the type in the
+/// database table but unfortunately this cannot be done due a limitation of the sqlx 'any' database type.
+fn encode_variant<T: IntoEnumIterator + PartialEq>(val: T) -> i32 {
+    T::iter().position(|x| x == val).unwrap() as i32
 }
 
-/// Decodes a 32-bit integer into a variant of a given enum type via Bincode.
-fn decode_enum<T: serde::de::DeserializeOwned>(val: i32, default: impl Fn() -> T) -> T {
-    bincode::deserialize(&i32::to_le_bytes(val)).unwrap_or_else(|_| {
+/// Decodes a 32-bit integer into a variant of a given enum type. If the given integer does not corespond to a variant
+/// of the given enum type, then a random variant is returned.
+fn decode_variant<T: IntoEnumIterator>(val: i32) -> T {
+    T::iter().nth(val as usize).unwrap_or_else(|| {
         log::warn!("Failed to decode 32-bit integer {} into enum variant of type {}", val, std::any::type_name::<T>());
-        default()
+        random_variant()
     })
+}
+
+fn random_variant<T: IntoEnumIterator>() -> T {
+    T::iter().choose(&mut rand::thread_rng()).unwrap()
 }

@@ -8,6 +8,7 @@ edition = "2018"
 serde = { version = "1.0", features = ["derive"] }
 serde-big-array = "0.3"
 base64 = "0.13"
+strum = { version = "0.20", features = ["derive"] }
 
 [workspace]
 members = ["client", "server"]
