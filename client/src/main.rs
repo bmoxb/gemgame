@@ -14,8 +14,10 @@ const CONNECTION_STR: &str = "wss://gemgame.mblack.dev/wss";
 
 #[macroquad::main("Client")]
 async fn main() {
+    #[cfg(target_arch = "wasm32")]
+    wasm_logger::init(Default::default());
     #[cfg(not(target_arch = "wasm32"))]
-    pretty_env_logger::init(); // Only have logging when targeting desktop.
+    pretty_env_logger::init();
 
     let mut assets = AssetManager::new("assets/", "textures/");
 
@@ -34,7 +36,7 @@ async fn main() {
         let delta = quad::get_frame_time();
         let potential_state_change = current_state.update_and_draw(&assets, delta);
 
-        #[cfg(debug_assertions)]
+        //#[cfg(debug_assertions)]
         draw_debug_text(32.0, quad::PURPLE, current_state.as_ref(), &assets);
 
         quad::next_frame().await;
@@ -49,7 +51,6 @@ async fn main() {
     }
 }
 
-#[cfg(debug_assertions)]
 fn draw_debug_text(font_size: f32, font_colour: quad::Color, current_state: &dyn states::State, assets: &AssetManager) {
     quad::set_default_camera();
 
