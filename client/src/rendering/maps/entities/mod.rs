@@ -10,45 +10,70 @@ use super::tile_coords_to_vec2;
 
 #[derive(Default)]
 pub struct Renderer {
+    /// The position that the entity is currently being drawn at.
     pub current_pos: quad::Vec2,
+    /// Network delays/inconsistencies mean that the client is going to be informed of a remote entity's movements by
+    /// the server with a fluctuating delay. This means that the renderer may be informed of movements to animate
+    /// earlier than expected and so keeps those future movement at the end of this queue in order to achieve smooth
+    /// animations of remote entity movements.
+    movement_queue: Vec<Movement>,
+    time_since_movement_began: f32,
+    walk_frame: WalkCycle
+}
+
+#[derive(Default)]
+struct Movement {
     destination_pos: quad::Vec2,
     movement: quad::Vec2,
-    current_time: f32,
-    movement_time: f32,
-    walk_frame: WalkCycle
+    movement_time: f32
 }
 
 impl Renderer {
     pub fn new(coords: TileCoords, tile_draw_size: f32) -> Self {
-        let pos = tile_coords_to_vec2(coords, tile_draw_size);
-        Renderer { current_pos: pos, destination_pos: pos, ..Default::default() }
+        Renderer { current_pos: tile_coords_to_vec2(coords, tile_draw_size), ..Default::default() }
     }
 
-    // Begin animated movement of the entity from the given coordinates to the specified destination coordinates.
-    pub fn do_movement(
-        &mut self, from_coords: TileCoords, to_coords: TileCoords, movement_time: f32, tile_draw_size: f32
-    ) {
-        self.current_pos = tile_coords_to_vec2(from_coords, tile_draw_size);
-        self.destination_pos = tile_coords_to_vec2(to_coords, tile_draw_size);
-        self.movement = (self.destination_pos - self.current_pos) / movement_time;
-        self.current_time = 0.0;
-        self.movement_time = movement_time;
+    /// Begin animated movement of the entity from the given coordinates to the specified destination coordinates.
+    pub fn do_movement(&mut self, to_coords: TileCoords, movement_time: f32, tile_draw_size: f32) {
+        // Ensure the timer is reset to 0 if the entity is not already moving:
 
-        self.walk_frame = self.walk_frame.next();
+        if self.movement_queue.is_empty() {
+            self.time_since_movement_began = 0.0;
+        }
+
+        // Add the movement to the queue:
+
+        let from_pos = self.movement_queue.last().map(|movement| movement.destination_pos).unwrap_or(self.current_pos);
+        let destination_pos = tile_coords_to_vec2(to_coords, tile_draw_size);
+
+        self.movement_queue.push(Movement {
+            destination_pos,
+            movement: (destination_pos - from_pos) / movement_time,
+            movement_time
+        });
     }
 
     /// Update draw position and animations.
     pub fn update(&mut self, delta: f32) {
-        self.current_time += delta;
-        self.current_pos += self.movement * delta;
+        self.time_since_movement_began += delta;
 
-        // Once the duration of a single tile movement has passed, ensure entity is positioned at the destination
-        // coordinates exactly:
-        if self.current_time >= self.movement_time {
-            self.current_pos = self.destination_pos;
+        if let Some(current_movement) = self.movement_queue.first() {
+            // Adjust the position at which the entity is to be drawn:
+            self.current_pos += current_movement.movement * delta;
+
+            // Once the duration of a single tile movement has passed, ensure entity is positioned at the destination
+            // coordinates exactly, reset the movement timer, move on to the next movement in the queue, and advance the
+            // movement/walk cycle animation frame:
+            if self.time_since_movement_began >= current_movement.movement_time {
+                self.current_pos = current_movement.destination_pos;
+                self.time_since_movement_began = 0.0;
+                self.movement_queue.remove(0);
+                self.walk_frame = self.walk_frame.next();
+            }
         }
-        // Almost immediately after completing a tile movement, reset the walk cycle frame:
-        if self.current_time >= self.movement_time * 1.2 {
+
+        // Change to a stationary walk cycle frame if the entity has not moved for more than 50ms:
+        if self.movement_queue.is_empty() && self.time_since_movement_began >= 0.05 {
             self.walk_frame = self.walk_frame.stationary();
         }
     }

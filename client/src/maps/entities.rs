@@ -62,7 +62,7 @@ impl MyEntity {
                 log::trace!("Moving player entity in direction {} to {}", direction, new_pos);
 
                 // Update the map renderer:
-                renderer.my_entity_moved(self.contained.pos, new_pos, self.contained.movement_time());
+                renderer.my_entity_moved(new_pos, self.contained.movement_time());
 
                 // Locally modify player entity's coordinates & direction:
                 self.contained.pos = new_pos;
@@ -106,7 +106,7 @@ impl MyEntity {
                 );
 
                 // Update map renderer:
-                renderer.my_entity_position_corrected(self.contained.pos, position);
+                renderer.my_entity_position_corrected(position);
 
                 // Correct position:
                 self.contained.pos = position;

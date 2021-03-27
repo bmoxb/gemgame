@@ -152,15 +152,14 @@ impl Renderer {
 
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
     /// called by the [`crate::maps::entities::MyEntity::move_towards_checked`] method.
-    pub fn my_entity_moved(&mut self, from_coords: TileCoords, to_coords: TileCoords, movement_time: f32) {
-        self.my_entity_renderer.do_movement(from_coords, to_coords, movement_time, self.tile_draw_size);
+    pub fn my_entity_moved(&mut self, to_coords: TileCoords, movement_time: f32) {
+        self.my_entity_renderer.do_movement(to_coords, movement_time, self.tile_draw_size);
     }
 
     /// Begin a shorter animation of this client's entity to the specified position. This method is to be called by the
     /// [`crate::maps::entities::MyEntity::received_movement_reconciliation'] method.
-    pub fn my_entity_position_corrected(&mut self, incorrect_coords: TileCoords, correct_coords: TileCoords) {
+    pub fn my_entity_position_corrected(&mut self, correct_coords: TileCoords) {
         self.my_entity_renderer.do_movement(
-            incorrect_coords,
             correct_coords,
             ENTITY_POSITION_CORRECTED_MOVEMENT_TIME,
             self.tile_draw_size
@@ -169,11 +168,8 @@ impl Renderer {
 
     /// Begin the animated movement of the specified remote entity to the given position. This method is to be called by
     /// the [`ClientMap::set_remote_entity_position`].
-    pub fn remote_entity_moved(
-        &mut self, entity_id: Id, from_coords: TileCoords, to_coords: TileCoords, movement_time: f32
-    ) {
+    pub fn remote_entity_moved(&mut self, entity_id: Id, to_coords: TileCoords, movement_time: f32) {
         self.remote_entity_renderers.entry(entity_id).or_default().do_movement(
-            from_coords,
             to_coords,
             movement_time,
             self.tile_draw_size
