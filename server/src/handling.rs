@@ -278,12 +278,21 @@ impl Handler {
                     responses.push(messages::FromServer::YourEntityMoved { request_number, new_position });
                 }
 
-                if !responses.is_empty() {
-                    // The broadcast isn't relevant to the task that sent it so immediately receive and discard:
-                    self.map_changes_receiver.recv().await.unwrap();
-                }
+                if responses.is_empty() {
+                    // The `responses` vector will only be empty if the movement was not allowed. In that case, inform
+                    // the remote client:
 
-                responses
+                    let new_position = self.game_map.lock().entity_by_id(player_id).unwrap().pos;
+                    vec![messages::FromServer::YourEntityMoved { request_number, new_position }]
+                }
+                else {
+                    // The `responses` vector will be populated only if the movement could go ahead. If it did then a
+                    // message will be sent to all tasks informing them of the entity movement. That message isn't
+                    // however relevant to the task that sent it so immediately receive and discard:
+                    self.map_changes_receiver.recv().await.unwrap();
+
+                    responses
+                }
             }
         }
     }
