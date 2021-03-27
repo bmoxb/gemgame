@@ -14,8 +14,6 @@ const CONNECTION_STR: &str = "wss://gemgame.mblack.dev/wss";
 
 #[macroquad::main("Client")]
 async fn main() {
-    #[cfg(target_arch = "wasm32")]
-    wasm_logger::init(Default::default());
     #[cfg(not(target_arch = "wasm32"))]
     pretty_env_logger::init();
 
