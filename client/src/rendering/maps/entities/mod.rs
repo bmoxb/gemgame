@@ -110,16 +110,6 @@ impl Renderer {
             _ => 0.0
         };
 
-        // Hair:
-
-        self.draw_part(
-            texture,
-            0.0,
-            (tile_draw_size * 0.875) + head_bob,
-            hair_colour,
-            hair_draw_params(entity, tile_draw_size, tile_texture_size)
-        );
-
         // Face:
 
         let (right_eye, left_eye, mouth) = match entity.direction {
@@ -161,6 +151,16 @@ impl Renderer {
                 mouth_draw_params(entity, tile_draw_size, tile_texture_size)
             );
         }
+
+        // Hair:
+
+        self.draw_part(
+            texture,
+            0.0,
+            (tile_draw_size * 0.875) + head_bob,
+            hair_colour,
+            hair_draw_params(entity, tile_draw_size, tile_texture_size)
+        );
     }
 
     /// Draw a component of the entity (hair, eye, etc.) using the specified drawing parameters.
@@ -263,7 +263,7 @@ fn hair_draw_params(entity: &Entity, tile_draw_size: f32, tile_texture_size: u16
     let x_offset = match entity.hair_style {
         HairStyle::Quiff => 0,
         HairStyle::Mohawk => 1,
-        HairStyle::Fringe => 3
+        HairStyle::Fringe => 2
     };
 
     let (y_offset, flip) = match entity.direction {
