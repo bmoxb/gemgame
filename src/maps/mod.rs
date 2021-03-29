@@ -108,15 +108,31 @@ impl Chunk {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum Tile {
     Grass,
-    Rock
+    FlowerPatch,
+    Stones,
+    Dirt,
+    DirtGrassTop,
+    DirtGrassBottom,
+    DirtGrassLeft,
+    DirtGrassRight,
+    DirtGrassTopLeft,
+    DirtGrassTopRight,
+    DirtGrassBottomLeft,
+    DirtGrassBottomRight,
+    DirtGrassCornerTopLeft,
+    DirtGrassCornerTopRight,
+    DirtGrassCornerBottomLeft,
+    DirtGrassCornerBottomRight,
+    Rock,
+    RockEmerald,
+    RockRuby,
+    RockDiamond,
+    RockSmashed
 }
 
 impl Tile {
     pub fn is_blocking(&self) -> bool {
-        match self {
-            Tile::Grass => false,
-            Tile::Rock => true
-        }
+        matches!(self, Tile::Rock | Tile::RockEmerald | Tile::RockRuby | Tile::RockDiamond)
     }
 }
 

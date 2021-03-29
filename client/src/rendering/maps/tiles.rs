@@ -42,7 +42,26 @@ fn texture_rect(tile: &Tile, texture_size: u16) -> quad::Rect {
 fn texture_pos_relative(tile: &Tile) -> (u16, u16) {
     match tile {
         Tile::Grass => (0, 0),
-        Tile::Rock => (4, 2)
+        Tile::FlowerPatch => (0, 1),
+        Tile::Stones => (0, 2),
+        Tile::Dirt => (2, 1),
+        Tile::DirtGrassTop => (2, 0),
+        Tile::DirtGrassBottom => (2, 2),
+        Tile::DirtGrassLeft => (1, 1),
+        Tile::DirtGrassRight => (3, 1),
+        Tile::DirtGrassTopLeft => (1, 0),
+        Tile::DirtGrassTopRight => (3, 0),
+        Tile::DirtGrassBottomLeft => (1, 2),
+        Tile::DirtGrassBottomRight => (3, 2),
+        Tile::DirtGrassCornerTopLeft => (4, 0),
+        Tile::DirtGrassCornerTopRight => (5, 0),
+        Tile::DirtGrassCornerBottomLeft => (4, 1),
+        Tile::DirtGrassCornerBottomRight => (5, 1),
+        Tile::Rock => (6, 0),
+        Tile::RockEmerald => (7, 0),
+        Tile::RockRuby => (7, 1),
+        Tile::RockDiamond => (7, 2),
+        Tile::RockSmashed => (6, 1)
     }
 }
 
