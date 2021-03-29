@@ -18,7 +18,7 @@ const MAX_LOADED_CHUNKS_PER_CLIENT: usize = 12;
 
 /// Creates a new `Handler` instance and then calls its `Handler::handle` method.
 pub async fn handle_connection(
-    stream: TcpStream, address: SocketAddr, game_map: Shared<ServerMap>, db_pool: sqlx::Pool<sqlx::Any>,
+    stream: TcpStream, address: SocketAddr, game_map: Shared<ServerMap>, db_pool: sqlx::PgPool,
     map_changes_sender: broadcast::Sender<maps::Modification>,
     map_changes_receiver: broadcast::Receiver<maps::Modification>
 ) {
@@ -41,7 +41,7 @@ struct Handler {
     /// Arc mutex containing the game map.
     game_map: Shared<ServerMap>,
     /// The database connection pool.
-    db_pool: sqlx::Pool<sqlx::Any>,
+    db_pool: sqlx::PgPool,
     map_changes_sender: broadcast::Sender<maps::Modification>,
     map_changes_receiver: broadcast::Receiver<maps::Modification>,
     // Set used to track of the coordinates of chunks that this handler's remote client has loaded.
@@ -472,7 +472,7 @@ mod tests {
 
         let handler = super::Handler {
             address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0),
-            db_pool: sqlx::any::AnyPoolOptions::new().connect("sqlite::memory:").await.unwrap(),
+            db_pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://").unwrap(),
             game_map: Arc::new(Mutex::new(ServerMap::new(
                 PathBuf::from("/tmp"),
                 Box::new(maps::generators::DefaultGenerator),

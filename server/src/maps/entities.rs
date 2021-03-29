@@ -9,9 +9,7 @@ use shared::{
 use sqlx::Row;
 use strum::IntoEnumIterator;
 
-pub async fn new_player_in_database(
-    client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
-) -> sqlx::Result<(Id, Entity)> {
+pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) -> sqlx::Result<(Id, Entity)> {
     let entity_id = crate::id::generate_with_timestamp();
 
     let entity = Entity {
@@ -47,12 +45,10 @@ pub async fn new_player_in_database(
     Ok((entity_id, entity))
 }
 
-pub async fn player_from_database(
-    client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
-) -> sqlx::Result<Option<(Id, Entity)>> {
+pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) -> sqlx::Result<Option<(Id, Entity)>> {
     let res = sqlx::query("SELECT * FROM client_entities WHERE client_id = $1")
         .bind(client_id.encode())
-        .map(|row: sqlx::any::AnyRow| {
+        .map(|row: sqlx::postgres::PgRow| {
             sqlx::Result::Ok((
                 Id::decode(row.try_get("entity_id")?).unwrap(), // TODO: Don't just unwrap.
                 Entity {
@@ -75,7 +71,7 @@ pub async fn player_from_database(
 }
 
 pub async fn update_database_for_player(
-    entity: &Entity, client_id: Id, db: &mut sqlx::pool::PoolConnection<sqlx::Any>
+    entity: &Entity, client_id: Id, db: &mut sqlx::PgConnection
 ) -> sqlx::Result<()> {
     sqlx::query(
         "UPDATE client_entities
@@ -105,16 +101,14 @@ pub async fn update_database_for_player(
     })
 }
 
-/// Encode an enum variant as a 32-bit integer.
-/// Ideally, this function and [`decode_variant`] would return `i16` and `SMALLINT` would be used as the type in the
-/// database table but unfortunately this cannot be done due a limitation of the sqlx 'any' database type.
-fn encode_variant<T: IntoEnumIterator + PartialEq>(val: T) -> i32 {
-    T::iter().position(|x| x == val).unwrap() as i32
+/// Encode an enum variant as a 16-bit integer.
+fn encode_variant<T: IntoEnumIterator + PartialEq>(val: T) -> i16 {
+    T::iter().position(|x| x == val).unwrap() as i16
 }
 
-/// Decodes a 32-bit integer into a variant of a given enum type. If the given integer does not corespond to a variant
-/// of the given enum type, then a random variant is returned.
-fn decode_variant<T: IntoEnumIterator>(val: i32) -> T {
+/// Decodes a 16-bit integer into a variant of a given enum type. If the given integer does not corespond to a variant
+/// of the given enum type, then a random variant is returned and a warning message is printed.
+fn decode_variant<T: IntoEnumIterator>(val: i16) -> T {
     T::iter().nth(val as usize).unwrap_or_else(|| {
         log::warn!("Failed to decode 32-bit integer {} into enum variant of type {}", val, std::any::type_name::<T>());
         random_variant()

@@ -72,7 +72,7 @@ async fn main() {
 
     // Connect to database:
 
-    let db_pool_options = sqlx::any::AnyPoolOptions::new().max_connections(options.max_database_connections);
+    let db_pool_options = sqlx::postgres::PgPoolOptions::new().max_connections(options.max_database_connections);
     let db_pool =
         db_pool_options.connect(&options.database_connection_string).await.expect("Failed to connect to database");
 
@@ -87,10 +87,10 @@ async fn main() {
             entity_id TEXT NOT NULL UNIQUE,
             tile_x INTEGER NOT NULL,
             tile_y INTEGER NOT NULL,
-            hair_style INTEGER NOT NULL,
-            clothing_colour INTEGER NOT NULL,
-            skin_colour INTEGER NOT NULL,
-            hair_colour INTEGER NOT NULL,
+            hair_style SMALLINT NOT NULL,
+            clothing_colour SMALLINT NOT NULL,
+            skin_colour SMALLINT NOT NULL,
+            hair_colour SMALLINT NOT NULL,
             has_running_shoes BOOLEAN NOT NULL
         )"
     );
