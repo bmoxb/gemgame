@@ -68,7 +68,11 @@ fn texture_pos_relative(tile: &Tile, time: f64) -> (u16, u16) {
         Tile::RockDiamond => (7, 2),
         Tile::RockSmashed => (6, 1),
         Tile::Shrub => (4, 2),
-        Tile::YellowOrangeFlowers => match animation_frame {
+        Tile::FlowerBlue => match animation_frame / 2 {
+            0 => (6, 2),
+            _ => (5, 2)
+        },
+        Tile::FlowersYellowOrange => match animation_frame {
             4 => (1, 3),
             5 => (2, 3),
             6 => (3, 3),

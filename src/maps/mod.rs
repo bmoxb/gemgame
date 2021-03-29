@@ -129,7 +129,8 @@ pub enum Tile {
     RockDiamond,
     RockSmashed,
     Shrub,
-    YellowOrangeFlowers,
+    FlowerBlue,
+    FlowersYellowOrange,
     Water
 }
 
