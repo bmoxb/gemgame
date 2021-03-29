@@ -127,12 +127,14 @@ pub enum Tile {
     RockEmerald,
     RockRuby,
     RockDiamond,
-    RockSmashed
+    RockSmashed,
+    Shrub,
+    YellowOrangeFlowers
 }
 
 impl Tile {
     pub fn is_blocking(&self) -> bool {
-        matches!(self, Tile::Rock | Tile::RockEmerald | Tile::RockRuby | Tile::RockDiamond)
+        matches!(self, Tile::Rock | Tile::RockEmerald | Tile::RockRuby | Tile::RockDiamond | Tile::Shrub)
     }
 }
 

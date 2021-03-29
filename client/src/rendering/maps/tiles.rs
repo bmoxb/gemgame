@@ -1,6 +1,9 @@
 use macroquad::prelude as quad;
 use shared::maps::Tile;
 
+const ANIMATION_FRAMES: u32 = 12;
+const ANIMATION_SPEED: f64 = 50.0;
+
 /// Draw the given tile at the specified coordinates.
 pub fn draw(tile: &Tile, draw_pos: quad::Vec2, draw_size: f32, texture_size: u16, texture: quad::Texture2D) {
     let rect = texture_rect(tile, texture_size);
@@ -27,7 +30,7 @@ pub fn draw_pending_tile(draw_pos: quad::Vec2, draw_size: f32) {
 
 /// Get the rectangle for the given tile within the context of the full tiles texture.
 fn texture_rect(tile: &Tile, texture_size: u16) -> quad::Rect {
-    let (relative_x, relative_y) = texture_pos_relative(tile);
+    let (relative_x, relative_y) = texture_pos_relative(tile, quad::get_time());
 
     quad::Rect {
         x: (relative_x * texture_size) as f32,
@@ -39,7 +42,9 @@ fn texture_rect(tile: &Tile, texture_size: u16) -> quad::Rect {
 
 /// Get the texture rectangle coordinates for the given tile relative to the size in pixels of each indivdual tile
 /// texture.
-fn texture_pos_relative(tile: &Tile) -> (u16, u16) {
+fn texture_pos_relative(tile: &Tile, time: f64) -> (u16, u16) {
+    let animation_frame = (time * ANIMATION_SPEED / ANIMATION_FRAMES as f64).floor() as u32 % ANIMATION_FRAMES;
+
     match tile {
         Tile::Grass => (0, 0),
         Tile::FlowerPatch => (0, 1),
@@ -61,7 +66,14 @@ fn texture_pos_relative(tile: &Tile) -> (u16, u16) {
         Tile::RockEmerald => (7, 0),
         Tile::RockRuby => (7, 1),
         Tile::RockDiamond => (7, 2),
-        Tile::RockSmashed => (6, 1)
+        Tile::RockSmashed => (6, 1),
+        Tile::Shrub => (4, 2),
+        Tile::YellowOrangeFlowers => match animation_frame {
+            1 => (1, 3),
+            2 => (2, 3),
+            3 => (3, 3),
+            _ => (0, 3)
+        }
     }
 }
 
