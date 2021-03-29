@@ -26,13 +26,16 @@ pub struct ServerMap {
     loaded_chunks: Chunks,
 
     /// Path to the directory containing map data.
-    pub directory: PathBuf,
+    directory: PathBuf,
 
     /// The generator to be used when new chunks must be made.
-    pub generator: Box<dyn Generator + Send>,
+    generator: Box<dyn Generator + Send>,
 
     /// Seed used by the generator.
     seed: u32,
+
+    /// Keeps track of how many remote clients have each chunk loaded.
+    chunk_usage: HashMap<ChunkCoords, usize>,
 
     /// Player-controlled entities mapped to entity IDs.
     player_entities: HashMap<Id, Entity>,
@@ -49,6 +52,7 @@ impl ServerMap {
             directory,
             generator,
             seed,
+            chunk_usage: HashMap::new(),
             player_entities: HashMap::new(),
             chunk_coords_to_player_ids: HashMap::new()
         }
@@ -191,6 +195,20 @@ impl ServerMap {
 
         entities
     }
+
+    pub fn chunk_in_use(&mut self, coords: ChunkCoords) {
+        *self.chunk_usage.entry(coords).or_default() += 1;
+    }
+
+    pub fn chunk_not_in_use(&mut self, coords: ChunkCoords) {
+        let entry = self.chunk_usage.entry(coords).or_default();
+        *entry -= 1;
+
+        // If no clients have the chunk loaded, then unloaded the chunk on the server:
+        if *entry == 0 {
+            self.remove_chunk(coords);
+        }
+    }
 }
 
 impl Map for ServerMap {
@@ -208,6 +226,8 @@ impl Map for ServerMap {
     }
 
     fn remove_chunk(&mut self, coords: ChunkCoords) -> Option<Chunk> {
+        log::debug!("Chunk at {} unloaded", coords);
+
         self.chunk_coords_to_player_ids.remove(&coords);
         self.loaded_chunks.remove(&coords)
     }
@@ -285,14 +305,12 @@ pub enum Modification {
         direction: Direction
     },
 
-    /// Indicates a new entity has been added to the map (in the case of a player entity, this means that a player just
-    /// connected).
+    /// Indicates a new entity has been added to the map (i.e. a player just connected).
     EntityAdded(Id),
 
-    /// Indicates that the entity with the specified ID has been removed from the map (in the case of a player entity,
-    /// this means that a player just disconnected). The coordinates of the chunk that the entity was positioned in are
-    /// included so that each task can decide whether to inform their client of the entity's removal based on their
-    /// loaded chunks.
+    /// Indicates that the entity with the specified ID has been removed from the map (i.e. a player just
+    /// disconnected). The coordinates of the chunk that the entity was positioned in are included so that each
+    /// task can decide whether to inform their client of the entity's removal based on their loaded chunks.
     EntityRemoved(Id, ChunkCoords)
 }
 

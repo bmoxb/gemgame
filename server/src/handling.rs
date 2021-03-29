@@ -1,4 +1,4 @@
-use std::{collections::HashSet, convert::Into, net::SocketAddr};
+use std::{convert::Into, net::SocketAddr};
 
 use shared::{
     maps::{ChunkCoords, Map},
@@ -14,6 +14,8 @@ use crate::{
     Shared
 };
 
+const MAX_LOADED_CHUNKS_PER_CLIENT: usize = 12;
+
 /// Creates a new `Handler` instance and then calls its `Handler::handle` method.
 pub async fn handle_connection(
     stream: TcpStream, address: SocketAddr, game_map: Shared<ServerMap>, db_pool: sqlx::Pool<sqlx::Any>,
@@ -26,7 +28,7 @@ pub async fn handle_connection(
         db_pool,
         map_changes_sender,
         map_changes_receiver,
-        remote_loaded_chunk_coords: HashSet::new()
+        remote_loaded_chunk_coords: Vec::new()
     };
 
     handler.handle(stream).await;
@@ -42,8 +44,8 @@ struct Handler {
     db_pool: sqlx::Pool<sqlx::Any>,
     map_changes_sender: broadcast::Sender<maps::Modification>,
     map_changes_receiver: broadcast::Receiver<maps::Modification>,
-    // Set used tos track of the coordinates of chunks that this handler believes its remote client has loaded.
-    remote_loaded_chunk_coords: HashSet<ChunkCoords>
+    // Set used to track of the coordinates of chunks that this handler's remote client has loaded.
+    remote_loaded_chunk_coords: Vec<ChunkCoords>
 }
 
 impl Handler {
@@ -161,6 +163,11 @@ impl Handler {
             // Begin main connection loop:
             let result = self.handle_established_connection(&mut ws, player_id).await;
 
+            // Ensure the game map knows that this client's loaded chunks are no longer needed by this task:
+            for coords in &self.remote_loaded_chunk_coords {
+                self.game_map.lock().chunk_not_in_use(*coords);
+            }
+
             // Remove this client's player entity from the game world and update database with changes to said entity:
             let entity_option = self.game_map.lock().remove_entity(player_id);
             if let Some(player_entity) = entity_option {
@@ -173,7 +180,6 @@ impl Handler {
                 let modification_msg =
                     maps::Modification::EntityRemoved(player_id, player_entity.pos.as_chunk_coords());
                 self.map_changes_sender.send(modification_msg).unwrap();
-                self.map_changes_receiver.recv().await.unwrap();
             }
 
             result
@@ -353,7 +359,21 @@ impl Handler {
     async fn provide_chunk_with_entities(&mut self, coords: ChunkCoords, player_id: Id) -> Vec<messages::FromServer> {
         let mut msgs = Vec::new();
 
-        if !self.remote_loaded_chunk_coords.contains(&coords) {
+        // Load new chunk & entities:
+
+        let search = self.remote_loaded_chunk_coords.iter().position(|x| coords == *x);
+
+        if let Some(index) = search {
+            // Remote client already has the chunk with those chunk coordinates loaded. Ensure those coordinates are
+            // positioned at the end of `remote_loaded_chunk_coords` so that those coordinates will not be unloaded yet:
+
+            self.remote_loaded_chunk_coords.remove(index);
+            self.remote_loaded_chunk_coords.push(coords);
+        }
+        else {
+            // The remote client does not already have the chunk loaded so prepare messages to provide the client with
+            // the chunks and any entities in that chunk:
+
             let chunk = maps::chunks::get_or_load_or_generate_chunk(&self.game_map, coords).await;
             msgs.push(messages::FromServer::ProvideChunk(coords, chunk));
 
@@ -365,7 +385,21 @@ impl Handler {
                 msgs.push(messages::FromServer::ProvideEntity(entity_id, entity));
             }
 
-            self.remote_loaded_chunk_coords.insert(coords);
+            self.remote_loaded_chunk_coords.push(coords);
+            self.game_map.lock().chunk_in_use(coords);
+        }
+
+        // If too many chunks now loaded, unload oldest chunk & entities:
+
+        if self.remote_loaded_chunk_coords.len() > MAX_LOADED_CHUNKS_PER_CLIENT {
+            let coords = self.remote_loaded_chunk_coords.remove(0);
+
+            for (entity_id, _) in self.game_map.lock().entities_in_chunk(coords).into_iter() {
+                msgs.push(messages::FromServer::ShouldUnloadEntity(entity_id));
+            }
+
+            msgs.push(messages::FromServer::ShouldUnloadChunk(coords));
+            self.game_map.lock().chunk_not_in_use(coords);
         }
 
         msgs
@@ -446,7 +480,7 @@ mod tests {
             ))),
             map_changes_sender,
             map_changes_receiver,
-            remote_loaded_chunk_coords: HashSet::new()
+            remote_loaded_chunk_coords: Vec::new()
         };
 
         handler
@@ -475,7 +509,7 @@ mod tests {
             let chunk = Chunk::new([Tile::Ground; CHUNK_TILE_COUNT]);
 
             self.game_map.lock().add_chunk(pos, chunk.clone());
-            self.remote_loaded_chunk_coords.insert(pos);
+            self.remote_loaded_chunk_coords.push(pos);
 
             chunk
         }
