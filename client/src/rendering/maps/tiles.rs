@@ -41,13 +41,12 @@ fn texture_rect(tile: &Tile, texture_size: u16) -> quad::Rect {
 /// texture.
 fn texture_pos_relative(tile: &Tile) -> (u16, u16) {
     match tile {
-        Tile::Ground => (0, 0)
+        Tile::Grass => (0, 0),
+        Tile::Rock => (4, 2)
     }
 }
 
 /// Get the colour/tint for the given tile.
-fn colour_tint(tile: &Tile) -> quad::Color {
-    match tile {
-        Tile::Ground => quad::WHITE
-    }
+fn colour_tint(_tile: &Tile) -> quad::Color {
+    quad::WHITE
 }

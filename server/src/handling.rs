@@ -462,7 +462,7 @@ mod tests {
     use parking_lot::Mutex;
     use shared::maps::{
         entities::{ClothingColour, Direction, Entity, FacialExpression, HairColour, HairStyle, SkinColour},
-        Chunk, ChunkCoords, Tile, TileCoords, CHUNK_TILE_COUNT, CHUNK_WIDTH
+        Chunk, ChunkCoords, OffsetCoords, Tile, TileCoords, CHUNK_TILE_COUNT, CHUNK_WIDTH
     };
 
     use super::*;
@@ -505,13 +505,13 @@ mod tests {
             entity_id
         }
 
-        fn add_test_chunk(&mut self, pos: ChunkCoords) -> Chunk {
-            let chunk = Chunk::new([Tile::Ground; CHUNK_TILE_COUNT]);
+        fn add_empty_chunk(&mut self, coords: ChunkCoords) {
+            self.add_chunk(coords, Chunk::new([Tile::default(); CHUNK_TILE_COUNT]));
+        }
 
-            self.game_map.lock().add_chunk(pos, chunk.clone());
-            self.remote_loaded_chunk_coords.push(pos);
-
-            chunk
+        fn add_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
+            self.game_map.lock().add_chunk(coords, chunk);
+            self.remote_loaded_chunk_coords.push(coords);
         }
     }
 
@@ -535,11 +535,10 @@ mod tests {
         let mut handler = make_test_handler().await;
         let mut other_map_changes_receiver = handler.map_changes_sender.subscribe();
 
-        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
+        handler.add_empty_chunk(ChunkCoords { x: 0, y: 0 });
         let player_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
 
         let msg = messages::ToServer::MoveMyEntity { request_number: 0, direction: Direction::Right };
-
         let responses = handler.handle_message(msg, player_id).await;
 
         // Ensure the response message is correct:
@@ -548,6 +547,9 @@ mod tests {
             responses[0],
             messages::FromServer::YourEntityMoved { request_number: 0, new_position: TileCoords { x: 6, y: 5 } }
         ));
+
+        // Ensure the entity's position was changed appropriately:
+        assert_eq!(handler.game_map.lock().entity_by_id(player_id).unwrap().pos, TileCoords { x: 6, y: 5 });
 
         // A message should not be broadcast to this task's map changes recevier:
         assert!(matches!(handler.map_changes_receiver.try_recv(), Err(broadcast::error::TryRecvError::Empty)));
@@ -567,10 +569,36 @@ mod tests {
     }
 
     /// Ensure that a 'move my entity' message that would fail due to a blocking tile or entity being in the way does
-    /// not modify the player entity's position, and does *not* send a message on the map modifications channel.
+    /// not modify the player entity's position, and does *not* send a message on the map modifications channel. Also
+    /// ensures that the client is sent a message informing them that their entity movement could not go ahead.
     #[tokio::test(flavor = "multi_thread")]
     async fn handle_move_my_entity_blocking() {
-        // TODO
+        let mut handler = make_test_handler().await;
+        let mut other_map_changes_receiver = handler.map_changes_sender.subscribe();
+
+        let mut chunk = Chunk::new([Tile::Grass; CHUNK_TILE_COUNT]);
+        chunk.set_tile_at_offset(OffsetCoords { x: 0, y: 1 }, Tile::Rock);
+
+        handler.add_chunk(ChunkCoords { x: 0, y: 0 }, chunk);
+
+        let player_starting_coords = TileCoords { x: 0, y: 0 };
+        let player_id = handler.add_test_entity(player_starting_coords);
+
+        let msg = messages::ToServer::MoveMyEntity { request_number: 0, direction: Direction::Down };
+        let responses = handler.handle_message(msg, player_id).await;
+
+        // Response message informing the entity that they could not perform such a movement should have been returned:
+        assert_eq!(responses.len(), 1);
+        assert!(matches!(
+            responses[0],
+            messages::FromServer::YourEntityMoved { request_number: 0, new_position } if new_position == player_starting_coords
+        ));
+
+        // Ensure player entity's position did not change:
+        assert_eq!(handler.game_map.lock().entity_by_id(player_id).unwrap().pos, player_starting_coords);
+
+        // No message should have been sent on the map changes channel:
+        assert!(matches!(other_map_changes_receiver.try_recv(), Err(broadcast::error::TryRecvError::Empty)));
     }
 
     /// Ensure that the appropriate map modification channel message is sent when some entity moves within this task's
@@ -579,7 +607,7 @@ mod tests {
     async fn handle_entity_moved_change_within_loaded_chunk() {
         let mut handler = make_test_handler().await;
 
-        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
+        handler.add_empty_chunk(ChunkCoords { x: 0, y: 0 });
         let entity_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
 
         let modification = maps::Modification::EntityMoved {
@@ -599,7 +627,7 @@ mod tests {
     async fn handle_entity_moved_change_into_loaded_chunk() {
         let mut handler = make_test_handler().await;
 
-        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
+        handler.add_empty_chunk(ChunkCoords { x: 0, y: 0 });
         let entity_id = handler.add_test_entity(TileCoords { x: CHUNK_WIDTH, y: 5 });
 
         let modification = maps::Modification::EntityMoved {
@@ -619,7 +647,7 @@ mod tests {
     async fn handle_entity_moved_change_leaving_loaded_chunk() {
         let mut handler = make_test_handler().await;
 
-        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
+        handler.add_empty_chunk(ChunkCoords { x: 0, y: 0 });
         let entity_id = handler.add_test_entity(TileCoords { x: 0, y: 5 });
 
         let modification = maps::Modification::EntityMoved {
@@ -655,7 +683,7 @@ mod tests {
     async fn handle_entity_added_change_within_loaded_chunks() {
         let mut handler = make_test_handler().await;
 
-        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
+        handler.add_empty_chunk(ChunkCoords { x: 0, y: 0 });
         let entity_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
 
         let modification = maps::Modification::EntityAdded(entity_id);
@@ -670,7 +698,7 @@ mod tests {
     async fn handle_entity_removed_change_within_loaded_chunks() {
         let mut handler = make_test_handler().await;
 
-        handler.add_test_chunk(ChunkCoords { x: 0, y: 0 });
+        handler.add_empty_chunk(ChunkCoords { x: 0, y: 0 });
         let entity_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
 
         let modification = maps::Modification::EntityRemoved(entity_id, ChunkCoords { x: 0, y: 0 });

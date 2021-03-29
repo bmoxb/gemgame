@@ -107,19 +107,21 @@ impl Chunk {
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum Tile {
-    Ground
+    Grass,
+    Rock
 }
 
 impl Tile {
     pub fn is_blocking(&self) -> bool {
         match self {
-            Tile::Ground => false
+            Tile::Grass => false,
+            Tile::Rock => true
         }
     }
 }
 
 impl Default for Tile {
     fn default() -> Self {
-        Tile::Ground
+        Tile::Grass
     }
 }
