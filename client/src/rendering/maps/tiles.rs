@@ -1,8 +1,8 @@
 use macroquad::prelude as quad;
 use shared::maps::Tile;
 
-const ANIMATION_FRAMES: u32 = 12;
-const ANIMATION_SPEED: f64 = 50.0;
+const ANIMATION_FRAMES: u32 = 8;
+const ANIMATION_SPEED: f64 = 100.0;
 
 /// Draw the given tile at the specified coordinates.
 pub fn draw(tile: &Tile, draw_pos: quad::Vec2, draw_size: f32, texture_size: u16, texture: quad::Texture2D) {
@@ -69,10 +69,16 @@ fn texture_pos_relative(tile: &Tile, time: f64) -> (u16, u16) {
         Tile::RockSmashed => (6, 1),
         Tile::Shrub => (4, 2),
         Tile::YellowOrangeFlowers => match animation_frame {
-            1 => (1, 3),
-            2 => (2, 3),
-            3 => (3, 3),
+            4 => (1, 3),
+            5 => (2, 3),
+            6 => (3, 3),
             _ => (0, 3)
+        },
+        Tile::Water => match animation_frame / 2 {
+            1 => (5, 3),
+            2 => (6, 3),
+            3 => (7, 3),
+            _ => (4, 3)
         }
     }
 }
