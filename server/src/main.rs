@@ -75,12 +75,6 @@ async fn main() {
     let listener = TcpListener::bind(&host_address).await.expect("Failed to create TCP/IP listener");
     log::info!("Created TCP/IP listener bound to address: {}", host_address);
 
-    // Load/create game map that is to be shared between threads:
-
-    let contained_map = ServerMap::try_load(options.map_directory.clone()).await;
-    let map: Shared<ServerMap> = Arc::new(Mutex::new(contained_map));
-    log::info!("Loaded/created game map from directory: {}", options.map_directory.display());
-
     // Connect to database:
 
     let db_pool_options = sqlx::postgres::PgPoolOptions::new().max_connections(options.max_database_connections);
@@ -92,10 +86,17 @@ async fn main() {
         options.max_database_connections
     );
 
-    db_query_from_file!("map_chunks/create table", &db_pool).await.unwrap();
+    db_query_from_file!("client_entities/create table", &db_pool).await.unwrap();
+    db_query_from_file!("map/create table", &db_pool).await.unwrap();
     db_query_from_file!("map_chunks/create table", &db_pool).await.unwrap();
 
     log::info!("Prepared necessary database tables");
+
+    // Load/create game map that is to be shared between threads:
+
+    let contained_map = ServerMap::load_or_new(&db_pool).await.unwrap();
+    let map: Shared<ServerMap> = Arc::new(Mutex::new(contained_map));
+    log::info!("Prepared game map");
 
     // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes made to
     // the game world:
@@ -132,7 +133,7 @@ async fn main() {
     log::info!("No longer listening for connections");
 
     let contained_map = Arc::try_unwrap(map).ok().unwrap().into_inner();
-    if let Err(e) = contained_map.save_all().await {
+    if let Err(e) = contained_map.save_loaded_chunks(&db_pool).await {
         log::error!("Failed to save game map before exiting due to error: {}", e);
     }
 }

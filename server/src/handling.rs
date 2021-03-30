@@ -374,7 +374,12 @@ impl Handler {
             // The remote client does not already have the chunk loaded so prepare messages to provide the client with
             // the chunks and any entities in that chunk:
 
-            let chunk = maps::chunks::get_or_load_or_generate_chunk(&self.game_map, coords).await;
+            let chunk = maps::chunks::get_or_load_or_generate_chunk(
+                &mut self.db_pool.acquire().await.unwrap(),
+                &self.game_map,
+                coords
+            )
+            .await;
             msgs.push(messages::FromServer::ProvideChunk(coords, chunk));
 
             // Get entities in the chunk but filter out this task's own player entity:
@@ -455,7 +460,6 @@ type Result<T> = std::result::Result<T, Error>;
 mod tests {
     use std::{
         net::{IpAddr, Ipv4Addr},
-        path::PathBuf,
         sync::Arc
     };
 
@@ -470,20 +474,14 @@ mod tests {
     async fn make_test_handler() -> Handler {
         let (map_changes_sender, map_changes_receiver) = broadcast::channel(5);
 
-        let handler = super::Handler {
+        super::Handler {
             address: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0),
             db_pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://").unwrap(),
-            game_map: Arc::new(Mutex::new(ServerMap::new(
-                PathBuf::from("/tmp"),
-                Box::new(maps::generators::DefaultGenerator),
-                0
-            ))),
+            game_map: Arc::new(Mutex::new(ServerMap::new_with_default_generator(0))),
             map_changes_sender,
             map_changes_receiver,
             remote_loaded_chunk_coords: Vec::new()
-        };
-
-        handler
+        }
     }
 
     impl Handler {

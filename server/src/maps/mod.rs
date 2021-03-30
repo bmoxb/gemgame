@@ -17,22 +17,19 @@ use shared::{
     },
     Id
 };
-use tokio::io::AsyncReadExt;
+use sqlx::Row;
 
-const CONFIG_FILE_NAME: &str = "map.json";
+use crate::db_query_from_file;
 
 pub struct ServerMap {
-    /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
-    loaded_chunks: Chunks,
+    /// Seed used by the generator.
+    seed: i32,
 
-    /// Path to the directory containing map data.
-    directory: PathBuf,
-
-    /// The generator to be used when new chunks must be made.
+    /// The generator to be used when new chunks are generated.
     generator: Box<dyn Generator + Send>,
 
-    /// Seed used by the generator.
-    seed: u32,
+    /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
+    loaded_chunks: Chunks,
 
     /// Keeps track of how many remote clients have each chunk loaded.
     chunk_usage: HashMap<ChunkCoords, usize>,
@@ -46,93 +43,50 @@ pub struct ServerMap {
 }
 
 impl ServerMap {
-    pub fn new(directory: PathBuf, generator: Box<dyn Generator + Send>, seed: u32) -> Self {
+    pub async fn load_or_new(db_pool: &sqlx::PgPool) -> sqlx::Result<Self> {
+        let existing_map_option = db_query_from_file!("map/select row")
+            .map(|row: sqlx::postgres::PgRow| ServerMap::new_with_default_generator(row.get("seed")))
+            .fetch_optional(db_pool)
+            .await?;
+
+        if let Some(existing_map) = existing_map_option {
+            log::debug!("Existing map loaded from database");
+
+            sqlx::Result::Ok(existing_map)
+        }
+        else {
+            let new_map = ServerMap::new_with_default_generator(0); // TODO: Random seed.
+
+            db_query_from_file!("map/create row").bind(new_map.seed).execute(db_pool).await.map(|_| {
+                log::debug!("Inserted newly generated map into database");
+
+                new_map
+            })
+        }
+    }
+
+    pub fn new(seed: i32, generator: Box<dyn Generator + Send>) -> Self {
         ServerMap {
-            loaded_chunks: HashMap::new(),
-            directory,
-            generator,
             seed,
+            generator,
+            loaded_chunks: HashMap::new(),
             chunk_usage: HashMap::new(),
             player_entities: HashMap::new(),
             chunk_coords_to_player_ids: HashMap::new()
         }
     }
 
-    /// Attempt to load a map from the specified directory. If unsuccessful, create a new map with appropriate defaults
-    /// set.
-    pub async fn try_load(directory: PathBuf) -> Self {
-        // TODO: Use timestamp as seed.
-        ServerMap::load(directory.clone()).await.unwrap_or_else(|e| {
-            log::debug!("Could not load existing map from directory '{}' due to error: {}", directory.display(), e);
-            ServerMap::new(directory, Box::new(generators::DefaultGenerator), 0)
-        })
+    pub fn new_with_default_generator(seed: i32) -> Self {
+        ServerMap::new(seed, Box::new(generators::DefaultGenerator))
     }
 
-    /// Load an existing map from the specified directory.
-    pub async fn load(directory: PathBuf) -> Result<Self> {
-        let config_file_path = directory.join(CONFIG_FILE_NAME);
-
-        log::debug!("Attempting to load map configuration file: {}", config_file_path.display());
-
-        if let Ok(mut file) = tokio::fs::File::open(&config_file_path).await {
-            let mut buffer = Vec::new();
-
-            match file.read_to_end(&mut buffer).await {
-                Ok(_) => match serde_json::from_slice::<MapConfig>(buffer.as_slice()) {
-                    Ok(config) => {
-                        log::trace!("Map configuration struct: {:?}", config);
-
-                        if let Some(generator) = generators::by_name(&config.generator_name, config.seed) {
-                            log::debug!("Loaded map configuration from file: {}", config_file_path.display());
-
-                            Ok(ServerMap::new(directory, generator, config.seed))
-                        }
-                        else {
-                            log::warn!(
-                                "Generator specified in map configuration file '{}' does not exist: {}",
-                                config_file_path.display(),
-                                config.generator_name
-                            );
-                            Err(Error::InvalidGenerator(config.generator_name))
-                        }
-                    }
-
-                    Err(json_error) => {
-                        log::warn!(
-                            "Failed decode JSON map configuration from file '{}' - {}",
-                            config_file_path.display(),
-                            json_error
-                        );
-                        Err(Error::EncodingFailure(Box::new(json_error)))
-                    }
-                },
-
-                Err(io_error) => {
-                    log::warn!(
-                        "Failed to read map configuration from file '{}' - {}",
-                        config_file_path.display(),
-                        io_error
-                    );
-                    Err(Error::AccessFailure(io_error))
-                }
-            }
-        }
-        else {
-            Err(Error::DoesNotExist(config_file_path))
-        }
-    }
-
-    pub async fn save_all(&self) -> Result<()> {
-        tokio::fs::create_dir_all(&self.directory).await?;
-        // TODO: Save map config as well.
-        self.save_loaded_chunks().await
-    }
-
-    async fn save_loaded_chunks(&self) -> Result<()> {
+    pub async fn save_loaded_chunks(&self, db_pool: &sqlx::PgPool) -> Result<()> {
         let mut success = Ok(());
 
+        let mut db = db_pool.acquire().await.unwrap();
+
         for (coords, chunk) in &self.loaded_chunks {
-            success = success.and(chunks::save_chunk(&self.directory, *coords, chunk).await);
+            success = success.and(chunks::save_chunk(&mut db, *coords, chunk).await);
         }
 
         success
@@ -196,10 +150,12 @@ impl ServerMap {
         entities
     }
 
+    /// To be called by a client task whenever their remote client is provided with a certain chunk.
     pub fn chunk_in_use(&mut self, coords: ChunkCoords) {
         *self.chunk_usage.entry(coords).or_default() += 1;
     }
 
+    /// To be called by a client task whenever their remote client is told to unload a certain chunk.
     pub fn chunk_not_in_use(&mut self, coords: ChunkCoords) {
         let entry = self.chunk_usage.entry(coords).or_default();
         *entry -= 1;

@@ -45,23 +45,22 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
     let res = db_query_from_file!("client_entities/select row")
         .bind(client_id.encode())
         .map(|row: sqlx::postgres::PgRow| {
-            sqlx::Result::Ok((
-                Id::decode(row.try_get("entity_id")?).unwrap(), // TODO: Don't just unwrap.
+            (
+                Id::decode(row.get("entity_id")).unwrap(),
                 Entity {
-                    pos: TileCoords { x: row.try_get("tile_x")?, y: row.try_get("tile_y")? },
+                    pos: TileCoords { x: row.get("tile_x"), y: row.get("tile_y") },
                     direction: Direction::Down,
                     facial_expression: FacialExpression::Neutral,
-                    hair_style: decode_variant(row.try_get("hair_style")?),
-                    clothing_colour: decode_variant(row.try_get("clothing_colour")?),
-                    skin_colour: decode_variant(row.try_get("skin_colour")?),
-                    hair_colour: decode_variant(row.try_get("hair_colour")?),
-                    has_running_shoes: row.try_get("has_running_shoes")?
+                    hair_style: decode_variant(row.get("hair_style")),
+                    clothing_colour: decode_variant(row.get("clothing_colour")),
+                    skin_colour: decode_variant(row.get("skin_colour")),
+                    hair_colour: decode_variant(row.get("hair_colour")),
+                    has_running_shoes: row.get("has_running_shoes")
                 }
-            ))
+            )
         })
         .fetch_optional(db)
-        .await?
-        .transpose();
+        .await;
 
     res
 }
