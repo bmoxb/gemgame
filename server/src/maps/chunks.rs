@@ -1,10 +1,7 @@
-use std::path::{Path, PathBuf};
-
 use shared::maps::{Chunk, ChunkCoords, Map};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use sqlx::Row;
 
-use super::{Error, Result};
-use crate::Shared;
+use crate::{db_query_from_file, Shared};
 
 /// This function will try the following steps until one succeeds:
 /// * Fetch the chunk at the specified coordinates from the given map object's loaded chunks.
@@ -15,7 +12,7 @@ use crate::Shared;
 /// This function is not a method of `super::ServerMap` so that the mutex that that object is contained in is locked for
 /// only shortest required period of time.
 pub async fn get_or_load_or_generate_chunk(
-    db: &mut sqlx::pool::PoolConnection<sqlx::Postgres>, map: &Shared<super::ServerMap>, coords: ChunkCoords
+    db: sqlx::pool::PoolConnection<sqlx::Postgres>, map: &Shared<super::ServerMap>, coords: ChunkCoords
 ) -> Chunk {
     let loaded_chunk_option = map.lock().loaded_chunk_at(coords).cloned();
 
@@ -25,14 +22,14 @@ pub async fn get_or_load_or_generate_chunk(
         loaded_chunk
     }
     else {
-        // Chunk is not already in memory so needs to either be read from disk or newly generated before being loaded
-        // into the map.
+        // Chunk is not already in memory so needs to either be fetched from the database or newly generated before
+        // being loaded into the map.
 
         let new_chunk = load_chunk(db, coords).await.unwrap_or_else(|_| {
             let generator = &map.lock().generator;
 
             log::debug!(
-                "Chunk at {} could not be found on disk so will be newly generated using generator '{}'",
+                "Chunk at {} could not be found in the database so will be newly generated using generator '{}'",
                 coords,
                 generator.name()
             );
@@ -48,15 +45,36 @@ pub async fn get_or_load_or_generate_chunk(
 }
 
 /// Attempt to asynchronously read data from the file system for the chunk at the specified coordinates.
-pub async fn load_chunk(db: &mut sqlx::pool::PoolConnection<sqlx::Postgres>, coords: ChunkCoords) -> Result<Chunk> {
+pub async fn load_chunk(mut db: sqlx::pool::PoolConnection<sqlx::Postgres>, coords: ChunkCoords) -> Result<Chunk> {
     log::trace!("Attempting to load chunk at {} from database", coords);
-    unimplemented!() // TODO
+
+    db_query_from_file!("map_chunks/select row")
+        .bind(coords.x)
+        .bind(coords.y)
+        .map(|row| {
+            let data: &[u8] = row.get("data");
+            Ok(bincode::deserialize(data)?)
+        })
+        .fetch_one(&mut db)
+        .await?
 }
 
 /// Attempt to asynchronously write the data comprising the provided chunk to the file system.
 pub async fn save_chunk(
-    db: &mut sqlx::pool::PoolConnection<sqlx::Postgres>, coords: ChunkCoords, chunk: &Chunk
+    mut _db: sqlx::pool::PoolConnection<sqlx::Postgres>, coords: ChunkCoords, _chunk: &Chunk
 ) -> Result<()> {
     log::trace!("Attempting to save chunk at {} to database", coords);
-    unimplemented!() // TODO
+
+    unimplemented!()
+    //db_query_from_file!("map_chunks/update row")
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Failed to access database")]
+    DatabaseError(#[from] sqlx::Error),
+    #[error("Failed to (de)serialise chunk data with Bincode")]
+    BincodeError(#[from] bincode::Error)
+}
+
+pub type Result<T> = std::result::Result<T, Error>;

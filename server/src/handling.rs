@@ -62,7 +62,7 @@ impl Handler {
                 match self.handle_websocket_connection(ws).await {
                     Ok(_) => {}
 
-                    Err(Error::NetworkError(e)) => match e {
+                    Err(Error::Network(e)) => match e {
                         networking::Error::MessageNotBinary(msg) => {
                             self.log_error(&format!("Message is not binary: {}", msg));
                         }
@@ -82,8 +82,8 @@ impl Handler {
                         }
                     },
 
-                    Err(Error::DatabaseError(db_err)) => {
-                        self.log_error(&format!("Encountered database error: {}", db_err));
+                    Err(other_error) => {
+                        self.log_error(&other_error.to_string());
                     }
                 }
 
@@ -104,7 +104,7 @@ impl Handler {
 
         if let Some(messages::ToServer::Hello { client_id_option }) = ws.receive().await? {
             let (client_id, player_id, player_entity) = {
-                let mut db = self.db_pool.acquire().await.unwrap();
+                let mut db = self.db_pool.acquire().await?;
 
                 if let Some(client_id) = client_id_option {
                     self.log(&format!("Existing client ID provided: {}", client_id));
@@ -147,7 +147,7 @@ impl Handler {
 
             let chunks_and_entities = self
                 .provide_chunks_at_and_surrounding_with_entities(player_entity.pos.as_chunk_coords(), player_id)
-                .await;
+                .await?;
 
             for msg in chunks_and_entities {
                 ws.send(&msg).await?;
@@ -165,14 +165,14 @@ impl Handler {
 
             // Ensure the game map knows that this client's loaded chunks are no longer needed by this task:
             for coords in &self.remote_loaded_chunk_coords {
-                self.game_map.lock().chunk_not_in_use(*coords);
+                self.chunk_not_needed(*coords).await?;
             }
 
             // Remove this client's player entity from the game world and update database with changes to said entity:
             let entity_option = self.game_map.lock().remove_entity(player_id);
             if let Some(player_entity) = entity_option {
                 {
-                    let mut db = self.db_pool.acquire().await.unwrap();
+                    let mut db = self.db_pool.acquire().await?;
                     entities::update_database_for_player(&player_entity, client_id, &mut db).await?;
                 }
 
@@ -203,7 +203,7 @@ impl Handler {
 
                         // Handle and respond to received message:
 
-                        let responses = self.handle_message(msg, player_id).await;
+                        let responses = self.handle_message(msg, player_id).await?;
 
                         for response in responses {
                             self.log(&format!("Response message: {}", response));
@@ -248,11 +248,11 @@ impl Handler {
     }
 
     /// Produces message(s) that are to be sent to the client in the response to the message they sent to the server.
-    async fn handle_message(&mut self, msg: messages::ToServer, player_id: Id) -> Vec<messages::FromServer> {
+    async fn handle_message(&mut self, msg: messages::ToServer, player_id: Id) -> Result<Vec<messages::FromServer>> {
         match msg {
             messages::ToServer::Hello { .. } => {
                 self.log_warn(&format!("Received unexpected 'hello' message: {}", msg));
-                vec![]
+                Ok(vec![])
             }
 
             messages::ToServer::MoveMyEntity { request_number, direction } => {
@@ -268,7 +268,7 @@ impl Handler {
                     if old_position.as_chunk_coords() != new_position.as_chunk_coords() {
                         let msgs = self
                             .provide_chunks_at_and_surrounding_with_entities(new_position.as_chunk_coords(), player_id)
-                            .await;
+                            .await?;
 
                         responses.extend(msgs);
                     }
@@ -289,7 +289,7 @@ impl Handler {
                     // the remote client:
 
                     let new_position = self.game_map.lock().entity_by_id(player_id).unwrap().pos;
-                    vec![messages::FromServer::YourEntityMoved { request_number, new_position }]
+                    Ok(vec![messages::FromServer::YourEntityMoved { request_number, new_position }])
                 }
                 else {
                     // The `responses` vector will be populated only if the movement could go ahead. If it did then a
@@ -297,7 +297,7 @@ impl Handler {
                     // however relevant to the task that sent it so immediately receive and discard:
                     self.map_changes_receiver.recv().await.unwrap();
 
-                    responses
+                    Ok(responses)
                 }
             }
         }
@@ -356,7 +356,9 @@ impl Handler {
     /// Messages will then be created to provide the remote client with the chunk as well as any entities in said chunk.
     /// This method will add the given chunk coordinates to the set of remote loaded chunk coordinates however it is
     /// the responsiblity of the caller to actually send the messages returned over the network.
-    async fn provide_chunk_with_entities(&mut self, coords: ChunkCoords, player_id: Id) -> Vec<messages::FromServer> {
+    async fn provide_chunk_with_entities(
+        &mut self, coords: ChunkCoords, player_id: Id
+    ) -> Result<Vec<messages::FromServer>> {
         let mut msgs = Vec::new();
 
         // Load new chunk & entities:
@@ -374,12 +376,9 @@ impl Handler {
             // The remote client does not already have the chunk loaded so prepare messages to provide the client with
             // the chunks and any entities in that chunk:
 
-            let chunk = maps::chunks::get_or_load_or_generate_chunk(
-                &mut self.db_pool.acquire().await.unwrap(),
-                &self.game_map,
-                coords
-            )
-            .await;
+            let chunk =
+                maps::chunks::get_or_load_or_generate_chunk(self.db_pool.acquire().await?, &self.game_map, coords)
+                    .await;
             msgs.push(messages::FromServer::ProvideChunk(coords, chunk));
 
             // Get entities in the chunk but filter out this task's own player entity:
@@ -404,17 +403,17 @@ impl Handler {
             }
 
             msgs.push(messages::FromServer::ShouldUnloadChunk(coords));
-            self.game_map.lock().chunk_not_in_use(coords);
+            self.chunk_not_needed(coords).await?;
         }
 
-        msgs
+        Ok(msgs)
     }
 
     /// Call `Self::provide_chunk_with_entities` for the specified chunk coordinates as well as the 9 surrounding set
     /// of coordinates.
     async fn provide_chunks_at_and_surrounding_with_entities(
         &mut self, coords: ChunkCoords, player_id: Id
-    ) -> Vec<messages::FromServer> {
+    ) -> Result<Vec<messages::FromServer>> {
         let mut msgs = Vec::new();
 
         for x_offset in -1..2 {
@@ -424,13 +423,26 @@ impl Handler {
                         ChunkCoords { x: coords.x + x_offset, y: coords.y + y_offset },
                         player_id
                     )
-                    .await;
+                    .await?;
 
                 msgs.extend(msg);
             }
         }
 
-        msgs
+        Ok(msgs)
+    }
+
+    /// Informs the game map that the chunk at the specified chunk coordinates is no longer loaded by this task's
+    /// remote client. If it is found that the chunk is at that point not loaded by any clients, then it is saved to
+    /// the database and removed from the server's loaded chunks collection.
+    async fn chunk_not_needed(&self, coords: ChunkCoords) -> maps::chunks::Result<()> {
+        let unloaded_chunk_option = self.game_map.lock().chunk_not_in_use(coords);
+
+        if let Some(unloaded_chunk) = unloaded_chunk_option {
+            maps::chunks::save_chunk(self.db_pool.acquire().await?, coords, &unloaded_chunk).await?;
+        }
+
+        Ok(())
     }
 
     fn log(&self, msg: &str) {
@@ -449,9 +461,11 @@ impl Handler {
 #[derive(Error, Debug)]
 enum Error {
     #[error("Networking error")]
-    NetworkError(#[from] networking::Error),
+    Network(#[from] networking::Error),
     #[error("Database error")]
-    DatabaseError(#[from] sqlx::Error)
+    Database(#[from] sqlx::Error),
+    #[error("Chunk access error")]
+    Chunk(#[from] maps::chunks::Error)
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -522,7 +536,7 @@ mod tests {
         let id = crate::id::generate_random();
         let msg = messages::ToServer::Hello { client_id_option: None };
 
-        assert!(handler.handle_message(msg, id).await.is_empty());
+        assert!(handler.handle_message(msg, id).await.unwrap().is_empty());
     }
 
     /// Ensure that a 'move my entity' message causes the entity's position on the game map to be appropriately
@@ -537,7 +551,7 @@ mod tests {
         let player_id = handler.add_test_entity(TileCoords { x: 5, y: 5 });
 
         let msg = messages::ToServer::MoveMyEntity { request_number: 0, direction: Direction::Right };
-        let responses = handler.handle_message(msg, player_id).await;
+        let responses = handler.handle_message(msg, player_id).await.unwrap();
 
         // Ensure the response message is correct:
         assert_eq!(responses.len(), 1);
@@ -583,7 +597,7 @@ mod tests {
         let player_id = handler.add_test_entity(player_starting_coords);
 
         let msg = messages::ToServer::MoveMyEntity { request_number: 0, direction: Direction::Down };
-        let responses = handler.handle_message(msg, player_id).await;
+        let responses = handler.handle_message(msg, player_id).await.unwrap();
 
         // Response message informing the entity that they could not perform such a movement should have been returned:
         assert_eq!(responses.len(), 1);

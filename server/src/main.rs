@@ -131,11 +131,6 @@ async fn main() {
     }
 
     log::info!("No longer listening for connections");
-
-    let contained_map = Arc::try_unwrap(map).ok().unwrap().into_inner();
-    if let Err(e) = contained_map.save_loaded_chunks(&db_pool).await {
-        log::error!("Failed to save game map before exiting due to error: {}", e);
-    }
 }
 
 type Shared<T> = Arc<Mutex<T>>;

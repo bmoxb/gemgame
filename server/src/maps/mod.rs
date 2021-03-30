@@ -4,8 +4,7 @@ pub mod generators;
 
 use std::{
     collections::{HashMap, HashSet},
-    fmt, io,
-    path::PathBuf
+    fmt
 };
 
 use generators::Generator;
@@ -80,18 +79,6 @@ impl ServerMap {
         ServerMap::new(seed, Box::new(generators::DefaultGenerator))
     }
 
-    pub async fn save_loaded_chunks(&self, db_pool: &sqlx::PgPool) -> Result<()> {
-        let mut success = Ok(());
-
-        let mut db = db_pool.acquire().await.unwrap();
-
-        for (coords, chunk) in &self.loaded_chunks {
-            success = success.and(chunks::save_chunk(&mut db, *coords, chunk).await);
-        }
-
-        success
-    }
-
     /// Move an entity in a specified direction. This method checks if the desintation position is already occupied or
     /// a blocking tile - if it is then `None` is returned (`None` is also returned should an entity with the specified
     /// ID not be found). If the movement is deemed okay to go ahead, the entity's old position and new position (i.e.
@@ -155,14 +142,19 @@ impl ServerMap {
         *self.chunk_usage.entry(coords).or_default() += 1;
     }
 
-    /// To be called by a client task whenever their remote client is told to unload a certain chunk.
-    pub fn chunk_not_in_use(&mut self, coords: ChunkCoords) {
+    /// To be called by a client task whenever their remote client is told to unload a certain chunk. Will remove the
+    /// chunk from this map's collection of loaded chunks & return it if it has been determined that no remote clients
+    /// have that chunk loaded.
+    pub fn chunk_not_in_use(&mut self, coords: ChunkCoords) -> Option<Chunk> {
         let entry = self.chunk_usage.entry(coords).or_default();
         *entry -= 1;
 
-        // If no clients have the chunk loaded, then unloaded the chunk on the server:
+        // If no clients have the chunk loaded, then save to database & unloaded the chunk:
         if *entry == 0 {
-            self.remove_chunk(coords);
+            self.remove_chunk(coords)
+        }
+        else {
+            None
         }
     }
 }
@@ -290,17 +282,3 @@ impl fmt::Display for Modification {
         }
     }
 }
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("file/directory '{0}' does not exist")]
-    DoesNotExist(PathBuf),
-    #[error("failed to access file/directory due to IO error - {0}")]
-    AccessFailure(#[from] io::Error),
-    #[error("failed due to bincode (de)serialisation error - {0}")]
-    EncodingFailure(Box<dyn std::error::Error>),
-    #[error("generator string '{0}' is invalid")]
-    InvalidGenerator(String)
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
