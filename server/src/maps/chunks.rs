@@ -1,3 +1,5 @@
+use std::convert;
+
 use shared::maps::{Chunk, ChunkCoords, Map};
 use sqlx::Row;
 
@@ -29,7 +31,7 @@ pub async fn get_or_load_or_generate_chunk(
             let generator = &map.lock().generator;
 
             log::debug!(
-                "Chunk at {} could not be found in the database so will be newly generated using generator '{}'",
+                "Chunk at {} could not be loaded from the database so will be newly generated using generator '{}'",
                 coords,
                 generator.name()
             );
@@ -48,7 +50,7 @@ pub async fn get_or_load_or_generate_chunk(
 pub async fn load_chunk(mut db: sqlx::pool::PoolConnection<sqlx::Postgres>, coords: ChunkCoords) -> Result<Chunk> {
     log::trace!("Attempting to load chunk at {} from database", coords);
 
-    db_query_from_file!("map_chunks/select row")
+    let res = db_query_from_file!("map_chunks/select row")
         .bind(coords.x)
         .bind(coords.y)
         .map(|row| {
@@ -56,17 +58,29 @@ pub async fn load_chunk(mut db: sqlx::pool::PoolConnection<sqlx::Postgres>, coor
             Ok(bincode::deserialize(data)?)
         })
         .fetch_one(&mut db)
-        .await?
+        .await?;
+
+    log::debug!("Successfully loaded chunk at {} from database", coords);
+
+    res
 }
 
 /// Attempt to asynchronously write the data comprising the provided chunk to the file system.
 pub async fn save_chunk(
-    mut _db: sqlx::pool::PoolConnection<sqlx::Postgres>, coords: ChunkCoords, _chunk: &Chunk
+    mut db: sqlx::pool::PoolConnection<sqlx::Postgres>, coords: ChunkCoords, chunk: &Chunk
 ) -> Result<()> {
     log::trace!("Attempting to save chunk at {} to database", coords);
 
-    unimplemented!()
-    //db_query_from_file!("map_chunks/update row")
+    db_query_from_file!("map_chunks/replace row")
+        .bind(coords.x)
+        .bind(coords.y)
+        .bind(bincode::serialize(chunk)?)
+        .execute(&mut db)
+        .await
+        .map(|_| {
+            log::debug!("Successfully wrote chunk at {} to database", coords);
+        })
+        .map_err(convert::Into::into) // Map error type.
 }
 
 #[derive(Debug, thiserror::Error)]
