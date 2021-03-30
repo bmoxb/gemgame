@@ -10,10 +10,21 @@ use parking_lot::Mutex;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
 
+/// Create an [`sqlx::Query`] instance using the SQL query in the specified file with the `.sql` extension
+/// (`server/db/` directory). In a database argument is provided then a query execution future is created.
+#[macro_export]
+macro_rules! db_query_from_file {
+    ($file:expr) => {
+        sqlx::query(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/db/", $file, ".sql")))
+    };
+    ($file:expr, $db:expr) => {
+        db_query_from_file!($file).execute($db)
+    };
+}
+
 #[tokio::main]
 async fn main() {
     // Command-line arguments:
-
     let options = Options::from_args();
 
     // Logger initialisation:
@@ -81,25 +92,13 @@ async fn main() {
         options.max_database_connections
     );
 
-    let create_table_query = sqlx::query(
-        "CREATE TABLE IF NOT EXISTS client_entities (
-            client_id TEXT PRIMARY KEY,
-            entity_id TEXT NOT NULL UNIQUE,
-            tile_x INTEGER NOT NULL,
-            tile_y INTEGER NOT NULL,
-            hair_style SMALLINT NOT NULL,
-            clothing_colour SMALLINT NOT NULL,
-            skin_colour SMALLINT NOT NULL,
-            hair_colour SMALLINT NOT NULL,
-            has_running_shoes BOOLEAN NOT NULL
-        )"
-    );
-    create_table_query.execute(&db_pool).await.expect("Failed to create required table in database");
+    db_query_from_file!("map_chunks/create table", &db_pool).await.unwrap();
+    db_query_from_file!("map_chunks/create table", &db_pool).await.unwrap();
 
-    log::info!("Prepared necessary database table");
+    log::info!("Prepared necessary database tables");
 
-    // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes
-    // made to the game world:
+    // Create multi-producer, multi-consumer channel so that each task may notify every other task of changes made to
+    // the game world:
 
     let (map_changes_sender, mut map_changes_receiver) = broadcast::channel(5);
 

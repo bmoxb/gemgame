@@ -9,6 +9,8 @@ use shared::{
 use sqlx::Row;
 use strum::IntoEnumIterator;
 
+use crate::db_query_from_file;
+
 pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) -> sqlx::Result<(Id, Entity)> {
     let entity_id = crate::id::generate_with_timestamp();
 
@@ -23,30 +25,24 @@ pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) 
         has_running_shoes: false
     };
 
-    sqlx::query(
-        "INSERT INTO client_entities (
-            client_id, entity_id, tile_x, tile_y, hair_style, clothing_colour, skin_colour, hair_colour,
-            has_running_shoes
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);"
-    )
-    .bind(client_id.encode())
-    .bind(entity_id.encode())
-    .bind(entity.pos.x)
-    .bind(entity.pos.y)
-    .bind(encode_variant(entity.hair_style))
-    .bind(encode_variant(entity.clothing_colour))
-    .bind(encode_variant(entity.skin_colour))
-    .bind(encode_variant(entity.hair_colour))
-    .bind(entity.has_running_shoes)
-    .execute(db)
-    .await?;
+    db_query_from_file!("client_entities/new row")
+        .bind(client_id.encode())
+        .bind(entity_id.encode())
+        .bind(entity.pos.x)
+        .bind(entity.pos.y)
+        .bind(encode_variant(entity.hair_style))
+        .bind(encode_variant(entity.clothing_colour))
+        .bind(encode_variant(entity.skin_colour))
+        .bind(encode_variant(entity.hair_colour))
+        .bind(entity.has_running_shoes)
+        .execute(db)
+        .await?;
 
     Ok((entity_id, entity))
 }
 
 pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) -> sqlx::Result<Option<(Id, Entity)>> {
-    let res = sqlx::query("SELECT * FROM client_entities WHERE client_id = $1")
+    let res = db_query_from_file!("client_entities/select")
         .bind(client_id.encode())
         .map(|row: sqlx::postgres::PgRow| {
             sqlx::Result::Ok((
@@ -73,32 +69,27 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
 pub async fn update_database_for_player(
     entity: &Entity, client_id: Id, db: &mut sqlx::PgConnection
 ) -> sqlx::Result<()> {
-    sqlx::query(
-        "UPDATE client_entities
-        SET tile_x = $1, tile_y = $2, hair_style = $3, clothing_colour = $4, skin_colour = $5, hair_colour = $6,
-            has_running_shoes = $7
-        WHERE client_id = $8"
-    )
-    .bind(entity.pos.x)
-    .bind(entity.pos.y)
-    .bind(encode_variant(entity.hair_style))
-    .bind(encode_variant(entity.clothing_colour))
-    .bind(encode_variant(entity.skin_colour))
-    .bind(encode_variant(entity.hair_colour))
-    .bind(entity.has_running_shoes)
-    .bind(client_id.encode())
-    .execute(db)
-    .await
-    .map(|result| {
-        let rows_changed = result.rows_affected();
-        if rows_changed != 1 {
-            log::warn!(
-                "Modified {} rows when update player entity data for client with ID {}",
-                rows_changed,
-                client_id
-            );
-        }
-    })
+    db_query_from_file!("client_entities/update")
+        .bind(entity.pos.x)
+        .bind(entity.pos.y)
+        .bind(encode_variant(entity.hair_style))
+        .bind(encode_variant(entity.clothing_colour))
+        .bind(encode_variant(entity.skin_colour))
+        .bind(encode_variant(entity.hair_colour))
+        .bind(entity.has_running_shoes)
+        .bind(client_id.encode())
+        .execute(db)
+        .await
+        .map(|result| {
+            let rows_changed = result.rows_affected();
+            if rows_changed != 1 {
+                log::warn!(
+                    "Modified {} rows when update player entity data for client with ID {}",
+                    rows_changed,
+                    client_id
+                );
+            }
+        })
 }
 
 /// Encode an enum variant as a 16-bit integer.
