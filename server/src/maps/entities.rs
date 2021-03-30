@@ -25,7 +25,7 @@ pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) 
         has_running_shoes: false
     };
 
-    db_query_from_file!("client_entities/new row")
+    db_query_from_file!("client_entities/create row")
         .bind(client_id.encode())
         .bind(entity_id.encode())
         .bind(entity.pos.x)
@@ -42,7 +42,7 @@ pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) 
 }
 
 pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) -> sqlx::Result<Option<(Id, Entity)>> {
-    let res = db_query_from_file!("client_entities/select")
+    let res = db_query_from_file!("client_entities/select row")
         .bind(client_id.encode())
         .map(|row: sqlx::postgres::PgRow| {
             sqlx::Result::Ok((
@@ -69,7 +69,7 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
 pub async fn update_database_for_player(
     entity: &Entity, client_id: Id, db: &mut sqlx::PgConnection
 ) -> sqlx::Result<()> {
-    db_query_from_file!("client_entities/update")
+    db_query_from_file!("client_entities/update row")
         .bind(entity.pos.x)
         .bind(entity.pos.y)
         .bind(encode_variant(entity.hair_style))
