@@ -8,7 +8,6 @@ use std::{
 };
 
 use generators::Generator;
-use serde::{Deserialize, Serialize};
 use shared::{
     maps::{
         entities::{Direction, Entity},
@@ -230,17 +229,11 @@ impl Map for ServerMap {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct MapConfig {
-    #[serde(rename = "generator")]
-    generator_name: String,
-    seed: u32
-}
-
 /// Represents a change made to the game map (tiles and entities). This enum is used by client tasks to inform other
 /// tasks of changes made to the game map.
-#[derive(Debug, Serialize, Deserialize, Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum Modification {
+    #[allow(dead_code)]
     TileChanged(TileCoords, Tile),
 
     EntityMoved {
