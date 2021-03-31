@@ -135,8 +135,14 @@ pub enum Tile {
 }
 
 impl Tile {
+    /// Returns `true` should entities be unable to walk over this tile.
     pub fn is_blocking(&self) -> bool {
-        matches!(self, Tile::Rock | Tile::RockEmerald | Tile::RockRuby | Tile::RockDiamond | Tile::Shrub)
+        matches!(self, Tile::Shrub)
+    }
+
+    /// Returns `true` for a tile that should become [`Tile::RockSmashed`] when an entity walks over it.
+    pub fn is_smashable(&self) -> bool {
+        matches!(self, Tile::Rock | Tile::RockEmerald | Tile::RockRuby | Tile::RockDiamond)
     }
 }
 
