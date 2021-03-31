@@ -59,31 +59,19 @@ impl Handler {
 
                 // Handle the connection should the handshake complete successfully:
 
-                match self.handle_websocket_connection(ws).await {
-                    Ok(_) => {}
-
-                    Err(Error::Network(e)) => match e {
-                        networking::Error::MessageNotBinary(msg) => {
-                            self.log_error(&format!("Message is not binary: {}", msg));
-                        }
-
-                        networking::Error::EncodingFailure(bincode_err) => {
-                            self.log_error(&format!("Failed to communicate due to encoding error: {}", bincode_err));
-                        }
-
-                        networking::Error::NetworkError(network_err) => match network_err {
-                            tungstenite::Error::Protocol(vioation) if vioation.contains("closing handshake") => {
-                                self.log("Connection closed without performing the closing handshake");
-                            }
-
-                            other => {
-                                self.log_error(&format!("Failed to communicate due to network error: {}", other));
-                            }
-                        }
-                    },
-
-                    Err(other_error) => {
-                        self.log_error(&other_error.to_string());
+                if let Err(err) = self.handle_websocket_connection(ws).await {
+                    // Display a debug log message if connection is closed without performing the closing handshake. Log
+                    // any other error messages at full error log level:
+                    if matches!(
+                        err,
+                        Error::Network(networking::Error::TungsteniteError(tungstenite::Error::Protocol(
+                            tungstenite::error::ProtocolError::ResetWithoutClosingHandshake
+                        )))
+                    ) {
+                        self.log("Connection closed without performing the closing handshake");
+                    }
+                    else {
+                        self.log_error(&err.to_string());
                     }
                 }
 
@@ -460,11 +448,11 @@ impl Handler {
 
 #[derive(Error, Debug)]
 enum Error {
-    #[error("Networking error")]
+    #[error("Networking error - {0}")]
     Network(#[from] networking::Error),
-    #[error("Database error")]
+    #[error("Database error - {0}")]
     Database(#[from] sqlx::Error),
-    #[error("Chunk access error")]
+    #[error("Chunk access error - {0}")]
     Chunk(#[from] maps::chunks::Error)
 }
 

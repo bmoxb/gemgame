@@ -43,12 +43,12 @@ impl Connection {
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Encoding failed")]
+    #[error("Encoding failed - {0}")]
     EncodingFailure(#[from] bincode::Error),
-    #[error("Message is not binary")]
+    #[error("Message is not binary - {0}")]
     MessageNotBinary(tungstenite::Message),
-    #[error("Internal networking error")]
-    NetworkError(#[from] tungstenite::Error)
+    #[error("Tungstenite error - {0}")]
+    TungsteniteError(#[from] tungstenite::Error)
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

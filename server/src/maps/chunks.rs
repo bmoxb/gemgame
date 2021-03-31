@@ -87,9 +87,9 @@ pub async fn save_chunk(
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Failed to access database")]
+    #[error("Failed to access database - {0}")]
     DatabaseError(#[from] sqlx::Error),
-    #[error("Failed to (de)serialise chunk data with Bincode")]
+    #[error("Failed to (de)serialise chunk data with Bincode - {0}")]
     BincodeError(#[from] bincode::Error)
 }
 
