@@ -16,7 +16,7 @@ use crate::{
 
 const MAX_LOADED_CHUNKS_PER_CLIENT: usize = 12;
 
-/// Creates a new `Handler` instance and then calls its `Handler::handle` method.
+/// Creates a new [`Handler`] instance and then calls its [`Handler::handle`] method.
 pub async fn handle_connection(
     stream: TcpStream, address: SocketAddr, game_map: Shared<ServerMap>, db_pool: sqlx::PgPool,
     map_changes_sender: broadcast::Sender<maps::Modification>,
@@ -409,7 +409,7 @@ impl Handler {
         Ok(msgs)
     }
 
-    /// Call `Self::provide_chunk_with_entities` for the specified chunk coordinates as well as the 9 surrounding set
+    /// Call [`Self::provide_chunk_with_entities`] for the specified chunk coordinates as well as the 9 surrounding set
     /// of coordinates.
     async fn provide_chunks_at_and_surrounding_with_entities(
         &mut self, coords: ChunkCoords, player_id: Id

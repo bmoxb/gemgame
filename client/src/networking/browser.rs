@@ -71,7 +71,7 @@ impl ConnectionStatus {
         }
     }
 
-    /// Return a `Result` value based on the current connection status.
+    /// Return a [`Result`] value based on the current connection status.
     fn result<T>(pending_value: T, ok_value: T) -> Result<T> {
         match ConnectionStatus::identify() {
             ConnectionStatus::Pending => Ok(pending_value),

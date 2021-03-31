@@ -10,7 +10,7 @@ use parking_lot::Mutex;
 use structopt::StructOpt;
 use tokio::{net::TcpListener, sync::broadcast};
 
-/// Create an [`sqlx::Query`] instance using the SQL query in the specified file with the `.sql` extension
+/// Create an [`sqlx::query::Query`] instance using the SQL query in the specified file with the `.sql` extension
 /// (`server/db/` directory). In a database argument is provided then a query execution future is created.
 #[macro_export]
 macro_rules! db_query_from_file {
@@ -133,6 +133,7 @@ async fn main() {
     log::info!("No longer listening for connections");
 }
 
+/// Alias for a [`Mutex`] wrapped in an [`Arc`].
 type Shared<T> = Arc<Mutex<T>>;
 
 /// Server application for GemGame.

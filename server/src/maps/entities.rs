@@ -1,3 +1,5 @@
+//! Includes functions to handle the fetching/saving of player entities from/to the database.
+
 use rand::seq::IteratorRandom;
 use shared::{
     maps::{
@@ -105,6 +107,7 @@ fn decode_variant<T: IntoEnumIterator>(val: i16) -> T {
     })
 }
 
+/// Returns a random variant of the specified enum type.
 fn random_variant<T: IntoEnumIterator>() -> T {
     T::iter().choose(&mut rand::thread_rng()).unwrap()
 }

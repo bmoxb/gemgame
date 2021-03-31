@@ -20,6 +20,7 @@ use sqlx::Row;
 
 use crate::db_query_from_file;
 
+/// The context in which gameplay takes place. This structure manages all loaded tile chunks and player entities.
 pub struct ServerMap {
     /// Seed used by the generator.
     seed: i32,

@@ -1,3 +1,7 @@
+//! Hold functions for saving/loading chunks to/from the database.  These functions are not methods of
+//! [`super::ServerMap`] so that the mutex that that object is contained in is locked for only shortest required period
+//! of time.
+
 use std::convert;
 
 use shared::maps::{Chunk, ChunkCoords, Map};
@@ -11,8 +15,6 @@ use crate::{db_query_from_file, Shared};
 ///   chunks.
 /// * Newly generate a chunk before inserting it into the given map's loaded chunks.
 /// Once a chunk is obtained from any of the above steps, it is cloned before being returned from this function.
-/// This function is not a method of `super::ServerMap` so that the mutex that that object is contained in is locked for
-/// only shortest required period of time.
 pub async fn get_or_load_or_generate_chunk(
     db: sqlx::pool::PoolConnection<sqlx::Postgres>, map: &Shared<super::ServerMap>, coords: ChunkCoords
 ) -> Chunk {

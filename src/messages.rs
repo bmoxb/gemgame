@@ -52,7 +52,8 @@ impl fmt::Display for ToServer {
 /// Message sent from the server to the client over the WebSocket protocol.
 #[derive(Serialize, Deserialize)]
 pub enum FromServer {
-    /// Response to a `ToServer::Hello` message. This should be the first message sent from the server to each client.
+    /// Response to a [`ToServer::Hello`] message. This should be the first message sent from the server to each
+    /// client.
     Welcome {
         /// The version of the game that the server is running. If this does not match the client's version then the
         /// client should close the connection.
