@@ -58,7 +58,7 @@ impl Renderer {
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
 
-        // Establish the tile area of the map that is actually on-screen:
+        // Establish the area of the map that is actually on-screen:
 
         let on_screen_tiles_left_boundary = ((self.camera.target.x - 1.0) / self.tile_draw_size).floor() as i32;
         let on_screen_tiles_right_boundary = ((self.camera.target.x + 1.0) / self.tile_draw_size).ceil() as i32;
@@ -118,7 +118,11 @@ impl Renderer {
             .collect();
 
         // Draw lower portion of each on-screen entity:
-        for (entity, renderer) in &remote_entities_to_draw {
+
+        let my_entity_iter = std::iter::once((my_entity_contained, &self.my_entity_renderer));
+        let all_entities_iter = remote_entities_to_draw.into_iter().chain(my_entity_iter);
+
+        for (entity, renderer) in all_entities_iter.clone() {
             renderer.draw_lower(
                 entity,
                 assets.texture(TextureKey::Entities),
@@ -126,15 +130,10 @@ impl Renderer {
                 self.tile_texture_size
             );
         }
-        self.my_entity_renderer.draw_lower(
-            my_entity_contained,
-            assets.texture(TextureKey::Entities),
-            self.tile_draw_size,
-            self.tile_texture_size
-        );
 
         // Draw upper portion of each on-screen entity:
-        for (entity, renderer) in &remote_entities_to_draw {
+
+        for (entity, renderer) in all_entities_iter {
             renderer.draw_upper(
                 entity,
                 assets.texture(TextureKey::Entities),
@@ -142,12 +141,6 @@ impl Renderer {
                 self.tile_texture_size
             );
         }
-        self.my_entity_renderer.draw_upper(
-            my_entity_contained,
-            assets.texture(TextureKey::Entities),
-            self.tile_draw_size,
-            self.tile_texture_size
-        )
     }
 
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
