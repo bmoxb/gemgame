@@ -1,3 +1,4 @@
+pub mod gems;
 pub mod id;
 pub mod maps;
 pub mod messages;

@@ -8,7 +8,10 @@ use entities::Entity;
 use serde::{Deserialize, Serialize};
 use serde_big_array::big_array;
 
-use crate::Id;
+use crate::{
+    gems::{Gem, GemYield},
+    Id
+};
 
 // TODO: Remove this workaround when const generics are properly stablised.
 big_array! { BigArray; }
@@ -143,6 +146,17 @@ impl Tile {
     /// Returns `true` for a tile that should become [`Tile::RockSmashed`] when an entity walks over it.
     pub fn is_smashable(&self) -> bool {
         matches!(self, Tile::Rock | Tile::RockEmerald | Tile::RockRuby | Tile::RockDiamond)
+    }
+
+    /// Returns the gem yield for a smashable tile (except [`Tile::Rock`] which is smashable but does not yield any
+    /// gems).
+    pub fn get_gem_yield(&self) -> Option<GemYield> {
+        match self {
+            Tile::RockEmerald => Some(GemYield { gem: Gem::Emerald, minimum_quantity: 3, maximum_quantity: 5 }),
+            Tile::RockRuby => Some(GemYield { gem: Gem::Ruby, minimum_quantity: 1, maximum_quantity: 3 }),
+            Tile::RockDiamond => Some(GemYield { gem: Gem::Diamond, minimum_quantity: 1, maximum_quantity: 1 }),
+            _ => None
+        }
     }
 }
 
