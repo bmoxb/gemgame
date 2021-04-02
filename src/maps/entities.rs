@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 use super::TileCoords;
-use crate::Id;
+use crate::{gems, Id};
 
 /// Type alias for a hash map of entity IDs to entities.
 pub type Entities = HashMap<Id, Entity>;
@@ -12,6 +12,7 @@ pub type Entities = HashMap<Id, Entity>;
 const STANDARD_MOVEMENT_TIME: f32 = 0.11;
 const RUNNING_MOVEMENT_TIME: f32 = STANDARD_MOVEMENT_TIME * 0.75;
 
+// TODO: 'Player' would probably be better name than `Entity`.
 /// An 'entity' in the context of the GemGame codebase refers specifically to the player characters that exist within
 /// the game world.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -20,15 +21,20 @@ pub struct Entity {
     pub pos: TileCoords,
     /// Direction that this entity is facing/travelling towards.
     pub direction: Direction,
-    /// Emotional expression of this human entity (angry, shocked, etc.) Defaults to a neutral expression.
+    /// Facial expression of this entity (angry, shocked, etc.) Defaults to a neutral expression.
     pub facial_expression: FacialExpression,
-    /// Style of this human entity's hair. Defaults to a quiff.
+    /// Style of this entity's hair. Defaults to a quiff.
     pub hair_style: HairStyle,
+    /// The colour of this entity's clothing.
     pub clothing_colour: ClothingColour,
+    /// The skin colour of this entity.
     pub skin_colour: SkinColour,
+    /// The colour of this entity's hair.
     pub hair_colour: HairColour,
     /// Whether or not this human entity has increased movement speed.
-    pub has_running_shoes: bool
+    pub has_running_shoes: bool,
+    /// The collection of gems that this entity has.
+    pub gem_collection: gems::GemCollection
 }
 
 impl Entity {
@@ -53,12 +59,13 @@ impl fmt::Display for Entity {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "entity at {} facing {} with facial expression {} with hair style {} {} running shoes",
+            "entity at {} facing {} with facial expression {} with hair style {} {} running shoes and gems {}",
             self.pos,
             self.direction,
             self.facial_expression,
             self.hair_style,
-            if self.has_running_shoes { "with" } else { "without" }
+            if self.has_running_shoes { "with" } else { "without" },
+            self.gem_collection
         )
     }
 }

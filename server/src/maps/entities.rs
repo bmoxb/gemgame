@@ -2,6 +2,7 @@
 
 use rand::seq::IteratorRandom;
 use shared::{
+    gems::GemCollection,
     maps::{
         entities::{Direction, Entity, FacialExpression},
         TileCoords
@@ -24,8 +25,11 @@ pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) 
         clothing_colour: random_variant(),
         skin_colour: random_variant(),
         hair_colour: random_variant(),
-        has_running_shoes: false
+        has_running_shoes: false,
+        gem_collection: GemCollection::default()
     };
+
+    // TODO: Save gem collection in database.
 
     db_query_from_file!("client_entities/create row")
         .bind(client_id.encode())
@@ -57,7 +61,8 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
                     clothing_colour: decode_variant(row.get("clothing_colour")),
                     skin_colour: decode_variant(row.get("skin_colour")),
                     hair_colour: decode_variant(row.get("hair_colour")),
-                    has_running_shoes: row.get("has_running_shoes")
+                    has_running_shoes: row.get("has_running_shoes"),
+                    gem_collection: GemCollection::default() // TODO
                 }
             )
         })

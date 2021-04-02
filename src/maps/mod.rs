@@ -72,8 +72,11 @@ pub trait Map {
 
     fn remove_chunk(&mut self, coords: ChunkCoords) -> Option<Chunk>;
 
-    /// Return the entity with the specified ID as an optional reference.
+    /// Return the entity with the specified ID as an optional immutable reference.
     fn entity_by_id(&self, id: Id) -> Option<&Entity>;
+
+    /// Return the entity with the specified ID as an optional mutable reference.
+    fn entity_by_id_mut(&mut self, id: Id) -> Option<&mut Entity>;
 
     /// Add an entity to the map. On client side this method is used to add all entities not controlled by the client
     /// (i.e. both players and AI-controlled entities) while on the server side this method is used to add all

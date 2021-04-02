@@ -69,6 +69,10 @@ impl Map for ClientMap {
         self.entities.get(&id)
     }
 
+    fn entity_by_id_mut(&mut self, id: Id) -> Option<&mut Entity> {
+        self.entities.get_mut(&id)
+    }
+
     fn add_entity(&mut self, id: Id, entity: Entity) {
         self.entities.insert(id, entity);
         log::info!("Entity with ID {} added to game map", id);

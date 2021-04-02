@@ -5,6 +5,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    gems,
     maps::{
         self,
         entities::{self, Entity}
@@ -94,7 +95,10 @@ pub enum FromServer {
     /// * An entity in one of the client's loaded chunks moves into a chunk that is not loaded by that client.
     /// * An entity in one of the chunks loaded by the client is removed from the map (typically as a result of a
     ///   player disconnecting).
-    ShouldUnloadEntity(Id)
+    ShouldUnloadEntity(Id),
+
+    /// Informs the client of the type and quantity of gems they received after their entity smashed a rock.
+    YouCollectedGems { gem_type: gems::Gem, quantity_increase: usize }
 }
 
 impl fmt::Display for FromServer {
@@ -117,7 +121,10 @@ impl fmt::Display for FromServer {
                 write!(f, "move entity {} to {} in direction {}", id, pos, direction)
             }
             FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id),
-            FromServer::ShouldUnloadEntity(id) => write!(f, "should unload entity {}", id)
+            FromServer::ShouldUnloadEntity(id) => write!(f, "should unload entity {}", id),
+            FromServer::YouCollectedGems { gem_type, quantity_increase } => {
+                write!(f, "you collected {} gems of type {:?}", quantity_increase, gem_type)
+            }
         }
     }
 }

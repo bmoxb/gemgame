@@ -80,6 +80,10 @@ impl GameState {
                 self.map_renderer.remove_remote_entity(id);
                 self.map.remove_entity(id);
             }
+
+            messages::FromServer::YouCollectedGems { gem_type, quantity_increase } => {
+                self.my_entity.contained.gem_collection.increase_quantity(gem_type, quantity_increase);
+            }
         }
     }
 }

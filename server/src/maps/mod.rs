@@ -201,6 +201,10 @@ impl Map for ServerMap {
         self.player_entities.get(&id)
     }
 
+    fn entity_by_id_mut(&mut self, id: Id) -> Option<&mut Entity> {
+        self.player_entities.get_mut(&id)
+    }
+
     fn add_entity(&mut self, id: Id, entity: Entity) {
         let chunk_coords = entity.pos.as_chunk_coords();
 

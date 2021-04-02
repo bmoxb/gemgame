@@ -2,6 +2,7 @@ mod tests;
 
 use std::{convert::Into, net::SocketAddr};
 
+use rand::Rng;
 use shared::{
     maps::{ChunkCoords, Map},
     messages, Id
@@ -279,7 +280,32 @@ impl Handler {
                     if let Some(smashed_tile) = smashed_tile_option {
                         self.log(&format!("Smashed tile {:?} at {}", smashed_tile, new_position));
 
-                        // TODO: Increase player's gem count...
+                        // If the smashed tile yields gems, calculate a quantity within the determined range, provide
+                        // that quantity of gems to the player on the server side, and send a message to the remote
+                        // client informing them of how many more gems they now have:
+
+                        if let Some(gem_yield) = smashed_tile.get_gem_yield() {
+                            // Random gem quantity within the range specified by the yield specific by the tile type:
+                            let quantity_increase = rand::thread_rng()
+                                .gen_range(gem_yield.maximum_quantity..(gem_yield.minimum_quantity + 1));
+
+                            // Increase gem quantity on the server side:
+                            if let Some(entity) = self.game_map.lock().entity_by_id_mut(player_id) {
+                                entity.gem_collection.increase_quantity(gem_yield.gem, quantity_increase);
+                            }
+
+                            // Produce message to send to the remote client to inform them of how many more gems they
+                            // now have:
+                            responses.push(messages::FromServer::YouCollectedGems {
+                                gem_type: gem_yield.gem,
+                                quantity_increase
+                            });
+
+                            self.log(&format!(
+                                "Obtained an additional {} gems of type {:?}",
+                                quantity_increase, gem_yield.gem
+                            ));
+                        }
                     }
                 }
 
