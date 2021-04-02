@@ -11,7 +11,7 @@ use tokio::{net::TcpStream, sync::broadcast};
 use tokio_tungstenite::tungstenite;
 
 use crate::{
-    maps::{self, entities, ServerMap},
+    maps::{self, entities, EntityMovement, ServerMap},
     networking::{self, Connection},
     Shared
 };
@@ -252,9 +252,9 @@ impl Handler {
 
                 let movement_option = self.game_map.lock().move_entity_towards(player_id, direction);
 
-                if let Some((old_position, new_position)) = movement_option {
-                    // If moving into a new chunk, ensure adjacent chunks are loaded:
-
+                if let Some(EntityMovement { old_position, new_position, smashed_tile_option }) = movement_option {
+                    // If moving into a new chunk, ensure chunks adjacent to the destination chunk are loaded and create
+                    // message(s) to provide them to the client:
                     if old_position.as_chunk_coords() != new_position.as_chunk_coords() {
                         let msgs = self
                             .provide_chunks_at_and_surrounding_with_entities(new_position.as_chunk_coords(), player_id)
@@ -264,14 +264,23 @@ impl Handler {
                     }
 
                     // Inform other tasks of the entity's movement:
+                    self.map_changes_sender
+                        .send(maps::Modification::EntityMoved {
+                            entity_id: player_id,
+                            old_position,
+                            new_position,
+                            direction
+                        })
+                        .unwrap();
 
-                    let broadcast_msg =
-                        maps::Modification::EntityMoved { entity_id: player_id, old_position, new_position, direction };
-
-                    self.map_changes_sender.send(broadcast_msg).unwrap();
-
-                    // Inform our remote client of the server's decision regarding their player entity's new position:
+                    // Confirm to the remote client that the movement could go ahead:
                     responses.push(messages::FromServer::YourEntityMoved { request_number, new_position });
+
+                    if let Some(smashed_tile) = smashed_tile_option {
+                        self.log(&format!("Smashed tile {:?} at {}", smashed_tile, new_position));
+
+                        // TODO: Increase player's gem count...
+                    }
                 }
 
                 if responses.is_empty() {

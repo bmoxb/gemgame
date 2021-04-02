@@ -80,28 +80,36 @@ impl ServerMap {
     }
 
     /// Move an entity in a specified direction. This method checks if the desintation position is already occupied or
-    /// a blocking tile - if it is then `None` is returned (`None` is also returned should an entity with the specified
-    /// ID not be found). If the movement is deemed okay to go ahead, the entity's old position and new position (i.e.
-    /// position after the movement is applied) are returned. The hash map that keeps track of which entities reside in
-    /// which chunks is updated also.
-    pub fn move_entity_towards(&mut self, entity_id: Id, direction: Direction) -> Option<(TileCoords, TileCoords)> {
+    /// a blocking tile (note that tile positions in unloaded chunks are considered blocking) - if it is then `None` is
+    /// returned (`None` is also returned should an entity with the specified ID not be found). If the movement is
+    /// deemed okay to go ahead, the entity's old position and new position (i.e. position after the movement is
+    /// applied) are returned. The hash map that keeps track of which entities reside in which chunks is updated
+    /// also.
+    ///
+    /// If the movement is on to a smashable tile (e.g. diamond rock) then the tile is updated. The caller does not have
+    /// to notify their client nor the tasks of other clients of the tile change as it is the responsiblity of each
+    /// client to infer a tile change whenever some entity moves onto a smashable tile.
+    pub fn move_entity_towards(&mut self, entity_id: Id, direction: Direction) -> Option<EntityMovement> {
+        // Ensure entity with the given ID actually exists:
         if self.player_entities.contains_key(&entity_id) {
-            let (old_pos, new_pos, new_pos_is_free) = {
+            // Identify that entity's current position and their new position if the movement is possible (i.e. the
+            // new position is not occupied by another entity and is not a blocking tile):
+            let (old_position, new_position_option) = {
                 let entity = self.entity_by_id(entity_id).unwrap();
 
                 let new_pos = direction.apply(entity.pos);
-                (entity.pos, new_pos, self.is_position_free(new_pos))
+                (entity.pos, self.is_position_free(new_pos).then(|| new_pos))
             };
 
             let entity_mut = self.player_entities.get_mut(&entity_id).unwrap();
 
-            if new_pos_is_free {
+            if let Some(new_position) = new_position_option {
                 // Apply the new position & direction:
-                entity_mut.pos = new_pos;
+                entity_mut.pos = new_position;
                 entity_mut.direction = direction;
 
-                let old_pos_chunk_coords = old_pos.as_chunk_coords();
-                let new_pos_chunk_coords = new_pos.as_chunk_coords();
+                let old_pos_chunk_coords = old_position.as_chunk_coords();
+                let new_pos_chunk_coords = new_position.as_chunk_coords();
 
                 // Check if the entity is moving across chunk boundaries:
                 if old_pos_chunk_coords != new_pos_chunk_coords {
@@ -111,10 +119,19 @@ impl ServerMap {
                     self.chunk_coords_to_player_ids.entry(new_pos_chunk_coords).or_default().insert(entity_id);
                 }
 
-                Some((old_pos, new_pos))
+                // Create an option that is `Some` if the destination tile is smashable:
+                let smashed_tile_option =
+                    self.loaded_tile_at(new_position).map(|tile| tile.is_smashable().then(|| *tile)).flatten();
+
+                // Set the destination tile to smashed rock if it is smashable:
+                if smashed_tile_option.is_some() {
+                    self.set_loaded_tile_at(new_position, Tile::RockSmashed);
+                }
+
+                Some(EntityMovement { old_position, new_position, smashed_tile_option })
             }
             else {
-                None // Movement not allowed.
+                None // Movement not allowed due to blocking tile or entity at destination.
             }
         }
         else {
@@ -227,6 +244,12 @@ impl Map for ServerMap {
 
         false
     }
+}
+
+pub struct EntityMovement {
+    pub old_position: TileCoords,
+    pub new_position: TileCoords,
+    pub smashed_tile_option: Option<Tile>
 }
 
 /// Represents a change made to the game map (tiles and entities). This enum is used by client tasks to inform other
