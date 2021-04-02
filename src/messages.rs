@@ -1,5 +1,4 @@
-//! Contains (de)serialisable enumerations that the server and client
-//! applications may communicate by means of.
+//! Contains (de)serialisable enumerations that the server and client applications may communicate with.
 
 use std::fmt;
 

@@ -1,3 +1,5 @@
+//! Defines an 'ID' type used to refer to remote clients (i.e. act as a session ID) as well as entities.
+
 use std::{convert::TryInto, fmt, str};
 
 use serde::{Deserialize, Serialize};
