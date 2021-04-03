@@ -2,7 +2,7 @@
 
 use rand::seq::IteratorRandom;
 use shared::{
-    gems::GemCollection,
+    gems::{Gem, GemCollection},
     maps::{
         entities::{Direction, Entity, FacialExpression},
         TileCoords
@@ -14,6 +14,7 @@ use strum::IntoEnumIterator;
 
 use crate::db_query_from_file;
 
+/// Create a new player entity that will be stored in the database.
 pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) -> sqlx::Result<(Id, Entity)> {
     let entity_id = crate::id::generate_with_timestamp();
 
@@ -29,24 +30,16 @@ pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) 
         gem_collection: GemCollection::default()
     };
 
-    // TODO: Save gem collection in database.
-
-    db_query_from_file!("client_entities/create row")
+    bind_entity_data(db_query_from_file!("client_entities/create row"), &entity)
         .bind(client_id.encode())
         .bind(entity_id.encode())
-        .bind(entity.pos.x)
-        .bind(entity.pos.y)
-        .bind(encode_variant(entity.hair_style))
-        .bind(encode_variant(entity.clothing_colour))
-        .bind(encode_variant(entity.skin_colour))
-        .bind(encode_variant(entity.hair_colour))
-        .bind(entity.has_running_shoes)
         .execute(db)
         .await?;
 
     Ok((entity_id, entity))
 }
 
+/// Fetch an existing player entity from the database.
 pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) -> sqlx::Result<Option<(Id, Entity)>> {
     let res = db_query_from_file!("client_entities/select row")
         .bind(client_id.encode())
@@ -62,7 +55,20 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
                     skin_colour: decode_variant(row.get("skin_colour")),
                     hair_colour: decode_variant(row.get("hair_colour")),
                     has_running_shoes: row.get("has_running_shoes"),
-                    gem_collection: GemCollection::default() // TODO
+                    gem_collection: {
+                        let mut collection = GemCollection::default();
+
+                        // Need to fetch from database as signed integer before casting to unsigned as PostgreSQL does
+                        // not support unsigned values:
+                        let (emerald, ruby, diamond): (i32, i32, i32) =
+                            (row.get("emerald_quantity"), row.get("ruby_quantity"), row.get("diamond_quantity"));
+
+                        collection.increase_quantity(Gem::Emerald, emerald as u32);
+                        collection.increase_quantity(Gem::Ruby, ruby as u32);
+                        collection.increase_quantity(Gem::Diamond, diamond as u32);
+
+                        collection
+                    }
                 }
             )
         })
@@ -72,17 +78,11 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
     res
 }
 
+/// Update an existing player entity in the database.
 pub async fn update_database_for_player(
     entity: &Entity, client_id: Id, db: &mut sqlx::PgConnection
 ) -> sqlx::Result<()> {
-    db_query_from_file!("client_entities/update row")
-        .bind(entity.pos.x)
-        .bind(entity.pos.y)
-        .bind(encode_variant(entity.hair_style))
-        .bind(encode_variant(entity.clothing_colour))
-        .bind(encode_variant(entity.skin_colour))
-        .bind(encode_variant(entity.hair_colour))
-        .bind(entity.has_running_shoes)
+    bind_entity_data(db_query_from_file!("client_entities/update row"), entity)
         .bind(client_id.encode())
         .execute(db)
         .await
@@ -96,6 +96,23 @@ pub async fn update_database_for_player(
                 );
             }
         })
+}
+
+/// Binds all the components of a player entity to the given database query (excluding the entity ID & client ID).
+fn bind_entity_data<'a>(
+    query: sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments>, entity: &Entity
+) -> sqlx::query::Query<'a, sqlx::Postgres, sqlx::postgres::PgArguments> {
+    query
+        .bind(entity.pos.x)
+        .bind(entity.pos.y)
+        .bind(encode_variant(entity.hair_style))
+        .bind(encode_variant(entity.clothing_colour))
+        .bind(encode_variant(entity.skin_colour))
+        .bind(encode_variant(entity.hair_colour))
+        .bind(entity.has_running_shoes)
+        .bind(entity.gem_collection.get_quantity(Gem::Emerald) as i32)
+        .bind(entity.gem_collection.get_quantity(Gem::Ruby) as i32)
+        .bind(entity.gem_collection.get_quantity(Gem::Diamond) as i32)
 }
 
 /// Encode an enum variant as a 16-bit integer.

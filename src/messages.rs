@@ -98,7 +98,7 @@ pub enum FromServer {
     ShouldUnloadEntity(Id),
 
     /// Informs the client of the type and quantity of gems they received after their entity smashed a rock.
-    YouCollectedGems { gem_type: gems::Gem, quantity_increase: usize }
+    YouCollectedGems { gem_type: gems::Gem, quantity_increase: u32 }
 }
 
 impl fmt::Display for FromServer {

@@ -7,5 +7,8 @@ CREATE TABLE IF NOT EXISTS client_entities (
     clothing_colour SMALLINT NOT NULL,
     skin_colour SMALLINT NOT NULL,
     hair_colour SMALLINT NOT NULL,
-    has_running_shoes BOOLEAN NOT NULL
+    has_running_shoes BOOLEAN NOT NULL,
+    emerald_quantity INTEGER NOT NULL,
+    ruby_quantity INTEGER NOT NULL,
+    diamond_quantity INTEGER NOT NULL
 )

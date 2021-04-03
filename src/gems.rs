@@ -13,21 +13,21 @@ pub enum Gem {
 /// Represents the potential yield of gems produced from the smashing of a rock tile.
 pub struct GemYield {
     pub gem: Gem,
-    pub minimum_quantity: usize,
-    pub maximum_quantity: usize
+    pub minimum_quantity: u32,
+    pub maximum_quantity: u32
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct GemCollection {
-    collection: HashMap<Gem, usize>
+    collection: HashMap<Gem, u32>
 }
 
 impl GemCollection {
-    pub fn get_quantity(&self, gem: Gem) -> usize {
+    pub fn get_quantity(&self, gem: Gem) -> u32 {
         *self.collection.get(&gem).unwrap_or(&0)
     }
 
-    pub fn increase_quantity(&mut self, gem: Gem, increase: usize) {
+    pub fn increase_quantity(&mut self, gem: Gem, increase: u32) {
         *self.collection.entry(gem).or_default() += increase;
     }
 }
