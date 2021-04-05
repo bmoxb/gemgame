@@ -1,7 +1,7 @@
 mod entities;
 mod tiles;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use macroquad::prelude as quad;
 use shared::{
@@ -9,30 +9,34 @@ use shared::{
     Id
 };
 
+use self::tiles::animations::Animation;
 use crate::{maps::ClientMap, AssetManager, TextureKey};
 
 const ENTITY_POSITION_CORRECTED_MOVEMENT_TIME: f32 = 0.025;
 
 /// Handles the drawing of a game map.
+#[derive(Default)]
 pub struct Renderer {
     /// The camera context in which the map will be rendered.
     camera: quad::Camera2D,
     /// The width and height (in camera space) that each tile will be draw as.
     tile_draw_size: f32,
     /// The width and height (in pixels) that each individual tile on the tiles texture is.
-    tile_texture_size: u16,
+    single_tile_texture_size: u16,
+    /// The entity renderer for this client's player entity.
     my_entity_renderer: entities::Renderer,
-    remote_entity_renderers: HashMap<Id, entities::Renderer>
+    /// Entity renderers for remote player entities (mapped to by entity IDs).
+    remote_entity_renderers: HashMap<Id, entities::Renderer>,
+    tile_change_animations: HashMap<TileCoords, tiles::animations::Once>
 }
 
 impl Renderer {
-    pub fn new(tile_draw_size: f32, tile_texture_size: u16, my_entity_pos: TileCoords) -> Self {
+    pub fn new(tile_draw_size: f32, single_tile_texture_size: u16, my_entity_pos: TileCoords) -> Self {
         Renderer {
-            camera: quad::Camera2D::default(),
             tile_draw_size,
-            tile_texture_size,
+            single_tile_texture_size,
             my_entity_renderer: entities::Renderer::new(my_entity_pos, tile_draw_size),
-            remote_entity_renderers: HashMap::new()
+            ..Default::default()
         }
     }
 
@@ -67,29 +71,53 @@ impl Renderer {
 
         // Draw tiles:
 
+        let mut tile_coords;
         let mut draw_pos;
+
         for tile_x in on_screen_tiles_left_boundary..on_screen_tiles_right_boundary {
             for tile_y in on_screen_tiles_bottom_boundary..on_screen_tiles_top_boundary {
-                draw_pos = tile_coords_to_vec2(TileCoords { x: tile_x, y: tile_y }, self.tile_draw_size);
+                tile_coords = TileCoords { x: tile_x, y: tile_y };
+                draw_pos = tile_coords_to_vec2(tile_coords, self.tile_draw_size);
 
                 // If the tile at the specified coordinates is in a chunk that is already loaded then it will be drawn.
                 // Otherwise, a grey placeholder rectangle will be drawn in its place until the required chunk is
                 // received from the server.
 
-                if let Some(tile) = map.loaded_tile_at(TileCoords { x: tile_x, y: tile_y }) {
-                    tiles::draw(
+                if let Some(tile) = map.loaded_tile_at(tile_coords) {
+                    tiles::draw_with_stateless_animation(
                         tile,
                         draw_pos,
                         self.tile_draw_size,
-                        self.tile_texture_size,
+                        self.single_tile_texture_size,
                         assets.texture(TextureKey::Tiles)
                     );
                 }
                 else {
-                    tiles::draw_pending_tile(draw_pos, self.tile_draw_size);
+                    tiles::draw_pending(draw_pos, self.tile_draw_size);
                 }
             }
         }
+
+        // Draw (and remove completed) tile transition animations:
+
+        let mut concluded_animations = HashSet::new();
+
+        for (coords, animation) in &self.tile_change_animations {
+            let draw_pos = tile_coords_to_vec2(*coords, self.tile_draw_size);
+
+            animation.draw(
+                draw_pos,
+                self.tile_draw_size,
+                self.single_tile_texture_size,
+                assets.texture(TextureKey::Tiles)
+            );
+
+            if animation.has_concluded() {
+                concluded_animations.insert(*coords);
+            }
+        }
+
+        self.tile_change_animations.retain(|key, _| !concluded_animations.contains(key));
 
         // Update remote entities:
 
@@ -127,7 +155,7 @@ impl Renderer {
                 entity,
                 assets.texture(TextureKey::Entities),
                 self.tile_draw_size,
-                self.tile_texture_size
+                self.single_tile_texture_size
             );
         }
 
@@ -138,7 +166,7 @@ impl Renderer {
                 entity,
                 assets.texture(TextureKey::Entities),
                 self.tile_draw_size,
-                self.tile_texture_size
+                self.single_tile_texture_size
             );
         }
     }

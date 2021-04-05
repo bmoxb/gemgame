@@ -8,6 +8,7 @@ use shared::maps::{
 
 use super::tile_coords_to_vec2;
 
+/// Handles the rendering of a single entity.
 #[derive(Default)]
 pub struct Renderer {
     /// The position that the entity is currently being drawn at.

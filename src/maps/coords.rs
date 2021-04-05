@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{CHUNK_HEIGHT, CHUNK_TILE_COUNT, CHUNK_WIDTH};
 
-#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TileCoords {
     pub x: i32,
     pub y: i32

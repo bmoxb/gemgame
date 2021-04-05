@@ -12,6 +12,8 @@ macroquad = "0.3.0-alpha"
 serde = "1.0"
 bincode = "1.3"
 
+lazy_static = "1.4"
+
 log = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
