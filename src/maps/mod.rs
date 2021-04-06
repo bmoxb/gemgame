@@ -27,7 +27,7 @@ pub const CHUNK_TILE_COUNT: usize = CHUNK_WIDTH as usize * CHUNK_HEIGHT as usize
 
 pub trait Map {
     /// Fetch the tile at the given tile coordinates assuming it is in a chunk that is already loaded.
-    fn loaded_tile_at(&self, coords: TileCoords) -> Option<&Tile> {
+    fn loaded_tile_at(&self, coords: TileCoords) -> Option<Tile> {
         let chunk = self.loaded_chunk_at(coords.as_chunk_coords())?;
         Some(chunk.tile_at_offset(coords.as_chunk_offset_coords()))
     }
@@ -102,8 +102,8 @@ impl Chunk {
         Chunk { tiles }
     }
 
-    pub fn tile_at_offset(&self, offset: OffsetCoords) -> &Tile {
-        &self.tiles[offset.calculate_index()]
+    pub fn tile_at_offset(&self, offset: OffsetCoords) -> Tile {
+        self.tiles[offset.calculate_index()]
     }
 
     pub fn set_tile_at_offset(&mut self, offset: OffsetCoords, tile: Tile) {

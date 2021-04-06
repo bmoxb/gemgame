@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use shared::{
     maps::{
         entities::{Direction, Entity},
-        Map, TileCoords
+        Map, Tile, TileCoords
     },
     messages
 };
@@ -33,7 +33,7 @@ pub struct MyEntity {
 impl MyEntity {
     pub fn new(contained: Entity) -> Self {
         MyEntity {
-            time_since_last_movement: contained.movement_time(),
+            time_since_last_movement: contained.movement_time(Tile::default()),
             contained,
             next_request_number: 0,
             unverified_movements: HashMap::new()
@@ -50,11 +50,13 @@ impl MyEntity {
         &mut self, direction: Direction, map: &mut ClientMap, connection: &mut networking::Connection,
         renderer: &mut rendering::maps::Renderer
     ) -> networking::Result<()> {
-        // First check if required amount of time has paced since last movement (i.e. don't exceed maximum movement
-        // speed:
-        if self.time_since_last_movement >= self.contained.movement_time() {
-            let new_pos = direction.apply(self.contained.pos);
+        // Determine the new position and the amount of time needed to move to it:
+        let new_pos = direction.apply(self.contained.pos);
+        let dest_tile = map.loaded_tile_at(new_pos).unwrap_or_default();
+        let movement_time = self.contained.movement_time(dest_tile);
 
+        // Check if required amount of time has paced since last movement (i.e. don't exceed maximum movement speed:
+        if self.time_since_last_movement >= movement_time {
             // Check if the position the player wants to move to is free (i.e. not a blocking tile and no other
             // entities persent at that position):
             if map.is_position_free(new_pos) {
@@ -64,7 +66,7 @@ impl MyEntity {
                 map.some_entity_moved_to(new_pos, renderer);
 
                 // Update the map renderer:
-                renderer.my_entity_moved(new_pos, self.contained.movement_time());
+                renderer.my_entity_moved(new_pos, movement_time);
 
                 // Locally modify player entity's coordinates & direction:
                 self.contained.pos = new_pos;

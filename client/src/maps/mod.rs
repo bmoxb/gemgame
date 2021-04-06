@@ -27,9 +27,11 @@ impl ClientMap {
     pub fn move_remote_entity(
         &mut self, id: Id, new_pos: TileCoords, direction: Direction, renderer: &mut rendering::maps::Renderer
     ) {
+        let dest_tile = self.loaded_tile_at(new_pos).unwrap_or_default();
+
         if let Some(entity) = self.entities.get_mut(&id) {
             // Update renderer:
-            renderer.remote_entity_moved(id, new_pos, entity.movement_time());
+            renderer.remote_entity_moved(id, new_pos, entity.movement_time(dest_tile));
 
             // Set position & direction:
             entity.pos = new_pos;
@@ -46,7 +48,7 @@ impl ClientMap {
     /// with an animated transition). Should be called whenever an entity (whether remote or the local player entity)
     /// moves.
     pub fn some_entity_moved_to(&mut self, pos: TileCoords, renderer: &mut rendering::maps::Renderer) {
-        let dest_tile_smashable = self.loaded_tile_at(pos).map(Tile::is_smashable).unwrap_or(false);
+        let dest_tile_smashable = self.loaded_tile_at(pos).map(|t| t.is_smashable()).unwrap_or(false);
 
         if dest_tile_smashable {
             self.set_loaded_tile_at(pos, Tile::RockSmashed);

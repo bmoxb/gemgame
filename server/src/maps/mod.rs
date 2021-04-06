@@ -121,7 +121,7 @@ impl ServerMap {
 
                 // Create an option that is `Some` if the destination tile is smashable:
                 let smashed_tile_option =
-                    self.loaded_tile_at(new_position).map(|tile| tile.is_smashable().then(|| *tile)).flatten();
+                    self.loaded_tile_at(new_position).map(|tile| tile.is_smashable().then(|| tile)).flatten();
 
                 // Set the destination tile to smashed rock if it is smashable:
                 if smashed_tile_option.is_some() {
