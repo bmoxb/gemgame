@@ -1,5 +1,6 @@
 use macroquad::prelude as quad;
 
+/// Trait that describes an animation for a map tile.
 pub trait Animation {
     fn draw(&self, draw_pos: quad::Vec2, draw_size: f32, single_tile_texture_size: u16, texture: quad::Texture2D) {
         let rect = self.get_texture_rect(single_tile_texture_size);
@@ -25,9 +26,12 @@ pub trait Animation {
         }
     }
 
+    /// Returns the texture coordinates relative to the size of each tile texture of the current frame.
     fn get_relative_texture_coords(&self, time: f64) -> (u16, u16);
 }
 
+/// An animation that is just a single frame (i.e. not animated but implements [`Animation`]). Can be shared between
+/// different tiles (see [`super::draw_with_stateless_animation`]).
 pub struct Static(pub u16, pub u16);
 
 impl Animation for Static {
@@ -40,6 +44,8 @@ pub fn boxed_static(x: u16, y: u16) -> Box<dyn Animation + Sync> {
     Box::new(Static(x, y))
 }
 
+/// An animation that continuously loops the same set of frames. Can be shared between different tiles (see
+/// [`super::draw_with_stateless_animation`]).
 pub struct Continuous {
     frames: &'static [Frame],
     duration: f64
@@ -61,6 +67,8 @@ pub fn boxed_continuous(frames: &'static [Frame]) -> Box<dyn Animation + Sync> {
     Box::new(Continuous::new(frames))
 }
 
+/// An animation that plays only once. This animation type is used for a tile transitions and should not be shared in
+/// the same way that continuous and static animations can be.
 pub struct Once {
     frames: &'static [Frame],
     start_time: f64,
@@ -83,6 +91,7 @@ impl Animation for Once {
     }
 }
 
+/// Gets the relative texture coordinates from the given set of frames at the specified time.
 fn frame_at_time(frames: &[Frame], frame_time: f64) -> Option<(u16, u16)> {
     let mut current_end_time = 0.0;
 
@@ -102,6 +111,7 @@ pub struct Frame {
     pub time: f64
 }
 
+/// Calculates the total duration of a set of animation frames.
 fn duration_of_frames(frames: &[Frame]) -> f64 {
     let mut duration = 0.0;
 
