@@ -25,6 +25,17 @@ const WATER_FRAMES: &[animations::Frame] = &[
     animations::Frame { at: (7, 3), time: WATER_FRAME_TIME }
 ];
 
+const ROCK_SMASH_FRAME_TIME: f64 = 0.025;
+const ROCK_SMASH_FRAMES: &[animations::Frame] = &[
+    animations::Frame { at: (0, 4), time: ROCK_SMASH_FRAME_TIME },
+    animations::Frame { at: (1, 4), time: ROCK_SMASH_FRAME_TIME },
+    animations::Frame { at: (2, 4), time: ROCK_SMASH_FRAME_TIME },
+    animations::Frame { at: (3, 4), time: ROCK_SMASH_FRAME_TIME },
+    animations::Frame { at: (4, 4), time: ROCK_SMASH_FRAME_TIME },
+    animations::Frame { at: (5, 4), time: ROCK_SMASH_FRAME_TIME },
+    animations::Frame { at: (6, 4), time: ROCK_SMASH_FRAME_TIME }
+];
+
 lazy_static! {
     static ref STATELESS_TILE_ANIMATIONS: HashMap<Tile, Box<dyn animations::Animation + Sync>> = {
         let mut map = HashMap::new();
@@ -73,4 +84,8 @@ pub fn draw_pending(draw_pos: quad::Vec2, draw_size: f32) {
     let reduced_size = draw_size - (offset * 2.0);
 
     quad::draw_rectangle(draw_pos.x + offset, draw_pos.y + offset, reduced_size, reduced_size, quad::DARKGRAY);
+}
+
+pub fn new_rock_smash_animation() -> animations::Once {
+    animations::Once::new(ROCK_SMASH_FRAMES)
 }

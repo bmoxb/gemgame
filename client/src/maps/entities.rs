@@ -61,6 +61,9 @@ impl MyEntity {
             if map.is_position_free(new_pos) {
                 log::trace!("Moving player entity in direction {} to {}", direction, new_pos);
 
+                // Handle tile changes based on entity movement (e.g. rock smashing):
+                map.some_entity_moved_to(new_pos, renderer);
+
                 // Update the map renderer:
                 renderer.my_entity_moved(new_pos, self.contained.movement_time());
 

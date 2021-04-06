@@ -63,22 +63,23 @@ pub fn boxed_continuous(frames: &'static [Frame]) -> Box<dyn Animation + Sync> {
 
 pub struct Once {
     frames: &'static [Frame],
-    end_time: f64
+    start_time: f64,
+    duration: f64
 }
 
 impl Once {
     pub fn new(frames: &'static [Frame]) -> Self {
-        Once { frames, end_time: quad::get_time() + duration_of_frames(frames) }
+        Once { frames, start_time: quad::get_time(), duration: duration_of_frames(frames) }
     }
 
     pub fn has_concluded(&self) -> bool {
-        quad::get_time() >= self.end_time
+        quad::get_time() >= self.start_time + self.duration
     }
 }
 
 impl Animation for Once {
     fn get_relative_texture_coords(&self, time: f64) -> (u16, u16) {
-        frame_at_time(self.frames, time - self.end_time).unwrap_or_else(|| self.frames.last().unwrap().at)
+        frame_at_time(self.frames, time - self.start_time).unwrap_or_else(|| self.frames.last().unwrap().at)
     }
 }
 

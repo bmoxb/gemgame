@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use shared::{
     maps::{
         entities::{Direction, Entities, Entity},
-        Chunk, ChunkCoords, Chunks, Map, TileCoords
+        Chunk, ChunkCoords, Chunks, Map, Tile, TileCoords
     },
     Id
 };
@@ -37,6 +37,20 @@ impl ClientMap {
         }
         else {
             log::warn!("Cannot set position of entity {} as it is not loaded", id);
+        }
+
+        self.some_entity_moved_to(new_pos, renderer);
+    }
+
+    /// Handles the changing of certain tiles when entities walk over them (e.g. turning a rock tile into a smashed rock
+    /// with an animated transition). Should be called whenever an entity (whether remote or the local player entity)
+    /// moves.
+    pub fn some_entity_moved_to(&mut self, pos: TileCoords, renderer: &mut rendering::maps::Renderer) {
+        let dest_tile_smashable = self.loaded_tile_at(pos).map(Tile::is_smashable).unwrap_or(false);
+
+        if dest_tile_smashable {
+            self.set_loaded_tile_at(pos, Tile::RockSmashed);
+            renderer.rock_tile_smashed(pos);
         }
     }
 }

@@ -13,12 +13,8 @@ impl Generator for DefaultGenerator {
     }
 
     fn generate(&self, _coords: ChunkCoords) -> Chunk {
-        let mut c = Chunk::new([Tile::Grass; CHUNK_TILE_COUNT]);
-        c.set_tile_at_offset(OffsetCoords { x: 5, y: 5 }, Tile::FlowerBlue);
-        c.set_tile_at_offset(OffsetCoords { x: 8, y: 8 }, Tile::FlowersYellowOrange);
-        for x in 10..15 {
-            c.set_tile_at_offset(OffsetCoords { x, y: 3 }, Tile::Water);
-        }
+        let mut c = Chunk::new([Tile::Dirt; CHUNK_TILE_COUNT]);
+        c.set_tile_at_offset(OffsetCoords { x: 3, y: 3 }, Tile::Rock);
         c
     }
 }

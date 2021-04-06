@@ -105,6 +105,7 @@ impl Renderer {
         for (coords, animation) in &self.tile_change_animations {
             let draw_pos = tile_coords_to_vec2(*coords, self.tile_draw_size);
 
+            // TODO: Draw only if on-screen, like entities below.
             animation.draw(
                 draw_pos,
                 self.tile_draw_size,
@@ -188,7 +189,7 @@ impl Renderer {
     }
 
     /// Begin the animated movement of the specified remote entity to the given position. This method is to be called by
-    /// the [`ClientMap::set_remote_entity_position`].
+    /// the [`ClientMap::set_remote_entity_position`] method.
     pub fn remote_entity_moved(&mut self, entity_id: Id, to_coords: TileCoords, movement_time: f32) {
         self.remote_entity_renderers.entry(entity_id).or_default().do_movement(
             to_coords,
@@ -203,6 +204,12 @@ impl Renderer {
 
     pub fn remove_remote_entity(&mut self, entity_id: Id) {
         self.remote_entity_renderers.remove(&entity_id);
+    }
+
+    /// Has a smashing animation play at the specified coordinates. This method is to be called when a rock tile is
+    // turned into a smashed rock by the [`ClientMap::some_entity_moved_to`] method.
+    pub fn rock_tile_smashed(&mut self, coords: TileCoords) {
+        self.tile_change_animations.insert(coords, tiles::new_rock_smash_animation());
     }
 }
 

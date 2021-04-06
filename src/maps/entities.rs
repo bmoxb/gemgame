@@ -9,7 +9,7 @@ use crate::{gems, Id};
 /// Type alias for a hash map of entity IDs to entities.
 pub type Entities = HashMap<Id, Entity>;
 
-const STANDARD_MOVEMENT_TIME: f32 = 0.11;
+const STANDARD_MOVEMENT_TIME: f32 = 0.13;
 const RUNNING_MOVEMENT_TIME: f32 = STANDARD_MOVEMENT_TIME * 0.75;
 
 // TODO: 'Player' would probably be better name than `Entity`.
@@ -40,6 +40,9 @@ pub struct Entity {
 impl Entity {
     /// The amount of time in seconds taken for the entity to move to an adjacent tile.
     pub fn movement_time(&self) -> f32 {
+        // TODO: Have the tile that the entity is moving to influence their movement speed (e.g. slowed movement when
+        // smashing rocks).
+
         if self.has_running_shoes {
             RUNNING_MOVEMENT_TIME
         }
