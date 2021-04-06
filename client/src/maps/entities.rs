@@ -5,7 +5,7 @@ use shared::{
         entities::{Direction, Entity},
         Map, TileCoords
     },
-    messages, Id
+    messages
 };
 
 use super::ClientMap;
@@ -16,7 +16,6 @@ use crate::{
 
 /// The entity controlled by this client program.
 pub struct MyEntity {
-    id: Id,
     pub contained: Entity,
     /// Request number value to be used for the next [`shared::messages::ToServer::MoveMyEntity`] message. Incremented
     /// after the sending of each message.
@@ -27,17 +26,17 @@ pub struct MyEntity {
     /// has not yet been received so it is not yet known whether the predicted coordinates align with those on the
     /// server side.
     unverified_movements: HashMap<u32, TileCoords>,
+    /// Time that has passed since the last movement between tiles.
     time_since_last_movement: f32
 }
 
 impl MyEntity {
-    pub fn new(id: Id, contained: Entity) -> Self {
+    pub fn new(contained: Entity) -> Self {
         MyEntity {
-            id,
-            next_request_number: 0,
-            unverified_movements: HashMap::new(),
             time_since_last_movement: contained.movement_time(),
-            contained
+            contained,
+            next_request_number: 0,
+            unverified_movements: HashMap::new()
         }
     }
 
