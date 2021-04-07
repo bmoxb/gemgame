@@ -14,7 +14,6 @@ impl TileCoords {
     /// Identify the coordinates of the chunk that the tile at these tile coordinates would be found in.
     pub fn as_chunk_coords(&self) -> ChunkCoords {
         let chunk_x = self.x / CHUNK_WIDTH;
-
         let chunk_y = self.y / CHUNK_HEIGHT;
 
         ChunkCoords {
@@ -26,7 +25,6 @@ impl TileCoords {
     /// Identify the offset from its containing chunk that the specified tile would be found at.
     pub fn as_chunk_offset_coords(&self) -> OffsetCoords {
         let offset_x = self.x % CHUNK_WIDTH;
-
         let offset_y = self.y % CHUNK_HEIGHT;
 
         OffsetCoords {
@@ -78,37 +76,26 @@ impl fmt::Display for OffsetCoords {
 mod tests {
     use super::{ChunkCoords, OffsetCoords, TileCoords};
 
+    const TEST_DATA: &[(TileCoords, ChunkCoords, OffsetCoords)] = &[
+        (TileCoords { x: 0, y: 0 }, ChunkCoords { x: 0, y: 0 }, OffsetCoords { x: 0, y: 0 }),
+        (TileCoords { x: 12, y: -14 }, ChunkCoords { x: 0, y: -1 }, OffsetCoords { x: 12, y: 2 }),
+        (TileCoords { x: -13, y: 14 }, ChunkCoords { x: -1, y: 0 }, OffsetCoords { x: 3, y: 14 }),
+        (TileCoords { x: -3, y: -2 }, ChunkCoords { x: -1, y: -1 }, OffsetCoords { x: 13, y: 14 }),
+        (TileCoords { x: -34, y: -19 }, ChunkCoords { x: -3, y: -2 }, OffsetCoords { x: 14, y: 13 }),
+        (TileCoords { x: -16, y: -17 }, ChunkCoords { x: -1, y: -2 }, OffsetCoords { x: 0, y: 15 }),
+        (TileCoords { x: -33, y: -32 }, ChunkCoords { x: -3, y: -2 }, OffsetCoords { x: 15, y: 0 })
+    ];
+
     #[test]
     fn tile_coords_to_chunk_coords() {
-        let test_data = &[
-            (TileCoords { x: 0, y: 0 }, ChunkCoords { x: 0, y: 0 }),
-            (TileCoords { x: 12, y: -14 }, ChunkCoords { x: 0, y: -1 }),
-            (TileCoords { x: -14, y: 14 }, ChunkCoords { x: -1, y: 0 }),
-            (TileCoords { x: -3, y: -2 }, ChunkCoords { x: -1, y: -1 }),
-            (TileCoords { x: -34, y: -19 }, ChunkCoords { x: -3, y: -2 }),
-            (TileCoords { x: -16, y: -17 }, ChunkCoords { x: -1, y: -2 }),
-            (TileCoords { x: -33, y: -32 }, ChunkCoords { x: -3, y: -2 })
-        ];
-
-        for (tile, chunk) in test_data {
+        for (tile, chunk, _) in TEST_DATA {
             assert_eq!(tile.as_chunk_coords(), *chunk);
         }
     }
 
     #[test]
     fn tile_coords_to_chunk_offset_coords() {
-        let test_data = &[
-            (TileCoords { x: 0, y: 0 }, OffsetCoords { x: 0, y: 0 }),
-            (TileCoords { x: 8, y: 6 }, OffsetCoords { x: 8, y: 6 }),
-            (TileCoords { x: 12, y: -14 }, OffsetCoords { x: 12, y: 2 }),
-            (TileCoords { x: -13, y: 14 }, OffsetCoords { x: 3, y: 14 }),
-            (TileCoords { x: -3, y: -2 }, OffsetCoords { x: 13, y: 14 }),
-            (TileCoords { x: -34, y: -19 }, OffsetCoords { x: 14, y: 13 }),
-            (TileCoords { x: -16, y: -17 }, OffsetCoords { x: 0, y: 15 }),
-            (TileCoords { x: -33, y: -32 }, OffsetCoords { x: 15, y: 0 })
-        ];
-
-        for (tile, offset) in test_data {
+        for (tile, _, offset) in TEST_DATA {
             assert_eq!(tile.as_chunk_offset_coords(), *offset);
         }
     }
