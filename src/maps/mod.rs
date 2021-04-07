@@ -151,6 +151,10 @@ impl Tile {
         matches!(self, Tile::Rock | Tile::RockEmerald | Tile::RockRuby | Tile::RockDiamond)
     }
 
+    pub fn is_grassy(&self) -> bool {
+        matches!(self, Tile::Grass | Tile::FlowerPatch | Tile::FlowerBlue | Tile::FlowersYellowOrange)
+    }
+
     /// Returns the gem yield for a smashable tile (except [`Tile::Rock`] which is smashable but does not yield any
     /// gems).
     pub fn get_gem_yield(&self) -> Option<GemYield> {

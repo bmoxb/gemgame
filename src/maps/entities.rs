@@ -13,6 +13,7 @@ const STANDARD_MOVEMENT_TIME: f32 = 0.13;
 const RUNNING_MOVEMENT_TIME: f32 = STANDARD_MOVEMENT_TIME * 0.75;
 
 const SMASHABLE_TILE_MOVEMENT_TIME_MODIFIER: f32 = 2.5;
+const GRASSY_TILE_MOVEMENT_TIME_MODIFIER: f32 = 0.8;
 
 // TODO: 'Player' would probably be better name than `Entity`.
 /// An 'entity' in the context of the GemGame codebase refers specifically to the player characters that exist within
@@ -42,13 +43,13 @@ pub struct Entity {
 impl Entity {
     /// The amount of time in seconds taken for the entity to move to an adjacent tile.
     pub fn movement_time(&self, tile_at_destination: Tile) -> f32 {
-        // TODO: Have the tile that the entity is moving to influence their movement speed (e.g. slowed movement when
-        // smashing rocks).
-
         let base_time = if self.has_running_shoes { RUNNING_MOVEMENT_TIME } else { STANDARD_MOVEMENT_TIME };
 
         if tile_at_destination.is_smashable() {
             base_time * SMASHABLE_TILE_MOVEMENT_TIME_MODIFIER
+        }
+        else if tile_at_destination.is_grassy() {
+            base_time * GRASSY_TILE_MOVEMENT_TIME_MODIFIER
         }
         else {
             base_time
