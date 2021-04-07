@@ -287,7 +287,7 @@ impl Handler {
                         if let Some(gem_yield) = smashed_tile.get_gem_yield() {
                             // Random gem quantity within the range specified by the yield specific by the tile type:
                             let quantity_increase = rand::thread_rng()
-                                .gen_range(gem_yield.maximum_quantity..(gem_yield.minimum_quantity + 1));
+                                .gen_range(gem_yield.minimum_quantity..(gem_yield.maximum_quantity + 1));
 
                             // Increase gem quantity on the server side:
                             if let Some(entity) = self.game_map.lock().entity_by_id_mut(player_id) {
