@@ -76,7 +76,7 @@ impl ServerMap {
     }
 
     pub fn new_with_default_generator(seed: i32) -> Self {
-        ServerMap::new(seed, Box::new(generators::DefaultGenerator))
+        ServerMap::new(seed, Box::new(generators::DefaultGenerator::new(seed as u32)))
     }
 
     /// Move an entity in a specified direction. This method checks if the desintation position is already occupied or
