@@ -23,7 +23,9 @@ const GRASS_TILE_CHOICES: &[Tile] =
 const GRASS_TILE_WEIGHTS: &[usize] = &[1500, 80, 70, 10, 8, 5];
 
 pub struct DefaultGenerator {
-    noise_gen: noise::OpenSimplex
+    noise_gen: noise::OpenSimplex,
+    dirt_dist: rand::distributions::WeightedIndex<usize>,
+    grass_dist: rand::distributions::WeightedIndex<usize>
 }
 
 impl Generator for DefaultGenerator {
@@ -31,7 +33,11 @@ impl Generator for DefaultGenerator {
         let noise_gen = noise::OpenSimplex::new();
         noise_gen.set_seed(seed);
 
-        DefaultGenerator { noise_gen }
+        DefaultGenerator {
+            noise_gen,
+            dirt_dist: rand::distributions::WeightedIndex::new(DIRT_TILE_WEIGHTS).unwrap(),
+            grass_dist: rand::distributions::WeightedIndex::new(GRASS_TILE_WEIGHTS).unwrap()
+        }
     }
 
     fn generate(&self, chunk_coords: ChunkCoords) -> Chunk {
@@ -43,9 +49,6 @@ impl Generator for DefaultGenerator {
         let rng_seed = (chunk_coords.x as u64) ^ (chunk_coords.y as u64);
         let mut rng = rand::rngs::StdRng::seed_from_u64(rng_seed);
 
-        let dirt_dist = rand::distributions::WeightedIndex::new(DIRT_TILE_WEIGHTS).unwrap();
-        let grass_dist = rand::distributions::WeightedIndex::new(GRASS_TILE_WEIGHTS).unwrap();
-
         // Go through each position in the chunk:
 
         for offset_x in 0..CHUNK_WIDTH {
@@ -56,14 +59,14 @@ impl Generator for DefaultGenerator {
                 let tile = {
                     if noise_sample > 0.3 {
                         // Select a dirt tile type:
-                        DIRT_TILE_CHOICES[dirt_dist.sample(&mut rng)]
+                        DIRT_TILE_CHOICES[self.dirt_dist.sample(&mut rng)]
                     }
                     else if noise_sample < -0.15 {
                         Tile::Water
                     }
                     else {
                         // Select a grass tile type:
-                        GRASS_TILE_CHOICES[grass_dist.sample(&mut rng)]
+                        GRASS_TILE_CHOICES[self.grass_dist.sample(&mut rng)]
                     }
                 };
                 chunk.set_tile_at_offset(OffsetCoords { x: offset_x as u8, y: offset_y as u8 }, tile);
