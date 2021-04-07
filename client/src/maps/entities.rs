@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use shared::{
     maps::{
         entities::{Direction, Entity},
-        Map, Tile, TileCoords
+        Map, TileCoords
     },
     messages
 };
@@ -26,22 +26,21 @@ pub struct MyEntity {
     /// has not yet been received so it is not yet known whether the predicted coordinates align with those on the
     /// server side.
     unverified_movements: HashMap<u32, TileCoords>,
-    /// Time that has passed since the last movement between tiles.
-    time_since_last_movement: f32
+    movement_time_countdown: f32
 }
 
 impl MyEntity {
     pub fn new(contained: Entity) -> Self {
         MyEntity {
-            time_since_last_movement: contained.movement_time(Tile::default()),
             contained,
             next_request_number: 0,
-            unverified_movements: HashMap::new()
+            unverified_movements: HashMap::new(),
+            movement_time_countdown: 0.0
         }
     }
 
     pub fn update(&mut self, delta: f32) {
-        self.time_since_last_movement += delta;
+        self.movement_time_countdown -= delta;
     }
 
     /// Will attempt to move the player entity in the specified direction but will fail if moving now would exceed the
@@ -50,17 +49,17 @@ impl MyEntity {
         &mut self, direction: Direction, map: &mut ClientMap, connection: &mut networking::Connection,
         renderer: &mut rendering::maps::Renderer
     ) -> networking::Result<()> {
-        // Determine the new position and the amount of time needed to move to it:
-        let new_pos = direction.apply(self.contained.pos);
-        let dest_tile = map.loaded_tile_at(new_pos).unwrap_or_default();
-        let movement_time = self.contained.movement_time(dest_tile);
-
-        // Check if required amount of time has paced since last movement (i.e. don't exceed maximum movement speed:
-        if self.time_since_last_movement >= movement_time {
+        // Check if required amount of time has paced since last movement (i.e. don't exceed maximum movement speed):
+        if self.movement_time_countdown <= 0.0 {
             // Check if the position the player wants to move to is free (i.e. not a blocking tile and no other
             // entities persent at that position):
+            let new_pos = direction.apply(self.contained.pos);
             if map.is_position_free(new_pos) {
                 log::trace!("Moving player entity in direction {} to {}", direction, new_pos);
+
+                // Determine the amount of time needed to move to the destination time:
+                let dest_tile = map.loaded_tile_at(new_pos).unwrap_or_default();
+                let movement_time = self.contained.movement_time(dest_tile);
 
                 // Handle tile changes based on entity movement (e.g. rock smashing):
                 map.some_entity_moved_to(new_pos, renderer);
@@ -79,8 +78,9 @@ impl MyEntity {
                 // Add to collection of movement predictions awaiting confirmation from the server:
                 self.unverified_movements.insert(self.next_request_number, self.contained.pos);
 
+                // Prepare for next movement:
                 self.next_request_number += 1;
-                self.time_since_last_movement = 0.0;
+                self.movement_time_countdown = movement_time;
             }
             else {
                 log::trace!(
