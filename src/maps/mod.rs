@@ -143,7 +143,7 @@ pub enum Tile {
 impl Tile {
     /// Returns `true` should entities be unable to walk over this tile.
     pub fn is_blocking(&self) -> bool {
-        matches!(self, Tile::Shrub)
+        matches!(self, Tile::Stones | Tile::Shrub | Tile::Water)
     }
 
     /// Returns `true` for a tile that should become [`Tile::RockSmashed`] when an entity walks over it.
