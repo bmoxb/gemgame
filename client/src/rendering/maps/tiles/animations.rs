@@ -106,6 +106,7 @@ fn frame_at_time(frames: &[Frame], frame_time: f64) -> Option<(u16, u16)> {
     None
 }
 
+#[derive(Clone, Copy)]
 pub struct Frame {
     pub at: (u16, u16),
     pub time: f64

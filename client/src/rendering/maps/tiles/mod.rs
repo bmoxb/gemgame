@@ -3,38 +3,36 @@ pub mod animations;
 use std::collections::HashMap;
 
 use animations::{boxed_continuous, boxed_static};
+use array_macro::array;
 use lazy_static::lazy_static;
 use macroquad::prelude as quad;
 use shared::maps::Tile;
+
+const ROCK_SMASH_FRAMES: [animations::Frame; 7] =
+    array![index => animations::Frame { at: (index as u16, 3), time: 0.025 }; 7];
 
 const BLUE_FLOWER_FRAMES: &[animations::Frame] =
     &[animations::Frame { at: (5, 2), time: 2.65 }, animations::Frame { at: (6, 2), time: 0.35 }];
 
 const YELLOW_ORANGE_FLOWER_FRAMES: &[animations::Frame] = &[
-    animations::Frame { at: (0, 3), time: 1.75 },
-    animations::Frame { at: (1, 3), time: 0.25 },
-    animations::Frame { at: (2, 3), time: 0.25 },
-    animations::Frame { at: (3, 3), time: 0.25 }
+    animations::Frame { at: (0, 4), time: 1.75 },
+    animations::Frame { at: (1, 4), time: 0.25 },
+    animations::Frame { at: (2, 4), time: 0.25 },
+    animations::Frame { at: (3, 4), time: 0.25 }
 ];
 
 const WATER_FRAME_TIME: f64 = 0.15;
-const WATER_FRAMES: &[animations::Frame] = &[
-    animations::Frame { at: (4, 3), time: WATER_FRAME_TIME },
-    animations::Frame { at: (5, 3), time: WATER_FRAME_TIME },
-    animations::Frame { at: (6, 3), time: WATER_FRAME_TIME },
-    animations::Frame { at: (7, 3), time: WATER_FRAME_TIME }
-];
+const WATER_FRAMES: [animations::Frame; 4] =
+    array![index => animations::Frame { at: (4 + index as u16, 7), time: WATER_FRAME_TIME }; 4];
 
-const ROCK_SMASH_FRAME_TIME: f64 = 0.025;
-const ROCK_SMASH_FRAMES: &[animations::Frame] = &[
-    animations::Frame { at: (0, 4), time: ROCK_SMASH_FRAME_TIME },
-    animations::Frame { at: (1, 4), time: ROCK_SMASH_FRAME_TIME },
-    animations::Frame { at: (2, 4), time: ROCK_SMASH_FRAME_TIME },
-    animations::Frame { at: (3, 4), time: ROCK_SMASH_FRAME_TIME },
-    animations::Frame { at: (4, 4), time: ROCK_SMASH_FRAME_TIME },
-    animations::Frame { at: (5, 4), time: ROCK_SMASH_FRAME_TIME },
-    animations::Frame { at: (6, 4), time: ROCK_SMASH_FRAME_TIME }
-];
+const WATER_GRASS_TOP_FRAMES: [animations::Frame; 4] =
+    array![index => animations::Frame { at: (4 + index as u16, 6), time: WATER_FRAME_TIME }; 4];
+
+const WATER_GRASS_CORNER_BOTTOM_LEFT: [animations::Frame; 4] =
+    array![index => animations::Frame { at: (4 + index as u16, 5), time: WATER_FRAME_TIME }; 4];
+
+const WATER_GRASS_CORNER_BOTTOM_RIGHT: [animations::Frame; 4] =
+    array![index => animations::Frame { at: (4 + index as u16, 4), time: WATER_FRAME_TIME }; 4];
 
 lazy_static! {
     static ref STATELESS_TILE_ANIMATIONS: HashMap<Tile, Box<dyn animations::Animation + Sync>> = {
@@ -64,7 +62,19 @@ lazy_static! {
         map.insert(Tile::Shrub, boxed_static(4, 2));
         map.insert(Tile::FlowerBlue, boxed_continuous(BLUE_FLOWER_FRAMES));
         map.insert(Tile::FlowersYellowOrange, boxed_continuous(YELLOW_ORANGE_FLOWER_FRAMES));
-        map.insert(Tile::Water, boxed_continuous(WATER_FRAMES));
+        map.insert(Tile::Water, boxed_continuous(&WATER_FRAMES));
+        map.insert(Tile::WaterGrassTop, boxed_continuous(&WATER_GRASS_TOP_FRAMES));
+        map.insert(Tile::WaterGrassBottom, boxed_static(2, 7));
+        map.insert(Tile::WaterGrassLeft, boxed_static(1, 6));
+        map.insert(Tile::WaterGrassRight, boxed_static(3, 6));
+        map.insert(Tile::WaterGrassTopLeft, boxed_static(1, 5));
+        map.insert(Tile::WaterGrassTopRight, boxed_static(3, 5));
+        map.insert(Tile::WaterGrassBottomLeft, boxed_static(1, 7));
+        map.insert(Tile::WaterGrassBottomRight, boxed_static(3, 7));
+        map.insert(Tile::WaterGrassCornerTopLeft, boxed_static(2, 5));
+        map.insert(Tile::WaterGrassCornerTopRight, boxed_static(2, 6));
+        map.insert(Tile::WaterGrassCornerBottomLeft, boxed_continuous(&WATER_GRASS_CORNER_BOTTOM_LEFT));
+        map.insert(Tile::WaterGrassCornerBottomRight, boxed_continuous(&WATER_GRASS_CORNER_BOTTOM_RIGHT));
 
         map
     };
@@ -87,5 +97,5 @@ pub fn draw_pending(draw_pos: quad::Vec2, draw_size: f32) {
 }
 
 pub fn new_rock_smash_animation() -> animations::Once {
-    animations::Once::new(ROCK_SMASH_FRAMES)
+    animations::Once::new(&ROCK_SMASH_FRAMES)
 }
