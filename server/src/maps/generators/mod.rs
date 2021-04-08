@@ -2,7 +2,7 @@ mod noisegen;
 
 use noise::Seedable;
 use noisegen::ChunkNoise;
-use rand::{distributions::Distribution, SeedableRng};
+use rand::{distributions::Distribution, rngs::StdRng, SeedableRng};
 use shared::maps::{Chunk, ChunkCoords, OffsetCoords, Tile, CHUNK_HEIGHT, CHUNK_TILE_COUNT, CHUNK_WIDTH};
 
 pub trait Generator {
@@ -53,28 +53,28 @@ impl Generator for DefaultGenerator {
             ChunkNoise::new(self.noise_func, chunk_coords, NOISE_SAMPLE_POINT_MULTIPLIER, NOISE_SAMPLE_VALUE_MULTIPLER);
 
         let rng_seed = (chunk_coords.x as u64) ^ (chunk_coords.y as u64);
-        let mut rng = rand::rngs::StdRng::seed_from_u64(rng_seed);
+        let mut rng = StdRng::seed_from_u64(rng_seed);
 
         // Go through each position in the chunk:
 
         for offset_x in 0..CHUNK_WIDTH {
             for offset_y in 0..CHUNK_HEIGHT {
-                // Sample the noise function:
-                let noise_sample = chunk_noise.sample(offset_x, offset_y);
-
                 let tile = {
-                    if noise_sample > 0.3 {
-                        // Select a dirt tile type:
+                    let noise_sample = chunk_noise.sample(offset_x, offset_y);
+
+                    if Self::should_be_dirt(noise_sample) {
                         DIRT_TILE_CHOICES[self.dirt_dist.sample(&mut rng)]
                     }
-                    else if noise_sample < -0.15 {
+                    else if Self::should_be_water(noise_sample) {
                         Tile::Water
                     }
                     else {
-                        // Select a grass tile type:
+                        self.place_grass_transition_tiles_around(offset_x, offset_y, &mut chunk, &chunk_noise);
+
                         GRASS_TILE_CHOICES[self.grass_dist.sample(&mut rng)]
                     }
                 };
+
                 chunk.set_tile_at_offset(OffsetCoords { x: offset_x as u8, y: offset_y as u8 }, tile);
             }
         }
@@ -86,5 +86,21 @@ impl Generator for DefaultGenerator {
 
     fn name(&self) -> &'static str {
         "default"
+    }
+}
+
+impl DefaultGenerator {
+    fn place_grass_transition_tiles_around(
+        &self, offset_x: i32, offset_y: i32, chunk: &mut Chunk, chunk_noise: &ChunkNoise
+    ) {
+        //unimplemented!()
+    }
+
+    fn should_be_dirt(noise_sample: f64) -> bool {
+        noise_sample >= 0.3
+    }
+
+    fn should_be_water(noise_sample: f64) -> bool {
+        noise_sample <= -0.15
     }
 }
