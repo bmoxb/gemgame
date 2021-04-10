@@ -28,11 +28,11 @@ const WATER_FRAMES: [animations::Frame; 4] =
 const WATER_GRASS_TOP_FRAMES: [animations::Frame; 4] =
     array![index => animations::Frame { at: (4 + index as u16, 6), time: WATER_FRAME_TIME }; 4];
 
-const WATER_GRASS_CORNER_BOTTOM_LEFT: [animations::Frame; 4] =
-    array![index => animations::Frame { at: (4 + index as u16, 5), time: WATER_FRAME_TIME }; 4];
-
-const WATER_GRASS_CORNER_BOTTOM_RIGHT: [animations::Frame; 4] =
+const WATER_GRASS_CORNER_TOP_LEFT: [animations::Frame; 4] =
     array![index => animations::Frame { at: (4 + index as u16, 4), time: WATER_FRAME_TIME }; 4];
+
+const WATER_GRASS_CORNER_TOP_RIGHT: [animations::Frame; 4] =
+    array![index => animations::Frame { at: (4 + index as u16, 5), time: WATER_FRAME_TIME }; 4];
 
 lazy_static! {
     static ref STATELESS_TILE_ANIMATIONS: HashMap<Tile, Box<dyn animations::Animation + Sync>> = {
@@ -71,10 +71,10 @@ lazy_static! {
         map.insert(Tile::WaterGrassTopRight, boxed_static(3, 5));
         map.insert(Tile::WaterGrassBottomLeft, boxed_static(1, 7));
         map.insert(Tile::WaterGrassBottomRight, boxed_static(3, 7));
-        map.insert(Tile::WaterGrassCornerTopLeft, boxed_static(2, 5));
-        map.insert(Tile::WaterGrassCornerTopRight, boxed_static(2, 6));
-        map.insert(Tile::WaterGrassCornerBottomLeft, boxed_continuous(&WATER_GRASS_CORNER_BOTTOM_LEFT));
-        map.insert(Tile::WaterGrassCornerBottomRight, boxed_continuous(&WATER_GRASS_CORNER_BOTTOM_RIGHT));
+        map.insert(Tile::WaterGrassCornerTopLeft, boxed_continuous(&WATER_GRASS_CORNER_TOP_LEFT));
+        map.insert(Tile::WaterGrassCornerTopRight, boxed_continuous(&WATER_GRASS_CORNER_TOP_RIGHT));
+        map.insert(Tile::WaterGrassCornerBottomLeft, boxed_static(2, 6));
+        map.insert(Tile::WaterGrassCornerBottomRight, boxed_static(2, 5));
 
         map
     };

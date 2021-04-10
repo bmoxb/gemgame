@@ -161,8 +161,8 @@ impl Tile {
                 | Tile::Shrub
                 | Tile::Water
                 | Tile::WaterGrassTop
-                | Tile::WaterGrassCornerBottomLeft
-                | Tile::WaterGrassCornerBottomRight
+                | Tile::WaterGrassCornerTopLeft
+                | Tile::WaterGrassCornerTopRight
         )
     }
 
