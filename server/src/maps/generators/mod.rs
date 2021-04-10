@@ -63,23 +63,19 @@ impl Generator for DefaultGenerator {
                     let noise_sample = chunk_noise.sample(offset_x, offset_y);
 
                     if Self::should_be_dirt(noise_sample) {
-                        DIRT_TILE_CHOICES[self.dirt_dist.sample(&mut rng)]
+                        self.dirt_or_transition_tile(offset_x, offset_y, &mut rng, &chunk_noise)
                     }
                     else if Self::should_be_water(noise_sample) {
                         Tile::Water
                     }
                     else {
-                        self.place_grass_transition_tiles_around(offset_x, offset_y, &mut chunk, &chunk_noise);
-
-                        GRASS_TILE_CHOICES[self.grass_dist.sample(&mut rng)]
+                        self.grass_or_transition_tile(offset_x, offset_y, &mut rng, &chunk_noise)
                     }
                 };
 
                 chunk.set_tile_at_offset(OffsetCoords { x: offset_x as u8, y: offset_y as u8 }, tile);
             }
         }
-
-        // TODO: Transition tiles between grass, dirt, water...
 
         chunk
     }
@@ -90,10 +86,68 @@ impl Generator for DefaultGenerator {
 }
 
 impl DefaultGenerator {
-    fn place_grass_transition_tiles_around(
-        &self, offset_x: i32, offset_y: i32, chunk: &mut Chunk, chunk_noise: &ChunkNoise
-    ) {
-        //unimplemented!()
+    fn dirt_or_transition_tile(
+        &self, offset_x: i32, offset_y: i32, rng: &mut StdRng, chunk_noise: &ChunkNoise
+    ) -> Tile {
+        let above = Self::should_be_grass_at(offset_x, offset_y + 1, chunk_noise);
+        let below = Self::should_be_grass_at(offset_x, offset_y - 1, chunk_noise);
+        let left = Self::should_be_grass_at(offset_x - 1, offset_y, chunk_noise);
+        let right = Self::should_be_grass_at(offset_x + 1, offset_y, chunk_noise);
+
+        // If a dirt tile is surrounded by grass tiles on any 3 sides, replace it with a grass tile:
+        if (above ^ below ^ left ^ right) & ((above & below) | (left & right)) {
+            return Tile::Grass;
+        }
+
+        let transition_tile = match (above, below, left, right) {
+            // Straight transition tiles:
+            (true, _, false, false) => Some(Tile::DirtGrassTop),
+            (_, true, false, false) => Some(Tile::DirtGrassBottom),
+            (false, false, true, _) => Some(Tile::DirtGrassLeft),
+            (false, false, _, true) => Some(Tile::DirtGrassRight),
+            // Right-angle transition tiles:
+            (true, _, true, false) => Some(Tile::DirtGrassTopLeft),
+            (true, _, false, true) => Some(Tile::DirtGrassTopRight),
+            (_, true, true, false) => Some(Tile::DirtGrassBottomLeft),
+            (_, true, false, true) => Some(Tile::DirtGrassBottomRight),
+
+            _ => None
+        };
+
+        transition_tile
+            .or_else(|| {
+                let top_left = Self::should_be_grass_at(offset_x - 1, offset_y + 1, chunk_noise);
+                let top_right = Self::should_be_grass_at(offset_x + 1, offset_y + 1, chunk_noise);
+                let bottom_left = Self::should_be_grass_at(offset_x - 1, offset_y - 1, chunk_noise);
+                let bottom_right = Self::should_be_grass_at(offset_x + 1, offset_y - 1, chunk_noise);
+
+                match (top_left, top_right, bottom_left, bottom_right) {
+                    // Corner tile transitions:
+                    (true, false, false, _) => Some(Tile::DirtGrassCornerTopLeft),
+                    (false, true, _, false) => Some(Tile::DirtGrassCornerTopRight),
+                    (false, _, true, false) => Some(Tile::DirtGrassCornerBottomLeft),
+                    (_, false, false, true) => Some(Tile::DirtGrassCornerBottomRight),
+                    // Straight transition tiles (accounting for positions where a single dirt tile would jut out but is
+                    // replaced with a grass tile instead):
+                    (true, true, ..) => Some(Tile::DirtGrassTop),
+                    (_, _, true, true) => Some(Tile::DirtGrassBottom),
+                    (true, _, true, _) => Some(Tile::DirtGrassLeft),
+                    (_, true, _, true) => Some(Tile::DirtGrassRight),
+                    _ => None
+                }
+            })
+            .unwrap_or_else(|| DIRT_TILE_CHOICES[self.dirt_dist.sample(rng)])
+    }
+
+    fn grass_or_transition_tile(
+        &self, offset_x: i32, offset_y: i32, rng: &mut StdRng, chunk_noise: &ChunkNoise
+    ) -> Tile {
+        GRASS_TILE_CHOICES[self.grass_dist.sample(rng)]
+    }
+
+    fn should_be_grass_at(offset_x: i32, offset_y: i32, chunk_noise: &ChunkNoise) -> bool {
+        let sample = chunk_noise.sample(offset_x, offset_y);
+        !Self::should_be_dirt(sample) && !Self::should_be_water(sample)
     }
 
     fn should_be_dirt(noise_sample: f64) -> bool {
