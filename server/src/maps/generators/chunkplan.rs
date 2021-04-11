@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use shared::maps::{Chunk, OffsetCoords, Tile, CHUNK_HEIGHT, CHUNK_TILE_COUNT, CHUNK_WIDTH};
+use shared::maps::{Chunk, OffsetCoords, Tile, CHUNK_HEIGHT, CHUNK_WIDTH};
 
 #[derive(Default)]
 pub struct ChunkPlan {
@@ -13,7 +13,7 @@ impl ChunkPlan {
     }
 
     pub fn remove_juttting_and_unconnected_tiles(&mut self) {
-        // TODO
+        unimplemented!() // TODO
     }
 
     pub fn to_chunk(
@@ -41,7 +41,52 @@ impl ChunkPlan {
     fn maybe_transition_tile(
         &self, offset_x: i32, offset_y: i32, dirt_transitions: &TransitionTiles, water_transitions: &TransitionTiles
     ) -> Option<Tile> {
-        None // TODO
+        let my_category = self.get_category_at(offset_x, offset_y);
+
+        let my_transition_tiles = {
+            match my_category {
+                TileCategory::Water => water_transitions,
+                TileCategory::Dirt => dirt_transitions,
+                TileCategory::Grass => return None
+            }
+        };
+
+        let above = self.get_category_at(offset_x, offset_y + 1) != my_category;
+        let below = self.get_category_at(offset_x, offset_y - 1) != my_category;
+        let left = self.get_category_at(offset_x - 1, offset_y) != my_category;
+        let right = self.get_category_at(offset_x + 1, offset_y) != my_category;
+
+        let transition_tile = match (above, below, left, right) {
+            // Straight transition tiles:
+            (true, _, false, false) => Some(my_transition_tiles.top),
+            (_, true, false, false) => Some(my_transition_tiles.bottom),
+            (false, false, true, _) => Some(my_transition_tiles.left),
+            (false, false, _, true) => Some(my_transition_tiles.right),
+            // Right-angle transition tiles:
+            (true, _, true, false) => Some(my_transition_tiles.top_left),
+            (true, _, false, true) => Some(my_transition_tiles.top_right),
+            (_, true, true, false) => Some(my_transition_tiles.bottom_left),
+            (_, true, false, true) => Some(my_transition_tiles.bottom_right),
+
+            _ => None
+        };
+
+        transition_tile.or_else(|| {
+            let top_left = self.get_category_at(offset_x - 1, offset_y + 1) != my_category;
+            let top_right = self.get_category_at(offset_x + 1, offset_y + 1) != my_category;
+            let bottom_left = self.get_category_at(offset_x - 1, offset_y - 1) != my_category;
+            let bottom_right = self.get_category_at(offset_x + 1, offset_y - 1) != my_category;
+
+            match (top_left, top_right, bottom_left, bottom_right) {
+                // Corner tile transitions:
+                (true, false, false, _) => Some(my_transition_tiles.corner_top_left),
+                (false, true, _, false) => Some(my_transition_tiles.corner_top_right),
+                (false, _, true, false) => Some(my_transition_tiles.corner_bottom_left),
+                (_, false, false, true) => Some(my_transition_tiles.corner_bottom_right),
+
+                _ => None
+            }
+        })
     }
 
     fn get_category_at(&self, offset_x: i32, offset_y: i32) -> TileCategory {
@@ -49,7 +94,7 @@ impl ChunkPlan {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TileCategory {
     Grass,
     Dirt,
