@@ -98,16 +98,18 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new(tiles: [Tile; CHUNK_TILE_COUNT]) -> Self {
-        Chunk { tiles }
-    }
-
     pub fn tile_at_offset(&self, offset: OffsetCoords) -> Tile {
         self.tiles[offset.calculate_index()]
     }
 
     pub fn set_tile_at_offset(&mut self, offset: OffsetCoords, tile: Tile) {
         self.tiles[offset.calculate_index()] = tile;
+    }
+}
+
+impl Default for Chunk {
+    fn default() -> Self {
+        Chunk { tiles: [Tile::default(); CHUNK_TILE_COUNT] }
     }
 }
 

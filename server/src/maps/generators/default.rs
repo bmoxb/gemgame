@@ -1,8 +1,11 @@
 use noise::Seedable;
 use rand::{distributions::Distribution, rngs::StdRng, SeedableRng};
-use shared::maps::{Chunk, ChunkCoords, OffsetCoords, Tile, CHUNK_HEIGHT, CHUNK_TILE_COUNT, CHUNK_WIDTH};
+use shared::maps::{Chunk, ChunkCoords, OffsetCoords, Tile, CHUNK_HEIGHT, CHUNK_WIDTH};
 
-use super::ChunkNoise;
+use super::{
+    chunknoise::ChunkNoise,
+    chunkplan::{ChunkPlan, TileCategory}
+};
 
 const DIRT_TILE_CHOICES: &[Tile] = &[Tile::Dirt, Tile::Rock, Tile::RockEmerald, Tile::RockRuby, Tile::RockDiamond];
 const DIRT_TILE_WEIGHTS: &[usize] = &[600, 15, 10, 5, 1];
@@ -15,6 +18,14 @@ const NOISE_SAMPLE_POINT_MULTIPLIER: f64 = 0.06;
 
 const NOISE_SAMPLE_VALUE_MULTIPLIER: f64 = 1.0;
 
+/// Default map chunk generator for GemGame. Algorithm is as follows:
+/// * Generate Perlin noise for coordinates within the chunk as well as immediately around the chunk (see
+///   [`ChunkNoise`]).
+/// * Use the noise to determine which category (grass, water, or dirt) each tile will be.
+/// * Iterate through tile categories and turn into water all dirt and grass tile categories that have 3 or 4 water tile
+///   category neighbours (considering only vertically & hoizontally adjacent - ignore diagonally adjacent).
+/// * Iterate through tile categories again and begin placing tiles using the relevant random distributions (see
+///   [`super::maybe_transition_tile`] for how transition tiles are placed).
 pub struct DefaultGenerator {
     noise_func: noise::OpenSimplex,
     dirt_dist: rand::distributions::WeightedIndex<usize>,
@@ -34,9 +45,6 @@ impl super::Generator for DefaultGenerator {
     }
 
     fn generate(&self, chunk_coords: ChunkCoords) -> Chunk {
-        // Create an empty chunk to modify:
-        let mut chunk = Chunk::new([Tile::Dirt; CHUNK_TILE_COUNT]);
-
         // Prepare RNG, noise, distributions:
 
         let chunk_noise = ChunkNoise::new(
@@ -49,69 +57,40 @@ impl super::Generator for DefaultGenerator {
         let rng_seed = (chunk_coords.x as u64) ^ (chunk_coords.y as u64);
         let mut rng = StdRng::seed_from_u64(rng_seed);
 
-        // Go through each position in the chunk:
+        // Go through each position in the chunk & identify the tile category based on noise values:
 
-        for offset_x in 0..CHUNK_WIDTH {
-            for offset_y in 0..CHUNK_HEIGHT {
-                let tile = {
-                    let noise_sample = chunk_noise.sample(offset_x, offset_y);
+        let mut plan = ChunkPlan::default();
 
-                    if should_be_dirt(noise_sample) {
-                        self.dirt_or_transition_tile(offset_x, offset_y, &mut rng, &chunk_noise)
-                    }
-                    else if should_be_water(noise_sample) {
-                        self.water_or_transition_tile(offset_x, offset_y, &mut rng, &chunk_noise)
-                    }
-                    else {
-                        GRASS_TILE_CHOICES[self.grass_dist.sample(&mut rng)]
-                    }
-                };
+        for offset_x in -1..CHUNK_WIDTH + 2 {
+            for offset_y in -1..CHUNK_HEIGHT + 2 {
+                let noise_sample = chunk_noise.sample(offset_x, offset_y);
 
-                chunk.set_tile_at_offset(OffsetCoords { x: offset_x as u8, y: offset_y as u8 }, tile);
+                if should_be_dirt(noise_sample) {
+                    plan.set_category_at(offset_x, offset_y, TileCategory::Dirt);
+                }
+                else if should_be_water(noise_sample) {
+                    plan.set_category_at(offset_x, offset_y, TileCategory::Water);
+                }
             }
         }
 
-        chunk
+        plan.remove_juttting_and_unconnected_tiles();
+
+        // Produce a chunk based on the chunk plan:
+
+        let mut rng_clone = rng.clone();
+        plan.to_chunk(&super::DIRT_GRASS_TRANSITION_TILES, &super::WATER_GRASS_TRANSITION_TILES, |category| {
+            match category {
+                TileCategory::Grass => GRASS_TILE_CHOICES[self.grass_dist.sample(&mut rng_clone)],
+                TileCategory::Dirt => DIRT_TILE_CHOICES[self.dirt_dist.sample(&mut rng)],
+                TileCategory::Water => Tile::Water // TODO: Add more water tile types.
+            }
+        })
     }
 
     fn name(&self) -> &'static str {
         "default"
     }
-}
-
-impl DefaultGenerator {
-    fn dirt_or_transition_tile(
-        &self, offset_x: i32, offset_y: i32, rng: &mut StdRng, chunk_noise: &ChunkNoise
-    ) -> Tile {
-        super::maybe_transition_tile(
-            offset_x,
-            offset_y,
-            chunk_noise,
-            should_be_grass_at,
-            Tile::Grass,
-            &super::DIRT_GRASS_TRANSITION_TILES
-        )
-        .unwrap_or_else(|| DIRT_TILE_CHOICES[self.dirt_dist.sample(rng)])
-    }
-
-    fn water_or_transition_tile(
-        &self, offset_x: i32, offset_y: i32, _rng: &mut StdRng, chunk_noise: &ChunkNoise
-    ) -> Tile {
-        super::maybe_transition_tile(
-            offset_x,
-            offset_y,
-            chunk_noise,
-            should_be_grass_at,
-            Tile::Grass,
-            &super::WATER_GRASS_TRANSITION_TILES
-        )
-        .unwrap_or(Tile::Water) // TODO: Add more water tile types.
-    }
-}
-
-fn should_be_grass_at(offset_x: i32, offset_y: i32, chunk_noise: &ChunkNoise) -> bool {
-    let sample = chunk_noise.sample(offset_x, offset_y);
-    !should_be_water(sample) && !should_be_dirt(sample)
 }
 
 fn should_be_water(noise_sample: f64) -> bool {
