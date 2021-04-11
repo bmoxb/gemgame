@@ -1,6 +1,6 @@
 use noise::Seedable;
 use rand::{distributions::Distribution, rngs::StdRng, SeedableRng};
-use shared::maps::{Chunk, ChunkCoords, OffsetCoords, Tile, CHUNK_HEIGHT, CHUNK_WIDTH};
+use shared::maps::{Chunk, ChunkCoords, Tile, CHUNK_HEIGHT, CHUNK_WIDTH};
 
 use super::{
     chunknoise::ChunkNoise,

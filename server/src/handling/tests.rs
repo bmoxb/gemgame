@@ -10,7 +10,7 @@ use shared::{
     gems::GemCollection,
     maps::{
         entities::{ClothingColour, Direction, Entity, FacialExpression, HairColour, HairStyle, SkinColour},
-        Chunk, ChunkCoords, OffsetCoords, Tile, TileCoords, CHUNK_TILE_COUNT, CHUNK_WIDTH
+        Chunk, ChunkCoords, OffsetCoords, Tile, TileCoords, CHUNK_WIDTH
     }
 };
 
@@ -50,7 +50,7 @@ impl Handler {
     }
 
     fn add_empty_chunk(&mut self, coords: ChunkCoords) {
-        self.add_chunk(coords, Chunk::new([Tile::default(); CHUNK_TILE_COUNT]));
+        self.add_chunk(coords, Chunk::default());
     }
 
     fn add_chunk(&mut self, coords: ChunkCoords, chunk: Chunk) {
@@ -120,7 +120,7 @@ async fn handle_move_my_entity_blocking() {
     let mut handler = make_test_handler().await;
     let mut other_map_changes_receiver = handler.map_changes_sender.subscribe();
 
-    let mut chunk = Chunk::new([Tile::Grass; CHUNK_TILE_COUNT]);
+    let mut chunk = Chunk::default();
     chunk.set_tile_at_offset(OffsetCoords { x: 0, y: 1 }, Tile::Rock);
 
     handler.add_chunk(ChunkCoords { x: 0, y: 0 }, chunk);
