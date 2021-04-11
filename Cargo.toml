@@ -12,3 +12,6 @@ strum = { version = "0.20", features = ["derive"] }
 
 [workspace]
 members = ["client", "server"]
+
+[profile.dev.package.'*']
+opt-level = 3

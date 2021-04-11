@@ -22,7 +22,7 @@ impl ChunkPlan {
                 let (above, below, left, right) = self.surrounding_not_equal_to(category, offset_x, offset_y);
 
                 if (above ^ below ^ left ^ right) & ((above & below) | (left & right)) {
-                    self.set_category_at(offset_x, offset_y, TileCategory::Dirt);
+                    self.set_category_at(offset_x, offset_y, TileCategory::default());
                 }
             }
         }
@@ -36,7 +36,7 @@ impl ChunkPlan {
                 let (above, below, left, right) = self.surrounding_not_equal_to(category, offset_x, offset_y);
 
                 if above && below && left && right {
-                    self.set_category_at(offset_x, offset_y, TileCategory::Dirt);
+                    self.set_category_at(offset_x, offset_y, TileCategory::default());
                 }
             }
         }

@@ -81,10 +81,24 @@ lazy_static! {
 }
 
 pub fn draw_with_stateless_animation(
-    tile: Tile, draw_pos: quad::Vec2, draw_size: f32, single_tile_texture_size: u16, texture: quad::Texture2D
+    tile: Tile, draw_pos: quad::Vec2, draw_size: f32, single_tile_texture_size: u16, texture: quad::Texture2D,
+    chunk_corner: bool
 ) {
     let animation = STATELESS_TILE_ANIMATIONS.get(&tile).unwrap();
     animation.draw(draw_pos, draw_size, single_tile_texture_size, texture);
+
+    #[cfg(debug_assertions)]
+    {
+        let (radius_multiplier, colour) = {
+            if chunk_corner {
+                (0.06, quad::DARKPURPLE)
+            }
+            else {
+                (0.03, quad::RED)
+            }
+        };
+        quad::draw_circle(draw_pos.x, draw_pos.y, draw_size * radius_multiplier, colour);
+    }
 }
 
 /// Draw a grey square at the specified coordinates. This is to act as a place holder while the necessary data is being

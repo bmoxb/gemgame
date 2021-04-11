@@ -99,6 +99,15 @@ impl State for GameState {
         self.map_renderer.draw(&self.map, &self.my_entity.contained, assets, delta);
         //self.ui_renderer.draw(...);
 
+        #[cfg(debug_assertions)]
+        rendering::ui::draw_debug_text(
+            28.0,
+            quad::DARKPURPLE,
+            assets,
+            &self.my_entity.contained,
+            self.map.get_loaded_chunk_coords()
+        );
+
         // Player entity updates/input handling:
 
         self.my_entity.update(delta);

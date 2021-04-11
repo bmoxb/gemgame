@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 use macroquad::prelude as quad;
 use shared::{
-    maps::{entities::Entity, Map, TileCoords},
+    maps::{entities::Entity, Map, OffsetCoords, TileCoords},
     Id
 };
 
@@ -84,12 +84,14 @@ impl Renderer {
                 // received from the server.
 
                 if let Some(tile) = map.loaded_tile_at(tile_coords) {
+                    let chunk_corner = tile_coords.as_chunk_offset_coords() == OffsetCoords { x: 0, y: 0 };
                     tiles::draw_with_stateless_animation(
                         tile,
                         draw_pos,
                         self.tile_draw_size,
                         self.single_tile_texture_size,
-                        assets.texture(TextureKey::Tiles)
+                        assets.texture(TextureKey::Tiles),
+                        chunk_corner
                     );
                 }
                 else {

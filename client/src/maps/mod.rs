@@ -55,6 +55,10 @@ impl ClientMap {
             renderer.rock_tile_smashed(pos);
         }
     }
+
+    pub fn get_loaded_chunk_coords(&self) -> impl Iterator<Item = ChunkCoords> + '_ {
+        self.loaded_chunks.keys().copied()
+    }
 }
 
 impl Map for ClientMap {
