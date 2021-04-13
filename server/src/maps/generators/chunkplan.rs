@@ -12,36 +12,6 @@ impl ChunkPlan {
         self.tile_categories.insert((offset_x, offset_y), category);
     }
 
-    pub fn remove_juttting_and_unconnected_tiles(&mut self) {
-        // Remove jutting (consider 3 adjacent tiles) tiles:
-
-        for offset_x in 0..CHUNK_WIDTH {
-            for offset_y in 0..CHUNK_HEIGHT {
-                let category = self.get_category_at(offset_x, offset_y);
-
-                let (above, below, left, right) = self.surrounding_not_equal_to(category, offset_x, offset_y);
-
-                if (above ^ below ^ left ^ right) & ((above & below) | (left & right)) {
-                    self.set_category_at(offset_x, offset_y, TileCategory::default());
-                }
-            }
-        }
-
-        // Remove unconnected (consider all 4 adjacent tiles) tiles:
-
-        for offset_x in 0..CHUNK_WIDTH {
-            for offset_y in 0..CHUNK_HEIGHT {
-                let category = self.get_category_at(offset_x, offset_y);
-
-                let (above, below, left, right) = self.surrounding_not_equal_to(category, offset_x, offset_y);
-
-                if above && below && left && right {
-                    self.set_category_at(offset_x, offset_y, TileCategory::default());
-                }
-            }
-        }
-    }
-
     pub fn to_chunk(
         &self, dirt_transitions: &TransitionTiles, water_transitions: &TransitionTiles,
         mut place_non_transition_tile: impl FnMut(TileCategory) -> Tile
@@ -62,6 +32,38 @@ impl ChunkPlan {
         }
 
         chunk
+    }
+
+    pub fn remove_juttting_and_unconnected_tiles(&mut self) {
+        for offset_x in 0..CHUNK_WIDTH {
+            for offset_y in 0..CHUNK_HEIGHT {
+                self.remove_juttting_and_unconnected_tiles_at(offset_x, offset_y);
+            }
+        }
+    }
+
+    fn remove_juttting_and_unconnected_tiles_at(&mut self, offset_x: i32, offset_y: i32) {
+        let category = self.get_category_at(offset_x, offset_y);
+
+        let (above, below, left, right) = self.surrounding_not_equal_to(category, offset_x, offset_y);
+
+        if (above && below && left) || (above && below && right) || (above && left && right) || (below && left && right)
+        {
+            self.set_category_at(offset_x, offset_y, TileCategory::default());
+
+            if !above {
+                self.remove_juttting_and_unconnected_tiles_at(offset_x, offset_y + 1);
+            }
+            if !below {
+                self.remove_juttting_and_unconnected_tiles_at(offset_x, offset_y - 1);
+            }
+            if left {
+                self.remove_juttting_and_unconnected_tiles_at(offset_x - 1, offset_y);
+            }
+            if !right {
+                self.remove_juttting_and_unconnected_tiles_at(offset_x + 1, offset_y);
+            }
+        }
     }
 
     fn maybe_transition_tile(
@@ -127,7 +129,7 @@ impl ChunkPlan {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TileCategory {
     Grass,
     Dirt,
@@ -157,20 +159,26 @@ pub struct TransitionTiles {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn remove_jutting_tiles() {
-        // ..##      ..##
-        // .###  ->  ..##
-        // ..##      ..##
+        // ....       .....
+        // ..##.  ->  ..##.
+        // .###.      ..##.
+        // .....      .....
 
-        // ...##      ...##
-        // .####  ->  ...##
-        // ...##      ...##
+        // ......      ......
+        // .####.  ->  ##....
+        // .##...      ##....
+        // ......      ......
 
-        // ..##
-        // .###  ->  no
-        // .###  ->  change
-        // ..##
+        // .....
+        // ..##.
+        // .###.  ->  no change
+        // .###.
+        // ..##.
+        // .....
     }
 
     #[test]
@@ -187,6 +195,7 @@ mod tests {
 
         // ....
         // .##.
+        // .#..
         // .#..
         // ....
 
