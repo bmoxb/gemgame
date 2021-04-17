@@ -74,7 +74,7 @@ impl super::Generator for DefaultGenerator {
             }
         }
 
-        plan.remove_juttting_and_unconnected_tiles();
+        plan.remove_all_juttting_and_unconnected_tiles();
 
         // Produce a chunk based on the chunk plan:
 

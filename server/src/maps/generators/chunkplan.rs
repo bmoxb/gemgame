@@ -34,7 +34,7 @@ impl ChunkPlan {
         chunk
     }
 
-    pub fn remove_juttting_and_unconnected_tiles(&mut self) {
+    pub fn remove_all_juttting_and_unconnected_tiles(&mut self) {
         for offset_x in 0..CHUNK_WIDTH {
             for offset_y in 0..CHUNK_HEIGHT {
                 self.remove_juttting_and_unconnected_tiles_at(offset_x, offset_y);
@@ -161,17 +161,56 @@ pub struct TransitionTiles {
 mod tests {
     use super::*;
 
+    fn test_chunk_plan(
+        area_width: i32, area_height: i32, dirt_positions_before: Vec<(i32, i32)>,
+        dirt_positions_after: Vec<(i32, i32)>
+    ) {
+        let mut chunk = ChunkPlan::default();
+
+        for x in 0..area_width {
+            for y in 0..area_height {
+                let category =
+                    if dirt_positions_before.contains(&(x, y)) { TileCategory::Dirt } else { TileCategory::Grass };
+                chunk.set_category_at(x, y, category);
+            }
+        }
+
+        chunk.remove_all_juttting_and_unconnected_tiles();
+
+        for x in 0..area_width {
+            for y in 0..area_height {
+                assert_eq!(
+                    chunk.get_category_at(x as i32, y as i32),
+                    if dirt_positions_after.contains(&(x, y)) { TileCategory::Dirt } else { TileCategory::Grass }
+                );
+            }
+        }
+    }
+
     #[test]
+    #[rustfmt::skip]
     fn remove_jutting_tiles() {
-        // ....       .....
+        // .....      .....
         // ..##.  ->  ..##.
         // .###.      ..##.
         // .....      .....
 
+        test_chunk_plan(
+            5, 4,
+            vec![(2, 1), (3, 1), (1, 2), (2, 2), (3, 2)],
+            vec![(2, 1), (3, 1), (2, 2), (3, 2)]
+        );
+
         // ......      ......
-        // .####.  ->  ##....
-        // .##...      ##....
+        // .####.  ->  ...##.
+        // ...##.      ...##.
         // ......      ......
+
+        test_chunk_plan(
+            6, 4,
+            vec![(1, 1), (2, 1), (3, 1), (4, 1), (3, 2), (4, 2)],
+            vec![(3, 1), (4, 1), (3, 2), (4, 2)]
+        );
 
         // .....
         // ..##.
@@ -179,9 +218,17 @@ mod tests {
         // .###.
         // ..##.
         // .....
+
+        let dirt_positions = vec![(2, 1), (3, 1), (1, 2), (2, 2), (3, 2), (1, 3), (2, 3), (3, 3), (2, 4), (3, 4)];
+        test_chunk_plan(
+            5, 6,
+            dirt_positions.clone(),
+            dirt_positions
+        );
     }
 
     #[test]
+    #[rustfmt::skip]
     fn remove_unconnected_tiles() {
         // Not allowed:
 
@@ -189,15 +236,29 @@ mod tests {
         // .#.
         // ...
 
+        test_chunk_plan(
+            3, 3,
+            vec![(1, 1)], vec![]
+        );
+
         // ....
         // .##.
         // ....
 
+        test_chunk_plan(
+            4, 3,
+            vec![(1, 1), (2, 1)], vec![]
+        );
+
         // ....
         // .##.
         // .#..
-        // .#..
         // ....
+
+        test_chunk_plan(
+            4, 4,
+            vec![(1, 1), (2, 1), (1, 2)], vec![]
+        );
 
         // Allowed:
 
@@ -205,5 +266,12 @@ mod tests {
         // .##.
         // .##.
         // ....
+
+        let dirt_positions = vec![(1, 1), (2, 1), (1, 2), (2, 2)];
+        test_chunk_plan(
+            4, 4,
+            dirt_positions.clone(),
+            dirt_positions
+        );
     }
 }
