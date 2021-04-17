@@ -14,7 +14,7 @@ impl ChunkPlan {
 
     pub fn to_chunk(
         &self, dirt_transitions: &TransitionTiles, water_transitions: &TransitionTiles,
-        mut place_non_transition_tile: impl FnMut(TileCategory) -> Tile
+        mut place_non_transition_tile: impl FnMut(TileCategory, i32, i32) -> Tile
     ) -> Chunk {
         let mut chunk = Chunk::default();
 
@@ -24,7 +24,7 @@ impl ChunkPlan {
 
                 let tile = self
                     .maybe_transition_tile(offset_x, offset_y, dirt_transitions, water_transitions)
-                    .unwrap_or_else(|| place_non_transition_tile(category));
+                    .unwrap_or_else(|| place_non_transition_tile(category, offset_x, offset_y));
 
                 let coords = OffsetCoords { x: offset_x as u8, y: offset_y as u8 };
                 chunk.set_tile_at_offset(coords, tile);
