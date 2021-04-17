@@ -13,10 +13,6 @@ const DIRT_TILE_WEIGHTS: &[usize] = &[600, 15, 10, 5, 1];
 const GRASS_TILE_CHOICES: &[Tile] = &[Tile::Grass, Tile::FlowerPatch, Tile::Stones, Tile::Shrub];
 const GRASS_TILE_WEIGHTS: &[usize] = &[900, 10, 8, 5];
 
-const NOISE_SAMPLE_POINT_MULTIPLIER: f64 = 0.06;
-
-const NOISE_SAMPLE_VALUE_MULTIPLIER: f64 = 1.0;
-
 /// Default map chunk generator for GemGame. Algorithm is as follows:
 /// * Generate Perlin noise for coordinates within the chunk as well as immediately around the chunk (see
 ///   [`ChunkNoise`]).
@@ -45,15 +41,10 @@ impl super::Generator for DefaultGenerator {
     fn generate(&self, chunk_coords: ChunkCoords) -> Chunk {
         // Prepare RNG, noise, distributions:
 
-        let terrain_noise = ChunkNoise::new(
-            self.terrain_noise_func,
-            chunk_coords,
-            NOISE_SAMPLE_POINT_MULTIPLIER,
-            NOISE_SAMPLE_VALUE_MULTIPLIER
-        );
-
         let rng_seed = (chunk_coords.x as u64) ^ (chunk_coords.y as u64);
         let mut rng = StdRng::seed_from_u64(rng_seed);
+
+        let terrain_noise = ChunkNoise::new(self.terrain_noise_func, chunk_coords, 0.05, 1.0);
 
         let flower_noise_generators = vec![
             (ChunkNoise::new(self.flower_noise_func, chunk_coords, rng.gen_range(0.1..0.15), 0.975), Tile::FlowerBlue),
@@ -96,13 +87,16 @@ impl super::Generator for DefaultGenerator {
                             if noise_gen.sample(offset_x, offset_y) > 0.275 {
                                 reached_some_noise_threshold = true;
 
+                                // 20% of the tiles positions that meet the noise value threshold will have a flower
+                                // placed at them:
                                 if rng.gen_bool(0.2) {
                                     return *tile;
                                 }
                             }
                         }
-
                         if reached_some_noise_threshold {
+                            // If the noise threshold for any of the flower types is met but no flower is placed, place
+                            // a grass tile instead:
                             Tile::Grass
                         }
                         else {
@@ -126,5 +120,5 @@ fn should_be_water(noise_sample: f64) -> bool {
 }
 
 fn should_be_dirt(noise_sample: f64) -> bool {
-    noise_sample >= 0.3
+    noise_sample >= 0.25
 }
