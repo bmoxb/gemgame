@@ -31,7 +31,12 @@ impl ClientMap {
 
         if let Some(entity) = self.entities.get_mut(&id) {
             // Update renderer:
-            renderer.remote_entity_moved(id, new_pos, entity.movement_time(dest_tile));
+            renderer.remote_entity_moved(
+                id,
+                new_pos,
+                entity.movement_time(dest_tile),
+                dest_tile.get_entity_movement_frame_changes()
+            );
 
             // Set position & direction:
             entity.pos = new_pos;

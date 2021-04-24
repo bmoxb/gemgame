@@ -177,6 +177,15 @@ impl Tile {
         matches!(self, Tile::Grass | Tile::FlowerPatch | Tile::FlowerBlue | Tile::FlowersYellowOrange)
     }
 
+    pub fn get_entity_movement_frame_changes(&self) -> usize {
+        if self.is_smashable() {
+            8
+        }
+        else {
+            1
+        }
+    }
+
     /// Returns the gem yield for a smashable tile (except [`Tile::Rock`] which is smashable but does not yield any
     /// gems).
     pub fn get_gem_yield(&self) -> Option<GemYield> {

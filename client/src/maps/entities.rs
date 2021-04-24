@@ -65,7 +65,7 @@ impl MyEntity {
                 map.some_entity_moved_to(new_pos, renderer);
 
                 // Update the map renderer:
-                renderer.my_entity_moved(new_pos, movement_time);
+                renderer.my_entity_moved(new_pos, movement_time, dest_tile.get_entity_movement_frame_changes());
 
                 // Locally modify player entity's coordinates & direction:
                 self.contained.pos = new_pos;
