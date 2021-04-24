@@ -29,7 +29,7 @@ impl GameState {
             connection,
             my_entity,
             map: maps::ClientMap::new(),
-            map_renderer: rendering::maps::Renderer::new(0.075, 16, my_entity_pos)
+            map_renderer: rendering::maps::Renderer::new(0.1, 16, my_entity_pos)
         }
     }
 }
