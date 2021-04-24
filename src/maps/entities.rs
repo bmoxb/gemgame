@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 use super::{Tile, TileCoords};
-use crate::{gems, Id};
+use crate::{gems, items, Id};
 
 /// Type alias for a hash map of entity IDs to entities.
 pub type Entities = HashMap<Id, Entity>;
@@ -37,7 +37,9 @@ pub struct Entity {
     /// Whether or not this human entity has increased movement speed.
     pub has_running_shoes: bool,
     /// The collection of gems that this entity has.
-    pub gem_collection: gems::GemCollection
+    pub gem_collection: gems::Collection,
+    /// Stores items that this entity has.
+    pub item_inventory: items::Inventory
 }
 
 impl Entity {

@@ -12,7 +12,7 @@ pub enum QuantitativeItem {
     Bombs
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Inventory {
     bool_items: HashMap<BoolItem, bool>,
     quantitive_items: HashMap<QuantitativeItem, u32>

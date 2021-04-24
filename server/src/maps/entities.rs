@@ -2,7 +2,8 @@
 
 use rand::seq::IteratorRandom;
 use shared::{
-    gems::{Gem, GemCollection},
+    gems::{self, Gem},
+    items,
     maps::{
         entities::{Direction, Entity, FacialExpression},
         TileCoords
@@ -27,7 +28,8 @@ pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) 
         skin_colour: random_variant(),
         hair_colour: random_variant(),
         has_running_shoes: false,
-        gem_collection: GemCollection::default()
+        gem_collection: gems::Collection::default(),
+        item_inventory: items::Inventory::default()
     };
 
     bind_entity_data(db_query_from_file!("client_entities/create row"), &entity)
@@ -56,7 +58,7 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
                     hair_colour: decode_variant(row.get("hair_colour")),
                     has_running_shoes: row.get("has_running_shoes"),
                     gem_collection: {
-                        let mut collection = GemCollection::default();
+                        let mut collection = gems::Collection::default();
 
                         // Need to fetch from database as signed integer before casting to unsigned as PostgreSQL does
                         // not support unsigned values:
@@ -68,6 +70,13 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
                         collection.increase_quantity(Gem::Diamond, diamond as u32);
 
                         collection
+                    },
+                    item_inventory: {
+                        let mut inventory = items::Inventory::default();
+
+                        // TODO: Fetch from database.
+
+                        inventory
                     }
                 }
             )

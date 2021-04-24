@@ -7,7 +7,7 @@ use std::{
 
 use parking_lot::Mutex;
 use shared::{
-    gems::GemCollection,
+    gems, items,
     maps::{
         entities::{ClothingColour, Direction, Entity, FacialExpression, HairColour, HairStyle, SkinColour},
         Chunk, ChunkCoords, OffsetCoords, Tile, TileCoords, CHUNK_WIDTH
@@ -42,7 +42,8 @@ impl Handler {
             skin_colour: SkinColour::Black,
             hair_colour: HairColour::Black,
             has_running_shoes: false,
-            gem_collection: GemCollection::default()
+            gem_collection: gems::Collection::default(),
+            item_inventory: items::Inventory::default()
         };
         self.game_map.lock().add_entity(entity_id, entity);
 

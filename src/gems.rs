@@ -11,18 +11,18 @@ pub enum Gem {
 }
 
 /// Represents the potential yield of gems produced from the smashing of a rock tile.
-pub struct GemYield {
+pub struct Yield {
     pub gem: Gem,
     pub minimum_quantity: u32,
     pub maximum_quantity: u32
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct GemCollection {
+pub struct Collection {
     collection: HashMap<Gem, u32>
 }
 
-impl GemCollection {
+impl Collection {
     pub fn get_quantity(&self, gem: Gem) -> u32 {
         *self.collection.get(&gem).unwrap_or(&0)
     }
@@ -32,7 +32,7 @@ impl GemCollection {
     }
 }
 
-impl fmt::Display for GemCollection {
+impl fmt::Display for Collection {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
