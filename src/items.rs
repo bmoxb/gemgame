@@ -2,14 +2,34 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::gems::Gem;
+
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum BoolItem {
+    EnergyDrink,
     RunningShoes
+}
+
+impl BoolItem {
+    pub fn get_price(&self) -> (Gem, u32) {
+        match self {
+            BoolItem::EnergyDrink => (Gem::Emerald, 10),
+            BoolItem::RunningShoes => (Gem::Emerald, 25)
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum QuantitativeItem {
-    Bombs
+    Bomb
+}
+
+impl QuantitativeItem {
+    pub fn get_price(&self) -> (Gem, u32) {
+        match self {
+            QuantitativeItem::Bomb => (Gem::Ruby, 5)
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]

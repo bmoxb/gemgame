@@ -325,6 +325,39 @@ impl Handler {
                     Ok(responses)
                 }
             }
+
+            messages::ToServer::PurchaseSingleItem(item) => {
+                let (cost_gem, cost_quantity) = item.get_price();
+
+                if let Some(entity) = self.game_map.lock().entity_by_id_mut(player_id) {
+                    // If the player has enough gems...
+                    if entity.gem_collection.get_quantity(cost_gem) >= cost_quantity {
+                        // Remove the required number of gems:
+                        entity.gem_collection.decrease_quantity(cost_gem, cost_quantity);
+                        // Give them their item:
+                        entity.item_inventory.give(item);
+                    }
+                }
+
+                Ok(vec![])
+            }
+
+            messages::ToServer::PurchaseItemQuantity { item, quantity } => {
+                let (cost_gem, single_cost_quantity) = item.get_price();
+                let total_cost_quantity = single_cost_quantity * quantity;
+
+                if let Some(entity) = self.game_map.lock().entity_by_id_mut(player_id) {
+                    // If the player has enough gems for the specified quantity of items...
+                    if entity.gem_collection.get_quantity(cost_gem) >= total_cost_quantity {
+                        // Remove the spent gems:
+                        entity.gem_collection.decrease_quantity(cost_gem, total_cost_quantity);
+                        // Give the player their quantity of items:
+                        entity.item_inventory.give_quantity(item, quantity);
+                    }
+                }
+
+                Ok(vec![])
+            }
         }
     }
 

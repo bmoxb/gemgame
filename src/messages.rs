@@ -5,7 +5,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    gems,
+    gems, items,
     maps::{
         self,
         entities::{self, Entity}
@@ -32,7 +32,17 @@ pub enum ToServer {
         /// regardless of connection speed, requests to move a player entity are incrementally numbered.
         request_number: u32,
         direction: entities::Direction
-    }
+    },
+
+    /// Indicate that the player wishes to purchase the given item (of type [`items::BoolItem`]). The client should
+    /// only send this message if it believes the player has enough gems to do so (if they do not then the server
+    /// will silently ignore the message).
+    PurchaseSingleItem(items::BoolItem),
+
+    /// Inform the server that the player wishes the purchase the specified quantity of the given item (of type
+    /// [`items::QuantitativeItem`]). The server will ignore the message if the player does have enough gems to
+    /// complete the purchase.
+    PurchaseItemQuantity { item: items::QuantitativeItem, quantity: u32 }
 }
 
 impl fmt::Display for ToServer {
@@ -45,6 +55,8 @@ impl fmt::Display for ToServer {
             ToServer::MoveMyEntity { request_number, direction } => {
                 write!(f, "move my player entity {} (request #{})", direction, request_number)
             }
+            ToServer::PurchaseSingleItem(item) => write!(f, "purchase {:?}", item),
+            ToServer::PurchaseItemQuantity { item, quantity } => write!(f, "purchase {} of {:?}", quantity, item)
         }
     }
 }

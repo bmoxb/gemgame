@@ -30,6 +30,10 @@ impl Collection {
     pub fn increase_quantity(&mut self, gem: Gem, increase: u32) {
         *self.collection.entry(gem).or_default() += increase;
     }
+
+    pub fn decrease_quantity(&mut self, gem: Gem, decrease: u32) {
+        *self.collection.entry(gem).or_default() -= decrease;
+    }
 }
 
 impl fmt::Display for Collection {
