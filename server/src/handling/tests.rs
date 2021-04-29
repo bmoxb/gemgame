@@ -41,7 +41,6 @@ impl Handler {
             clothing_colour: ClothingColour::Grey,
             skin_colour: SkinColour::Black,
             hair_colour: HairColour::Black,
-            has_running_shoes: false,
             gem_collection: gems::Collection::default(),
             item_inventory: items::Inventory::default()
         };

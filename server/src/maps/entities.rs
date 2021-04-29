@@ -2,8 +2,7 @@
 
 use rand::seq::IteratorRandom;
 use shared::{
-    gems::{self, Gem},
-    items,
+    gems, items,
     maps::{
         entities::{Direction, Entity, FacialExpression},
         TileCoords
@@ -27,7 +26,6 @@ pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) 
         clothing_colour: random_variant(),
         skin_colour: random_variant(),
         hair_colour: random_variant(),
-        has_running_shoes: false,
         gem_collection: gems::Collection::default(),
         item_inventory: items::Inventory::default()
     };
@@ -56,28 +54,8 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
                     clothing_colour: decode_variant(row.get("clothing_colour")),
                     skin_colour: decode_variant(row.get("skin_colour")),
                     hair_colour: decode_variant(row.get("hair_colour")),
-                    has_running_shoes: row.get("has_running_shoes"),
-                    gem_collection: {
-                        let mut collection = gems::Collection::default();
-
-                        // Need to fetch from database as signed integer before casting to unsigned as PostgreSQL does
-                        // not support unsigned values:
-                        let (emerald, ruby, diamond): (i32, i32, i32) =
-                            (row.get("emerald_quantity"), row.get("ruby_quantity"), row.get("diamond_quantity"));
-
-                        collection.increase_quantity(Gem::Emerald, emerald as u32);
-                        collection.increase_quantity(Gem::Ruby, ruby as u32);
-                        collection.increase_quantity(Gem::Diamond, diamond as u32);
-
-                        collection
-                    },
-                    item_inventory: {
-                        let mut inventory = items::Inventory::default();
-
-                        // TODO: Fetch from database.
-
-                        inventory
-                    }
+                    gem_collection: bincode::deserialize(row.get("gem_collection")).unwrap_or_default(),
+                    item_inventory: bincode::deserialize(row.get("item_inventory")).unwrap_or_default()
                 }
             )
         })
@@ -118,10 +96,8 @@ fn bind_entity_data<'a>(
         .bind(encode_variant(entity.clothing_colour))
         .bind(encode_variant(entity.skin_colour))
         .bind(encode_variant(entity.hair_colour))
-        .bind(entity.has_running_shoes)
-        .bind(entity.gem_collection.get_quantity(Gem::Emerald) as i32)
-        .bind(entity.gem_collection.get_quantity(Gem::Ruby) as i32)
-        .bind(entity.gem_collection.get_quantity(Gem::Diamond) as i32)
+        .bind(bincode::serialize(&entity.gem_collection).unwrap_or_default())
+        .bind(bincode::serialize(&entity.item_inventory).unwrap_or_default())
 }
 
 /// Encode an enum variant as a 16-bit integer.

@@ -4,7 +4,11 @@ use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 use super::{Tile, TileCoords};
-use crate::{gems, items, Id};
+use crate::{
+    gems,
+    items::{self, BoolItem},
+    Id
+};
 
 /// Type alias for a hash map of entity IDs to entities.
 pub type Entities = HashMap<Id, Entity>;
@@ -34,8 +38,6 @@ pub struct Entity {
     pub skin_colour: SkinColour,
     /// The colour of this entity's hair.
     pub hair_colour: HairColour,
-    /// Whether or not this human entity has increased movement speed.
-    pub has_running_shoes: bool,
     /// The collection of gems that this entity has.
     pub gem_collection: gems::Collection,
     /// Stores items that this entity has.
@@ -45,7 +47,12 @@ pub struct Entity {
 impl Entity {
     /// The amount of time in seconds taken for the entity to move to an adjacent tile.
     pub fn movement_time(&self, tile_at_destination: Tile) -> f32 {
-        let base_time = if self.has_running_shoes { RUNNING_MOVEMENT_TIME } else { STANDARD_MOVEMENT_TIME };
+        let base_time = if self.item_inventory.has(BoolItem::RunningShoes) {
+            RUNNING_MOVEMENT_TIME
+        }
+        else {
+            STANDARD_MOVEMENT_TIME
+        };
 
         if tile_at_destination.is_smashable() {
             base_time * SMASHABLE_TILE_MOVEMENT_TIME_MODIFIER
@@ -74,7 +81,7 @@ impl fmt::Display for Entity {
             self.direction,
             self.facial_expression,
             self.hair_style,
-            if self.has_running_shoes { "with" } else { "without" },
+            if self.item_inventory.has(BoolItem::RunningShoes) { "with" } else { "without" },
             self.gem_collection
         )
     }
