@@ -24,7 +24,7 @@ pub struct GameState {
 
 impl GameState {
     pub fn new(connection: networking::Connection, my_entity: MyEntity) -> Self {
-        let my_entity_pos = my_entity.contained.pos;
+        let my_entity_pos = my_entity.get_pos();
         GameState {
             connection,
             my_entity,
@@ -82,7 +82,7 @@ impl GameState {
             }
 
             messages::FromServer::YouCollectedGems { gem_type, quantity_increase } => {
-                self.my_entity.contained.gem_collection.increase_quantity(gem_type, quantity_increase);
+                self.my_entity.obtained_gems(gem_type, quantity_increase);
             }
         }
     }
@@ -96,7 +96,7 @@ impl State for GameState {
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
         // Rendering:
 
-        self.map_renderer.draw(&self.map, &self.my_entity.contained, assets, delta);
+        self.map_renderer.draw(&self.map, self.my_entity.get_contained_entity(), assets, delta);
         //self.ui_renderer.draw(...);
 
         #[cfg(debug_assertions)]
@@ -104,7 +104,7 @@ impl State for GameState {
             28.0,
             quad::DARKPURPLE,
             assets,
-            &self.my_entity.contained,
+            self.my_entity.get_contained_entity(),
             self.map.get_loaded_chunk_coords()
         );
 

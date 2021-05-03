@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use shared::{
+    gems::Gem,
     maps::{
         entities::{Direction, Entity},
         Map, TileCoords
@@ -16,7 +17,7 @@ use crate::{
 
 /// The entity controlled by this client program.
 pub struct MyEntity {
-    pub contained: Entity,
+    contained: Entity,
     /// Request number value to be used for the next [`shared::messages::ToServer::MoveMyEntity`] message. Incremented
     /// after the sending of each message.
     next_request_number: u32,
@@ -26,6 +27,8 @@ pub struct MyEntity {
     /// has not yet been received so it is not yet known whether the predicted coordinates align with those on the
     /// server side.
     unverified_movements: HashMap<u32, TileCoords>,
+    /// When this value reaches 0 then the required amount of time has passed since the player's last movement before
+    /// it can move again.
     movement_time_countdown: f32
 }
 
@@ -94,6 +97,12 @@ impl MyEntity {
         Ok(())
     }
 
+    /// This method is called from the main game state whenever a [`shared::messages::FromServer::YouCollectedGems`]
+    /// message is received.
+    pub fn obtained_gems(&mut self, gem_type: Gem, quantity_increase: u32) {
+        self.contained.gem_collection.increase_quantity(gem_type, quantity_increase);
+    }
+
     /// This method is called from the main game state whenever a [`shared::messages::FromSever::YourEntityMoved`]
     /// message is received. It is the role of this method to ensure that previous predictions regarding player
     /// entity position after movement were correct.
@@ -124,5 +133,13 @@ impl MyEntity {
         }
 
         self.unverified_movements.remove(&request_number);
+    }
+
+    pub fn get_contained_entity(&self) -> &Entity {
+        &self.contained
+    }
+
+    pub fn get_pos(&self) -> TileCoords {
+        self.contained.pos
     }
 }
