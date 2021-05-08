@@ -16,7 +16,7 @@ const ENTITY_POSITION_CORRECTED_MOVEMENT_TIME: f32 = 0.025;
 
 /// Handles the drawing of a game map.
 #[derive(Default)]
-pub struct Renderer {
+pub struct MapRenderer {
     /// The camera context in which the map will be rendered.
     camera: quad::Camera2D,
     /// The width and height (in camera space) that each tile will be draw as.
@@ -30,9 +30,9 @@ pub struct Renderer {
     tile_change_animations: HashMap<TileCoords, tiles::animations::Once>
 }
 
-impl Renderer {
+impl MapRenderer {
     pub fn new(tile_draw_size: f32, single_tile_texture_size: u16, my_entity_pos: TileCoords) -> Self {
-        Renderer {
+        MapRenderer {
             tile_draw_size,
             single_tile_texture_size,
             my_entity_renderer: entities::Renderer::new(my_entity_pos, tile_draw_size),

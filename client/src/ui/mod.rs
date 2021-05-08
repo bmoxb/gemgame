@@ -3,6 +3,22 @@ use shared::maps::{entities::Entity, ChunkCoords};
 
 use crate::AssetManager;
 
+pub struct Ui {
+    /// Whether or not the item purchase menu is currently visible.
+    purchase_menu_open: bool
+}
+
+impl Ui {
+    pub fn new() -> Self {
+        Ui { purchase_menu_open: false }
+    }
+
+    pub fn update(&mut self) {}
+
+    pub fn draw(&self) {}
+}
+
+/// Draws debug information to the screen.
 #[cfg(debug_assertions)]
 pub fn draw_debug_text(
     font_size: f32, font_colour: quad::Color, assets: &AssetManager, my_entity: &Entity,

@@ -1,7 +1,9 @@
 pub mod entities;
+pub mod rendering;
 
 use std::collections::HashMap;
 
+pub use rendering::MapRenderer;
 use shared::{
     maps::{
         entities::{Direction, Entities, Entity},
@@ -9,8 +11,6 @@ use shared::{
     },
     Id
 };
-
-use super::rendering;
 
 pub struct ClientMap {
     /// Chunks that are currently loaded (mapped to by chunk coordinate pairs).
@@ -25,7 +25,7 @@ impl ClientMap {
     }
 
     pub fn move_remote_entity(
-        &mut self, id: Id, new_pos: TileCoords, direction: Direction, renderer: &mut rendering::maps::Renderer
+        &mut self, id: Id, new_pos: TileCoords, direction: Direction, renderer: &mut MapRenderer
     ) {
         let dest_tile = self.loaded_tile_at(new_pos).unwrap_or_default();
 
@@ -52,7 +52,7 @@ impl ClientMap {
     /// Handles the changing of certain tiles when entities walk over them (e.g. turning a rock tile into a smashed rock
     /// with an animated transition). Should be called whenever an entity (whether remote or the local player entity)
     /// moves.
-    pub fn some_entity_moved_to(&mut self, pos: TileCoords, renderer: &mut rendering::maps::Renderer) {
+    pub fn some_entity_moved_to(&mut self, pos: TileCoords, renderer: &mut MapRenderer) {
         let dest_tile_smashable = self.loaded_tile_at(pos).map(|t| t.is_smashable()).unwrap_or(false);
 
         if dest_tile_smashable {

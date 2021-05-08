@@ -9,11 +9,8 @@ use shared::{
     messages
 };
 
-use super::ClientMap;
-use crate::{
-    networking::{self, ConnectionTrait},
-    rendering
-};
+use super::{ClientMap, MapRenderer};
+use crate::networking::{self, ConnectionTrait};
 
 /// The entity controlled by this client program.
 pub struct MyEntity {
@@ -50,7 +47,7 @@ impl MyEntity {
     /// movement speed limit, or if the destination tile is occupied/blocking, or if unable to contact the server.
     pub fn move_towards_checked(
         &mut self, direction: Direction, map: &mut ClientMap, connection: &mut networking::Connection,
-        renderer: &mut rendering::maps::Renderer
+        renderer: &mut MapRenderer
     ) -> networking::Result<()> {
         // Check if required amount of time has paced since last movement (i.e. don't exceed maximum movement speed):
         if self.movement_time_countdown <= 0.0 {
@@ -107,7 +104,7 @@ impl MyEntity {
     /// message is received. It is the role of this method to ensure that previous predictions regarding player
     /// entity position after movement were correct.
     pub fn received_movement_reconciliation(
-        &mut self, request_number: u32, position: TileCoords, renderer: &mut rendering::maps::Renderer
+        &mut self, request_number: u32, position: TileCoords, renderer: &mut MapRenderer
     ) {
         if let Some(predicted_position) = self.unverified_movements.get(&request_number) {
             if *predicted_position != position {

@@ -6,9 +6,9 @@ use shared::{
 
 use super::State;
 use crate::{
-    maps::{self, entities::MyEntity},
+    maps::{self, entities::MyEntity, MapRenderer},
     networking::{self, ConnectionTrait},
-    rendering, AssetManager, TextureKey
+    ui, AssetManager, TextureKey
 };
 
 pub struct GameState {
@@ -19,7 +19,7 @@ pub struct GameState {
     /// The current world map that the player entity is in.
     map: maps::ClientMap,
     /// The rendering system used to draw the game map to the screen.
-    map_renderer: rendering::maps::Renderer
+    map_renderer: MapRenderer
 }
 
 impl GameState {
@@ -29,7 +29,7 @@ impl GameState {
             connection,
             my_entity,
             map: maps::ClientMap::new(),
-            map_renderer: rendering::maps::Renderer::new(0.1, 16, my_entity_pos)
+            map_renderer: MapRenderer::new(0.1, 16, my_entity_pos)
         }
     }
 }
@@ -100,7 +100,7 @@ impl State for GameState {
         //self.ui_renderer.draw(...);
 
         #[cfg(debug_assertions)]
-        rendering::ui::draw_debug_text(
+        ui::draw_debug_text(
             28.0,
             quad::DARKPURPLE,
             assets,
