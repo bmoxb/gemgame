@@ -51,14 +51,27 @@ pub type AssetManager = asset_management::AssetManager<TextureKey>;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum TextureKey {
     Tiles,
-    Entities
+    Entities,
+    Ui
 }
 
 impl asset_management::AssetKey for TextureKey {
     fn path(&self) -> &str {
         match self {
             TextureKey::Tiles => "tileset.png",
-            TextureKey::Entities => "entities.png"
+            TextureKey::Entities => "entities.png",
+            TextureKey::Ui => "ui.png"
         }
+    }
+}
+
+fn make_texture_source_rect(single_tile_texture_size: u16, relative_texture_coords: (u16, u16)) -> quad::Rect {
+    let (relative_x, relative_y) = relative_texture_coords;
+
+    quad::Rect {
+        x: (relative_x * single_tile_texture_size) as f32,
+        y: (relative_y * single_tile_texture_size) as f32,
+        w: single_tile_texture_size as f32,
+        h: single_tile_texture_size as f32
     }
 }

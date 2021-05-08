@@ -1,21 +1,34 @@
+mod buttons;
+
+use buttons::Button;
 use macroquad::prelude as quad;
 use shared::maps::{entities::Entity, ChunkCoords};
 
 use crate::AssetManager;
 
 pub struct Ui {
-    /// Whether or not the item purchase menu is currently visible.
-    purchase_menu_open: bool
+    button_draw_size: f32,
+    /// Whether or not the item purchase menu is currently shown.
+    purchase_menu_open: bool,
+    purchase_menu_button: Button
 }
 
 impl Ui {
-    pub fn new() -> Self {
-        Ui { purchase_menu_open: false }
+    pub fn new(button_draw_size: f32) -> Self {
+        Ui {
+            button_draw_size,
+            purchase_menu_open: false,
+            purchase_menu_button: buttons::make_purchase_menu_button(-0.4, 0.4)
+        }
     }
 
     pub fn update(&mut self) {}
 
-    pub fn draw(&self) {}
+    pub fn draw(&self, assets: &AssetManager) {
+        quad::set_default_camera();
+
+        self.purchase_menu_button.draw(assets, self.button_draw_size);
+    }
 }
 
 /// Draws debug information to the screen.

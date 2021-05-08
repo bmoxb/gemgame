@@ -12,6 +12,10 @@ use shared::{
 use self::tiles::animations::Animation;
 use crate::{maps::ClientMap, AssetManager, TextureKey};
 
+/// The width and height (in pixels) that each individual tile on the tiles texture is.
+const SINGLE_TILE_TEXTURE_SIZE: u16 = 16;
+
+/// The time taken for the movement to complete when an entity's position is corrected.
 const ENTITY_POSITION_CORRECTED_MOVEMENT_TIME: f32 = 0.025;
 
 /// Handles the drawing of a game map.
@@ -21,8 +25,6 @@ pub struct MapRenderer {
     camera: quad::Camera2D,
     /// The width and height (in camera space) that each tile will be draw as.
     tile_draw_size: f32,
-    /// The width and height (in pixels) that each individual tile on the tiles texture is.
-    single_tile_texture_size: u16,
     /// The entity renderer for this client's player entity.
     my_entity_renderer: entities::Renderer,
     /// Entity renderers for remote player entities (mapped to by entity IDs).
@@ -31,10 +33,9 @@ pub struct MapRenderer {
 }
 
 impl MapRenderer {
-    pub fn new(tile_draw_size: f32, single_tile_texture_size: u16, my_entity_pos: TileCoords) -> Self {
+    pub fn new(tile_draw_size: f32, my_entity_pos: TileCoords) -> Self {
         MapRenderer {
             tile_draw_size,
-            single_tile_texture_size,
             my_entity_renderer: entities::Renderer::new(my_entity_pos, tile_draw_size),
             ..Default::default()
         }
@@ -89,7 +90,6 @@ impl MapRenderer {
                         tile,
                         draw_pos,
                         self.tile_draw_size,
-                        self.single_tile_texture_size,
                         assets.texture(TextureKey::Tiles),
                         chunk_corner
                     );
@@ -108,12 +108,7 @@ impl MapRenderer {
             let draw_pos = tile_coords_to_vec2(*coords, self.tile_draw_size);
 
             // TODO: Draw only if on-screen, like entities below.
-            animation.draw(
-                draw_pos,
-                self.tile_draw_size,
-                self.single_tile_texture_size,
-                assets.texture(TextureKey::Tiles)
-            );
+            animation.draw(draw_pos, self.tile_draw_size, assets.texture(TextureKey::Tiles));
 
             if animation.has_concluded() {
                 concluded_animations.insert(*coords);
@@ -154,23 +149,13 @@ impl MapRenderer {
         let all_entities_iter = remote_entities_to_draw.into_iter().chain(my_entity_iter);
 
         for (entity, renderer) in all_entities_iter.clone() {
-            renderer.draw_lower(
-                entity,
-                assets.texture(TextureKey::Entities),
-                self.tile_draw_size,
-                self.single_tile_texture_size
-            );
+            renderer.draw_lower(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
         }
 
         // Draw upper portion of each on-screen entity:
 
         for (entity, renderer) in all_entities_iter {
-            renderer.draw_upper(
-                entity,
-                assets.texture(TextureKey::Entities),
-                self.tile_draw_size,
-                self.single_tile_texture_size
-            );
+            renderer.draw_upper(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
         }
     }
 

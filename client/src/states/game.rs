@@ -8,7 +8,8 @@ use super::State;
 use crate::{
     maps::{self, entities::MyEntity, MapRenderer},
     networking::{self, ConnectionTrait},
-    ui, AssetManager, TextureKey
+    ui::{self, Ui},
+    AssetManager, TextureKey
 };
 
 pub struct GameState {
@@ -19,7 +20,9 @@ pub struct GameState {
     /// The current world map that the player entity is in.
     map: maps::ClientMap,
     /// The rendering system used to draw the game map to the screen.
-    map_renderer: MapRenderer
+    map_renderer: MapRenderer,
+    /// User interface.
+    ui: Ui
 }
 
 impl GameState {
@@ -29,12 +32,11 @@ impl GameState {
             connection,
             my_entity,
             map: maps::ClientMap::new(),
-            map_renderer: MapRenderer::new(0.1, 16, my_entity_pos)
+            map_renderer: MapRenderer::new(0.1, my_entity_pos),
+            ui: Ui::new(0.12)
         }
     }
-}
 
-impl GameState {
     fn handle_message_from_server(&mut self, msg: messages::FromServer) {
         match msg {
             messages::FromServer::Welcome { .. } => {
@@ -90,14 +92,14 @@ impl GameState {
 
 impl State for GameState {
     fn required_textures(&self) -> &[TextureKey] {
-        &[TextureKey::Tiles, TextureKey::Entities]
+        &[TextureKey::Tiles, TextureKey::Entities, TextureKey::Ui]
     }
 
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
         // Rendering:
 
         self.map_renderer.draw(&self.map, self.my_entity.get_contained_entity(), assets, delta);
-        //self.ui_renderer.draw(...);
+        self.ui.draw(assets);
 
         #[cfg(debug_assertions)]
         ui::draw_debug_text(

@@ -1,9 +1,14 @@
 use macroquad::prelude as quad;
 
+use crate::maps::rendering::SINGLE_TILE_TEXTURE_SIZE;
+
 /// Trait that describes an animation for a map tile.
 pub trait Animation {
-    fn draw(&self, draw_pos: quad::Vec2, draw_size: f32, single_tile_texture_size: u16, texture: quad::Texture2D) {
-        let rect = self.get_texture_rect(single_tile_texture_size);
+    fn draw(&self, draw_pos: quad::Vec2, draw_size: f32, texture: quad::Texture2D) {
+        let rect = crate::make_texture_source_rect(
+            SINGLE_TILE_TEXTURE_SIZE,
+            self.get_relative_texture_coords(quad::get_time())
+        );
 
         let params = quad::DrawTextureParams {
             dest_size: Some(quad::vec2(draw_size, draw_size)),
@@ -13,17 +18,6 @@ pub trait Animation {
         };
 
         quad::draw_texture_ex(texture, draw_pos.x, draw_pos.y, quad::WHITE, params);
-    }
-
-    fn get_texture_rect(&self, single_tile_texture_size: u16) -> quad::Rect {
-        let (relative_x, relative_y) = self.get_relative_texture_coords(quad::get_time());
-
-        quad::Rect {
-            x: (relative_x * single_tile_texture_size) as f32,
-            y: (relative_y * single_tile_texture_size) as f32,
-            w: single_tile_texture_size as f32,
-            h: single_tile_texture_size as f32
-        }
     }
 
     /// Returns the texture coordinates relative to the size of each tile texture of the current frame.
