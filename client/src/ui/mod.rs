@@ -22,7 +22,11 @@ impl Ui {
         }
     }
 
-    pub fn update(&mut self) {}
+    pub fn update(&mut self) {
+        let (mouse_x, mouse_y) = quad::mouse_position();
+
+        self.purchase_menu_button.update(self.button_draw_size, mouse_x, mouse_y);
+    }
 
     pub fn draw(&self, assets: &AssetManager) {
         quad::set_default_camera();

@@ -96,6 +96,9 @@ impl State for GameState {
     }
 
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
+        // Update UI:
+        self.ui.update();
+
         // Rendering:
 
         self.map_renderer.draw(&self.map, self.my_entity.get_contained_entity(), assets, delta);
