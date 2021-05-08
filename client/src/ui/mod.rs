@@ -1,37 +1,44 @@
-mod buttons;
+mod widgets;
 
-use buttons::Button;
 use macroquad::prelude as quad;
 use shared::maps::{entities::Entity, ChunkCoords};
+use widgets::{Button, Menu};
 
 use crate::AssetManager;
 
 pub struct Ui {
-    button_draw_size: f32,
+    button_size: f32,
+    open_purchase_menu_button: Button,
     /// Whether or not the item purchase menu is currently shown.
     purchase_menu_open: bool,
-    purchase_menu_button: Button
+    purchase_menu: Menu
 }
 
 impl Ui {
-    pub fn new(button_draw_size: f32) -> Self {
+    pub fn new(button_size: f32) -> Self {
         Ui {
-            button_draw_size,
+            button_size,
             purchase_menu_open: false,
-            purchase_menu_button: buttons::make_purchase_menu_button(-0.4, 0.4)
+            open_purchase_menu_button: widgets::make_open_purchase_menu_button(-0.4, 0.4),
+            purchase_menu: Menu { x: 0.0, y: 0.0, width: 0.6, height: 0.6 }
         }
     }
 
     pub fn update(&mut self) {
-        let (mouse_x, mouse_y) = quad::mouse_position();
-
-        self.purchase_menu_button.update(self.button_draw_size, mouse_x, mouse_y);
+        if self.open_purchase_menu_button.update(self.button_size) {
+            // Toggle item purchase menu when button is pressed:
+            self.purchase_menu_open = !self.purchase_menu_open;
+        }
     }
 
     pub fn draw(&self, assets: &AssetManager) {
         quad::set_default_camera();
 
-        self.purchase_menu_button.draw(assets, self.button_draw_size);
+        self.open_purchase_menu_button.draw(assets, self.button_size);
+
+        if self.purchase_menu_open {
+            self.purchase_menu.draw();
+        }
     }
 }
 

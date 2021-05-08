@@ -12,14 +12,6 @@ const INTERACT_SIZE_MULTIPLIER: f32 = 0.6;
 const NOT_HOVER_COLOUR: quad::Color = quad::Color::new(0.8, 0.8, 0.8, 1.0);
 const HOVER_COLOUR: quad::Color = quad::WHITE;
 
-pub fn make_purchase_menu_button(x: f32, y: f32) -> Button {
-    Button { is_hover: false, is_down: false, x, y, icon_texture_x: 0, icon_texture_y: 1 }
-}
-
-pub fn make_purchase_button() -> Button {
-    unimplemented!()
-}
-
 pub struct Button {
     is_hover: bool,
     is_down: bool,
@@ -29,28 +21,43 @@ pub struct Button {
     icon_texture_y: u16
 }
 
-impl Button {
-    pub fn update(&mut self, draw_size: f32, mouse_x: f32, mouse_y: f32) {
-        let abs_draw_size = calculate_absolute_draw_size(draw_size) * INTERACT_SIZE_MULTIPLIER;
-        let (draw_x, draw_y) = self.calculate_draw_pos_centre_origin(abs_draw_size);
+pub fn make_open_purchase_menu_button(x: f32, y: f32) -> Button {
+    Button { is_hover: false, is_down: false, x, y, icon_texture_x: 0, icon_texture_y: 1 }
+}
 
-        let rect = quad::Rect { x: draw_x, y: draw_y, w: abs_draw_size, h: abs_draw_size };
+pub fn make_purchase_button() -> Button {
+    unimplemented!()
+}
+
+impl Button {
+    /// Updates the fields `is_hover` and `is_down` based on mouse position & whether or not the left mouse button is
+    /// down. Returns true once when the button is clicked on.
+    pub fn update(&mut self, size: f32) -> bool {
+        let (mouse_x, mouse_y) = quad::mouse_position();
+
+        let draw_size = super::calculate_largest_squre_draw_size(size) * INTERACT_SIZE_MULTIPLIER;
+        let (draw_x, draw_y) = super::calculate_draw_position(self.x, self.y, draw_size, draw_size);
+
+        let rect = quad::Rect { x: draw_x, y: draw_y, w: draw_size, h: draw_size };
+
+        let was_down = self.is_down;
 
         self.is_hover = rect.contains(quad::vec2(mouse_x, mouse_y));
         self.is_down = self.is_hover && quad::is_mouse_button_down(quad::MouseButton::Left);
+
+        !was_down && self.is_down
     }
 
-    pub fn draw(&self, assets: &AssetManager, draw_size: f32) {
-        // Button sizes are calculated as a fraction of either the screen width or height (whichever is larger). Values
-        // are rounded down.
+    pub fn draw(&self, assets: &AssetManager, size: f32) {
+        // Button sizes are calculated as a fraction of either the screen width or height (whichever is larger).
 
-        let absolute_draw_size = calculate_absolute_draw_size(draw_size);
-        let dest_size = Some(quad::vec2(absolute_draw_size, absolute_draw_size));
+        let draw_size = super::calculate_largest_squre_draw_size(size);
+        let dest_size = Some(quad::vec2(draw_size, draw_size));
 
         // Positions of the buttons are expressed relative to the screen size with each coordinate being within the -0.5
         // to 0.5 range.
 
-        let (draw_x, draw_y) = self.calculate_draw_pos_centre_origin(absolute_draw_size);
+        let (draw_x, draw_y) = super::calculate_draw_position(self.x, self.y, draw_size, draw_size);
 
         quad::draw_texture_ex(
             assets.texture(TextureKey::Ui),
@@ -82,20 +89,4 @@ impl Button {
             }
         );
     }
-
-    fn calculate_draw_pos(&self) -> (f32, f32) {
-        (
-            (quad::screen_width() / 2.0) + (quad::screen_width() * self.x),
-            (quad::screen_height() / 2.0) + (quad::screen_height() * self.y)
-        )
-    }
-
-    fn calculate_draw_pos_centre_origin(&self, absolute_draw_size: f32) -> (f32, f32) {
-        let (draw_x, draw_y) = self.calculate_draw_pos();
-        (draw_x - (absolute_draw_size as f32 / 2.0), draw_y - (absolute_draw_size as f32 / 2.0))
-    }
-}
-
-fn calculate_absolute_draw_size(draw_size: f32) -> f32 {
-    std::cmp::max((draw_size * quad::screen_width()) as usize, (draw_size * quad::screen_height()) as usize) as f32
 }
