@@ -12,7 +12,34 @@ const INTERACT_SIZE_MULTIPLIER: f32 = 0.6;
 const NOT_HOVER_COLOUR: quad::Color = quad::Color::new(0.8, 0.8, 0.8, 1.0);
 const HOVER_COLOUR: quad::Color = quad::WHITE;
 
-pub struct Button {
+pub fn make_open_purchase_menu_button(x: f32, y: f32) -> SimpleButton {
+    SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 0, icon_texture_y: 1 }
+}
+
+pub fn make_place_bomb_button(x: f32, y: f32) -> QuantityButton {
+    QuantityButton {
+        button: SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 0, icon_texture_y: 2 },
+        quantity: 3,
+        quantity_bars_texture_x: 1,
+        quantity_bars_texture_y: 2
+    }
+}
+
+pub fn make_purchase_button() -> SimpleButton {
+    unimplemented!()
+}
+
+pub trait Button {
+    /// Determines whether the button is being hovered over and/or pressed based on mouse position & whether or not the
+    /// left mouse button is down. Returns true once when the button is clicked on.
+    fn update(&mut self, size: f32) -> bool;
+
+    /// Draws the button to the screen. Should return the absolute position (first pair of values in returned tuple) and
+    /// size (second tuple value) that button was drawn.
+    fn draw(&self, assets: &AssetManager, size: f32) -> ((f32, f32), f32);
+}
+
+pub struct SimpleButton {
     is_hover: bool,
     is_down: bool,
     x: f32,
@@ -21,18 +48,8 @@ pub struct Button {
     icon_texture_y: u16
 }
 
-pub fn make_open_purchase_menu_button(x: f32, y: f32) -> Button {
-    Button { is_hover: false, is_down: false, x, y, icon_texture_x: 0, icon_texture_y: 1 }
-}
-
-pub fn make_purchase_button() -> Button {
-    unimplemented!()
-}
-
-impl Button {
-    /// Updates the fields `is_hover` and `is_down` based on mouse position & whether or not the left mouse button is
-    /// down. Returns true once when the button is clicked on.
-    pub fn update(&mut self, size: f32) -> bool {
+impl Button for SimpleButton {
+    fn update(&mut self, size: f32) -> bool {
         let (mouse_x, mouse_y) = quad::mouse_position();
 
         let draw_size = super::calculate_largest_squre_draw_size(size) * INTERACT_SIZE_MULTIPLIER;
@@ -48,7 +65,7 @@ impl Button {
         !was_down && self.is_down
     }
 
-    pub fn draw(&self, assets: &AssetManager, size: f32) {
+    fn draw(&self, assets: &AssetManager, size: f32) -> ((f32, f32), f32) {
         // Button sizes are calculated as a fraction of either the screen width or height (whichever is larger).
 
         let draw_size = super::calculate_largest_squre_draw_size(size);
@@ -88,5 +105,50 @@ impl Button {
                 ..Default::default()
             }
         );
+
+        ((draw_x, draw_y), draw_size)
+    }
+}
+
+pub struct QuantityButton {
+    button: SimpleButton,
+    quantity: u32,
+    quantity_bars_texture_x: u16,
+    quantity_bars_texture_y: u16
+}
+
+impl Button for QuantityButton {
+    fn update(&mut self, size: f32) -> bool {
+        self.button.update(size)
+    }
+
+    fn draw(&self, assets: &AssetManager, size: f32) -> ((f32, f32), f32) {
+        let ((draw_x, draw_y), draw_size) = self.button.draw(assets, size);
+
+        if self.quantity > 0 {
+            let bar_texture_offset = std::cmp::min(self.quantity as u16 - 1, 3);
+
+            let quarter_texture_tile_size = BUTTON_TEXTURE_TILE_SIZE / 4;
+
+            quad::draw_texture_ex(
+                assets.texture(TextureKey::Ui),
+                draw_x + (draw_size / 4.0),
+                draw_y,
+                quad::WHITE,
+                quad::DrawTextureParams {
+                    dest_size: Some(quad::vec2(draw_size / 4.0, draw_size)),
+                    source: Some(quad::Rect {
+                        x: ((self.quantity_bars_texture_x * BUTTON_TEXTURE_TILE_SIZE)
+                            + (bar_texture_offset * quarter_texture_tile_size)) as f32,
+                        y: (self.quantity_bars_texture_y * BUTTON_TEXTURE_TILE_SIZE) as f32,
+                        w: quarter_texture_tile_size as f32,
+                        h: BUTTON_TEXTURE_TILE_SIZE as f32
+                    }),
+                    ..Default::default()
+                }
+            );
+        }
+
+        ((draw_x, draw_y), draw_size)
     }
 }

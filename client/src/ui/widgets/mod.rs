@@ -1,7 +1,7 @@
 pub mod buttons;
 pub mod menus;
 
-pub use buttons::{make_open_purchase_menu_button, make_purchase_button, Button};
+pub use buttons::{Button, QuantityButton, SimpleButton};
 use macroquad::prelude as quad;
 pub use menus::Menu;
 
