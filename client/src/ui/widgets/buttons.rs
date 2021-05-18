@@ -4,24 +4,22 @@ use crate::{AssetManager, TextureKey};
 
 const BUTTON_TEXTURE_TILE_SIZE: u16 = 32;
 
-const BUTTON_UP_RELATIVE_TEXTURE_COORDS: (u16, u16) = (0, 0);
-const BUTTON_DOWN_RELATIVE_TEXTURE_COORDS: (u16, u16) = (1, 0);
+const BUTTON_UP_RELATIVE_TEXTURE_COORDS: (u16, u16) = (2, 0);
+const BUTTON_HOVER_RELATIVE_TEXTURE_COORDS: (u16, u16) = (2, 1);
+const BUTTON_DOWN_RELATIVE_TEXTURE_COORDS: (u16, u16) = (1, 1);
 
 const INTERACT_SIZE_MULTIPLIER: f32 = 0.6;
 
-const NOT_HOVER_COLOUR: quad::Color = quad::Color::new(0.8, 0.8, 0.8, 1.0);
-const HOVER_COLOUR: quad::Color = quad::WHITE;
-
 pub fn make_open_purchase_menu_button(x: f32, y: f32) -> SimpleButton {
-    SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 0, icon_texture_y: 1 }
+    SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 1, icon_texture_y: 2 }
 }
 
 pub fn make_place_bomb_button(x: f32, y: f32) -> QuantityButton {
     QuantityButton {
-        button: SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 0, icon_texture_y: 2 },
-        quantity: 3,
-        quantity_bars_texture_x: 1,
-        quantity_bars_texture_y: 2
+        button: SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 1, icon_texture_y: 3 },
+        quantity: 1,
+        quantity_bars_texture_x: 0,
+        quantity_bars_texture_y: 3
     }
 }
 
@@ -80,12 +78,16 @@ impl Button for SimpleButton {
             assets.texture(TextureKey::Ui),
             draw_x,
             draw_y,
-            if self.is_hover { HOVER_COLOUR } else { NOT_HOVER_COLOUR },
+            quad::WHITE,
             quad::DrawTextureParams {
                 dest_size,
                 source: Some(crate::make_texture_source_rect(
                     BUTTON_TEXTURE_TILE_SIZE,
-                    if self.is_down { BUTTON_DOWN_RELATIVE_TEXTURE_COORDS } else { BUTTON_UP_RELATIVE_TEXTURE_COORDS }
+                    match (self.is_hover, self.is_down) {
+                        (true, false) => BUTTON_HOVER_RELATIVE_TEXTURE_COORDS,
+                        (_, true) => BUTTON_DOWN_RELATIVE_TEXTURE_COORDS,
+                        _ => BUTTON_UP_RELATIVE_TEXTURE_COORDS
+                    }
                 )),
                 ..Default::default()
             }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use shared::{
-    gems::Gem,
+    gems::{self, Gem},
     maps::{
         entities::{Direction, Entity},
         Map, TileCoords
@@ -138,5 +138,9 @@ impl MyEntity {
 
     pub fn get_pos(&self) -> TileCoords {
         self.contained.pos
+    }
+
+    pub fn get_gem_collection(&self) -> &gems::Collection {
+        &self.contained.gem_collection
     }
 }
