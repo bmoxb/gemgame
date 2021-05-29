@@ -8,6 +8,8 @@ const BUTTON_UP_RELATIVE_TEXTURE_COORDS: (u16, u16) = (2, 0);
 const BUTTON_HOVER_RELATIVE_TEXTURE_COORDS: (u16, u16) = (2, 1);
 const BUTTON_DOWN_RELATIVE_TEXTURE_COORDS: (u16, u16) = (1, 1);
 
+const QUANTITY_BARS_TEXTURE_COORDS: (u16, u16) = (0, 3);
+
 const INTERACT_SIZE_MULTIPLIER: f32 = 0.6;
 
 pub fn make_open_purchase_menu_button(x: f32, y: f32) -> SimpleButton {
@@ -17,9 +19,14 @@ pub fn make_open_purchase_menu_button(x: f32, y: f32) -> SimpleButton {
 pub fn make_place_bomb_button(x: f32, y: f32) -> QuantityButton {
     QuantityButton {
         button: SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 1, icon_texture_y: 3 },
-        quantity: 1,
-        quantity_bars_texture_x: 0,
-        quantity_bars_texture_y: 3
+        quantity: 0
+    }
+}
+
+pub fn make_detonate_bombs_button(x: f32, y: f32) -> QuantityButton {
+    QuantityButton {
+        button: SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 2, icon_texture_y: 3 },
+        quantity: 0
     }
 }
 
@@ -114,9 +121,7 @@ impl Button for SimpleButton {
 
 pub struct QuantityButton {
     button: SimpleButton,
-    quantity: u32,
-    quantity_bars_texture_x: u16,
-    quantity_bars_texture_y: u16
+    quantity: u32
 }
 
 impl Button for QuantityButton {
@@ -129,7 +134,7 @@ impl Button for QuantityButton {
 
         if self.quantity > 0 {
             let bar_texture_offset = std::cmp::min(self.quantity as u16 - 1, 3);
-
+            let (bars_texture_x, bars_texture_y) = QUANTITY_BARS_TEXTURE_COORDS;
             let quarter_texture_tile_size = BUTTON_TEXTURE_TILE_SIZE / 4;
 
             quad::draw_texture_ex(
@@ -140,9 +145,9 @@ impl Button for QuantityButton {
                 quad::DrawTextureParams {
                     dest_size: Some(quad::vec2(draw_size / 4.0, draw_size)),
                     source: Some(quad::Rect {
-                        x: ((self.quantity_bars_texture_x * BUTTON_TEXTURE_TILE_SIZE)
+                        x: ((bars_texture_x * BUTTON_TEXTURE_TILE_SIZE)
                             + (bar_texture_offset * quarter_texture_tile_size)) as f32,
-                        y: (self.quantity_bars_texture_y * BUTTON_TEXTURE_TILE_SIZE) as f32,
+                        y: (bars_texture_y * BUTTON_TEXTURE_TILE_SIZE) as f32,
                         w: quarter_texture_tile_size as f32,
                         h: BUTTON_TEXTURE_TILE_SIZE as f32
                     }),
