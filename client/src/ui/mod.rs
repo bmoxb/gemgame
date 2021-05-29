@@ -1,59 +1,99 @@
 mod widgets;
 
 use macroquad::prelude as quad;
-use shared::maps::{entities::Entity, ChunkCoords};
-use widgets::{Button, Menu, QuantityButton, SimpleButton};
+use shared::{
+    items,
+    maps::{entities::Entity, ChunkCoords}
+};
+use widgets::Button;
 
 use crate::AssetManager;
 
 pub struct Ui {
-    button_size: f32,
-    open_purchase_menu_button: SimpleButton,
-    place_bomb_button: QuantityButton,
-    detonate_bombs_button: QuantityButton,
-    /// Whether or not the item purchase menu is currently shown.
-    purchase_menu_open: bool,
-    purchase_menu: Menu
+    large_button_size: f32,
+    small_button_size: f32,
+    show_purchase_buttons_button: widgets::SimpleButton,
+    place_bomb_button: widgets::QuantityButton,
+    detonate_bombs_button: widgets::QuantityButton,
+    showing_purchase_buttons: bool,
+    bool_item_purchase_buttons: Vec<widgets::PurchaseButton<items::BoolItem>>,
+    quantitative_item_purchase_buttons: Vec<widgets::PurchaseButton<items::QuantitativeItem>>
 }
 
 impl Ui {
     pub fn new(button_size: f32) -> Self {
         Ui {
-            button_size,
-            open_purchase_menu_button: widgets::buttons::make_open_purchase_menu_button(-0.4, 0.4),
-            place_bomb_button: widgets::buttons::make_place_bomb_button(0.4, 0.4),
-            detonate_bombs_button: widgets::buttons::make_detonate_bombs_button(0.3, 0.4),
-            purchase_menu_open: false,
-            purchase_menu: Menu { x: 0.0, y: 0.0, width: 0.6, height: 0.6 }
+            large_button_size: button_size,
+            small_button_size: button_size * 0.75,
+            show_purchase_buttons_button: widgets::SimpleButton::new(-0.4, 0.4, 1, 2),
+            place_bomb_button: widgets::QuantityButton::new(0.4, 0.4, 1, 3),
+            detonate_bombs_button: widgets::QuantityButton::new(0.3, 0.4, 2, 3),
+            showing_purchase_buttons: false,
+            bool_item_purchase_buttons: vec![widgets::PurchaseButton::new(
+                -0.3,
+                0.4,
+                3,
+                0,
+                items::BoolItem::RunningShoes
+            )],
+            quantitative_item_purchase_buttons: vec![widgets::PurchaseButton::new(
+                -0.22,
+                0.4,
+                3,
+                1,
+                items::QuantitativeItem::Bomb
+            )]
         }
     }
 
     pub fn update(&mut self) {
-        if self.open_purchase_menu_button.update(self.button_size) {
-            // Toggle item purchase menu when button is pressed:
-            self.purchase_menu_open = !self.purchase_menu_open;
+        if self.show_purchase_buttons_button.update(self.large_button_size) {
+            // Show item purchase buttons:
+            self.showing_purchase_buttons = !self.showing_purchase_buttons;
         }
 
-        if self.place_bomb_button.update(self.button_size) {
+        if self.place_bomb_button.update(self.large_button_size) {
             // Place bomb:
             // TODO
         }
 
-        if self.detonate_bombs_button.update(self.button_size) {
+        if self.detonate_bombs_button.update(self.large_button_size) {
             // Detonated placed bombs:
             // TODO
+        }
+
+        if self.showing_purchase_buttons {
+            for btn in &mut self.bool_item_purchase_buttons {
+                if btn.update(self.small_button_size) {
+                    // TODO: Bool item purchase...
+                }
+            }
+
+            for btn in &mut self.quantitative_item_purchase_buttons {
+                if btn.update(self.small_button_size) {
+                    // TODO: Quantitative item purchase...
+                }
+            }
         }
     }
 
     pub fn draw(&self, assets: &AssetManager) {
         quad::set_default_camera();
 
-        self.open_purchase_menu_button.draw(assets, self.button_size);
-        self.place_bomb_button.draw(assets, self.button_size);
-        self.detonate_bombs_button.draw(assets, self.button_size);
+        let large_buttons: &[&dyn Button] =
+            &[&self.show_purchase_buttons_button, &self.place_bomb_button, &self.detonate_bombs_button];
 
-        if self.purchase_menu_open {
-            self.purchase_menu.draw();
+        for large_btn in large_buttons {
+            large_btn.draw(assets, self.large_button_size);
+        }
+
+        if self.showing_purchase_buttons {
+            let bool_item_buttons = self.bool_item_purchase_buttons.iter().map(|x| x as &dyn Button);
+            let quantitative_item_buttons = self.quantitative_item_purchase_buttons.iter().map(|x| x as &dyn Button);
+
+            for small_btn in bool_item_buttons.chain(quantitative_item_buttons) {
+                small_btn.draw(assets, self.small_button_size);
+            }
         }
     }
 }

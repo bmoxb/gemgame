@@ -1,4 +1,5 @@
 use macroquad::prelude as quad;
+use shared::items::Item;
 
 use crate::{AssetManager, TextureKey};
 
@@ -11,28 +12,6 @@ const BUTTON_DOWN_RELATIVE_TEXTURE_COORDS: (u16, u16) = (1, 1);
 const QUANTITY_BARS_TEXTURE_COORDS: (u16, u16) = (0, 3);
 
 const INTERACT_SIZE_MULTIPLIER: f32 = 0.6;
-
-pub fn make_open_purchase_menu_button(x: f32, y: f32) -> SimpleButton {
-    SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 1, icon_texture_y: 2 }
-}
-
-pub fn make_place_bomb_button(x: f32, y: f32) -> QuantityButton {
-    QuantityButton {
-        button: SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 1, icon_texture_y: 3 },
-        quantity: 0
-    }
-}
-
-pub fn make_detonate_bombs_button(x: f32, y: f32) -> QuantityButton {
-    QuantityButton {
-        button: SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x: 2, icon_texture_y: 3 },
-        quantity: 0
-    }
-}
-
-pub fn make_purchase_button() -> SimpleButton {
-    unimplemented!()
-}
 
 pub trait Button {
     /// Determines whether the button is being hovered over and/or pressed based on mouse position & whether or not the
@@ -51,6 +30,12 @@ pub struct SimpleButton {
     y: f32,
     icon_texture_x: u16,
     icon_texture_y: u16
+}
+
+impl SimpleButton {
+    pub fn new(x: f32, y: f32, icon_texture_x: u16, icon_texture_y: u16) -> Self {
+        SimpleButton { is_hover: false, is_down: false, x, y, icon_texture_x, icon_texture_y }
+    }
 }
 
 impl Button for SimpleButton {
@@ -124,6 +109,12 @@ pub struct QuantityButton {
     quantity: u32
 }
 
+impl QuantityButton {
+    pub fn new(x: f32, y: f32, icon_texture_x: u16, icon_texture_y: u16) -> Self {
+        QuantityButton { button: SimpleButton::new(x, y, icon_texture_x, icon_texture_y), quantity: 0 }
+    }
+}
+
 impl Button for QuantityButton {
     fn update(&mut self, size: f32) -> bool {
         self.button.update(size)
@@ -157,5 +148,27 @@ impl Button for QuantityButton {
         }
 
         ((draw_x, draw_y), draw_size)
+    }
+}
+
+pub struct PurchaseButton<T> {
+    button: SimpleButton,
+    pub purchase_item: T
+}
+
+impl<T> PurchaseButton<T> {
+    pub fn new(x: f32, y: f32, icon_texture_x: u16, icon_texture_y: u16, purchase_item: T) -> Self {
+        PurchaseButton { button: SimpleButton::new(x, y, icon_texture_x, icon_texture_y), purchase_item }
+    }
+}
+
+impl<T: Item> Button for PurchaseButton<T> {
+    fn update(&mut self, size: f32) -> bool {
+        self.button.update(size)
+    }
+
+    fn draw(&self, assets: &AssetManager, size: f32) -> ((f32, f32), f32) {
+        self.button.draw(assets, size)
+        // TODO: Draw some sort of indicator of item cost.
     }
 }

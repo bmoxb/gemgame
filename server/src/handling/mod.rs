@@ -4,6 +4,7 @@ use std::{convert::Into, net::SocketAddr};
 
 use rand::Rng;
 use shared::{
+    items::Item,
     maps::{ChunkCoords, Map},
     messages, Id
 };
