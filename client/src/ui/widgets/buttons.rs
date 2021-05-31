@@ -106,7 +106,7 @@ impl Button for SimpleButton {
 
 pub struct QuantityButton {
     button: SimpleButton,
-    quantity: u32
+    pub quantity: u32
 }
 
 impl QuantityButton {

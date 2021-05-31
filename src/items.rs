@@ -16,7 +16,7 @@ pub enum BoolItem {
 impl Item for BoolItem {
     fn get_price(&self) -> (Gem, u32) {
         match self {
-            BoolItem::RunningShoes => (Gem::Emerald, 25)
+            BoolItem::RunningShoes => (Gem::Emerald, 20)
         }
     }
 }

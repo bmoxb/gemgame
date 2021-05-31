@@ -97,7 +97,7 @@ impl State for GameState {
 
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
         // Update UI:
-        self.ui.update();
+        self.ui.update(&mut self.my_entity, &mut self.connection).unwrap(); // TODO: Unwrap
 
         // Rendering:
 

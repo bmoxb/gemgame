@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use shared::{
     gems::{self, Gem},
+    items::{self, Item},
     maps::{
         entities::{Direction, Entity},
         Map, TileCoords
@@ -132,6 +133,26 @@ impl MyEntity {
         self.unverified_movements.remove(&request_number);
     }
 
+    /// Attempt to purchase a 'bool item' (an item that a player can either 0 or 1 of). Will send a message to the
+    /// server informing it of the purchase provided that the player has the required gems and does not already own
+    /// the item.
+    pub fn purchase_bool_item(
+        &mut self, itm: items::BoolItem, connection: &mut networking::Connection
+    ) -> networking::Result<bool> {
+        let (gem, required_gem_quantity) = itm.get_price();
+
+        let will_buy = self.contained.gem_collection.get_quantity(gem) >= required_gem_quantity
+            && !self.contained.item_inventory.has(itm);
+
+        if will_buy {
+            connection.send(&messages::ToServer::PurchaseSingleItem(itm))?;
+            self.contained.item_inventory.give(itm);
+            self.contained.gem_collection.decrease_quantity(gem, required_gem_quantity);
+        }
+
+        Ok(will_buy)
+    }
+
     pub fn get_contained_entity(&self) -> &Entity {
         &self.contained
     }
@@ -142,5 +163,9 @@ impl MyEntity {
 
     pub fn get_gem_collection(&self) -> &gems::Collection {
         &self.contained.gem_collection
+    }
+
+    pub fn get_inventory(&self) -> &items::Inventory {
+        &self.contained.item_inventory
     }
 }
