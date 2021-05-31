@@ -74,7 +74,7 @@ impl Ui {
 
             for btn in &mut self.quantitative_item_purchase_buttons {
                 if btn.update(self.small_button_size) {
-                    // TODO: Quantitative item purchase...
+                    player.purchase_quantitative_item(btn.purchase_item, 1, connection)?;
                 }
             }
         }

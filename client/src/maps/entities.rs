@@ -137,17 +137,36 @@ impl MyEntity {
     /// server informing it of the purchase provided that the player has the required gems and does not already own
     /// the item.
     pub fn purchase_bool_item(
-        &mut self, itm: items::BoolItem, connection: &mut networking::Connection
+        &mut self, item: items::BoolItem, connection: &mut networking::Connection
     ) -> networking::Result<bool> {
-        let (gem, required_gem_quantity) = itm.get_price();
+        let (gem, required_gem_quantity) = item.get_price();
 
         let will_buy = self.contained.gem_collection.get_quantity(gem) >= required_gem_quantity
-            && !self.contained.item_inventory.has(itm);
+            && !self.contained.item_inventory.has(item);
 
         if will_buy {
-            connection.send(&messages::ToServer::PurchaseSingleItem(itm))?;
-            self.contained.item_inventory.give(itm);
+            connection.send(&messages::ToServer::PurchaseSingleItem(item))?;
+
+            self.contained.item_inventory.give(item);
             self.contained.gem_collection.decrease_quantity(gem, required_gem_quantity);
+        }
+
+        Ok(will_buy)
+    }
+
+    pub fn purchase_quantitative_item(
+        &mut self, item: items::QuantitativeItem, quantity: u32, connection: &mut networking::Connection
+    ) -> networking::Result<bool> {
+        let (gem, required_gem_quantity_per_item) = item.get_price();
+        let total_required_gem_quantity = required_gem_quantity_per_item * quantity;
+
+        let will_buy = self.contained.gem_collection.get_quantity(gem) >= total_required_gem_quantity;
+
+        if will_buy {
+            connection.send(&messages::ToServer::PurchaseItemQuantity { item, quantity })?;
+
+            self.contained.item_inventory.give_quantity(item, quantity);
+            self.contained.gem_collection.decrease_quantity(gem, total_required_gem_quantity);
         }
 
         Ok(will_buy)
