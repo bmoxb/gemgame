@@ -34,6 +34,10 @@ pub enum ToServer {
         direction: entities::Direction
     },
 
+    /// Attempt to place a bomb at the player entity's position. The client is expected to ensure that their player
+    /// actually has a bomb to place before sending this message.
+    PlaceBomb,
+
     /// Indicate that the player wishes to purchase the given item (of type [`items::BoolItem`]). The client should
     /// only send this message if it believes the player has enough gems to do so (if they do not then the server
     /// will silently ignore the message).
@@ -55,6 +59,7 @@ impl fmt::Display for ToServer {
             ToServer::MoveMyEntity { request_number, direction } => {
                 write!(f, "move my player entity {} (request #{})", direction, request_number)
             }
+            ToServer::PlaceBomb => write!(f, "place bomb"),
             ToServer::PurchaseSingleItem(item) => write!(f, "purchase {:?}", item),
             ToServer::PurchaseItemQuantity { item, quantity } => write!(f, "purchase {} of {:?}", quantity, item)
         }
@@ -109,6 +114,12 @@ pub enum FromServer {
     ///   player disconnecting).
     ShouldUnloadEntity(Id),
 
+    /// Inform the client that some entity (not their own) placed a bomb down within the client's loaded chunks.
+    BombPlaced { placed_by_entity_id: Id, position: maps::TileCoords },
+
+    /// Inform the client that all the bombs placed by the entity with the given ID have now detonated.
+    BombsDetonated { placed_by_entity_id: Id },
+
     /// Informs the client of the type and quantity of gems they received after their entity smashed a rock.
     YouCollectedGems { gem_type: gems::Gem, quantity_increase: u32 }
 }
@@ -134,6 +145,12 @@ impl fmt::Display for FromServer {
             }
             FromServer::ProvideEntity(id, entity) => write!(f, "provide entity {} - {}", entity, id),
             FromServer::ShouldUnloadEntity(id) => write!(f, "should unload entity {}", id),
+            FromServer::BombPlaced { placed_by_entity_id, position } => {
+                write!(f, "bomb placed at {} by entity {}", position, placed_by_entity_id)
+            }
+            FromServer::BombsDetonated { placed_by_entity_id } => {
+                write!(f, "bombs placed entity {} detonated", placed_by_entity_id)
+            }
             FromServer::YouCollectedGems { gem_type, quantity_increase } => {
                 write!(f, "you collected {} gems of type {:?}", quantity_increase, gem_type)
             }

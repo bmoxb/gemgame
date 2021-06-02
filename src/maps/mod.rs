@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_big_array::big_array;
 
 use crate::{
-    gems::{Gem, self},
+    gems::{self, Gem},
     Id
 };
 
@@ -94,7 +94,9 @@ pub type Chunks = HashMap<ChunkCoords, Chunk>;
 pub struct Chunk {
     /// The tiles that this chunk is comprised of.
     #[serde(with = "BigArray")]
-    tiles: [Tile; CHUNK_TILE_COUNT]
+    tiles: [Tile; CHUNK_TILE_COUNT],
+    /// Bombs placed in this chunk - sets of bombs are mapped to by the ID of the entity that placed those bombs.
+    bombs: HashMap<Id, Vec<Bomb>>
 }
 
 impl Chunk {
@@ -109,7 +111,7 @@ impl Chunk {
 
 impl Default for Chunk {
     fn default() -> Self {
-        Chunk { tiles: [Tile::default(); CHUNK_TILE_COUNT] }
+        Chunk { tiles: [Tile::default(); CHUNK_TILE_COUNT], bombs: HashMap::new() }
     }
 }
 
@@ -202,4 +204,11 @@ impl Default for Tile {
     fn default() -> Self {
         Tile::Grass
     }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Bomb {
+    pos: TileCoords,
+    /// Is `true` when the bomb is in the process of detonating and `false` otherwise.
+    exploding: bool
 }
