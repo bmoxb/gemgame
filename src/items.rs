@@ -56,4 +56,10 @@ impl Inventory {
     pub fn give_quantity(&mut self, itm: QuantitativeItem, quantity: u32) {
         *self.quantitive_items.entry(itm).or_insert(0) += quantity;
     }
+
+    //pub fn take(&mut self, itm: BoolItem) { ... }
+
+    pub fn take_quantity(&mut self, itm: QuantitativeItem, quantity: u32) {
+        *self.quantitive_items.entry(itm).or_insert(0) -= quantity;
+    }
 }

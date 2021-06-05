@@ -4,8 +4,8 @@ use std::{convert::Into, net::SocketAddr};
 
 use rand::Rng;
 use shared::{
-    items::Item,
-    maps::{ChunkCoords, Map},
+    items::{self, Item},
+    maps::{ChunkCoords, Map, TileCoords},
     messages, Id
 };
 use thiserror::Error;
@@ -48,7 +48,8 @@ struct Handler {
     db_pool: sqlx::PgPool,
     map_changes_sender: broadcast::Sender<maps::Modification>,
     map_changes_receiver: broadcast::Receiver<maps::Modification>,
-    // Set used to track of the coordinates of chunks that this handler's remote client has loaded.
+    /// Set used to track of the coordinates of chunks that this handler's remote client has loaded.
+    // TODO: Hash set?
     remote_loaded_chunk_coords: Vec<ChunkCoords>
 }
 
@@ -327,6 +328,35 @@ impl Handler {
                 }
             }
 
+            messages::ToServer::PlaceBomb => {
+                // Get player's position & check if the player actually posses a bomb to place:
+                let (can_place_bomb, pos) = self
+                    .game_map
+                    .lock()
+                    .entity_by_id(player_id)
+                    .map(|player| (player.item_inventory.has_how_many(items::QuantitativeItem::Bomb) >= 1, player.pos))
+                    .unwrap_or((false, TileCoords { x: 0, y: 0 }));
+
+                if can_place_bomb {
+                    // Place the bomb (server-side):
+                    self.game_map.lock().set_bomb_at(pos, player_id);
+
+                    // Inform other tasks that a bomb has been placed:
+                    self.map_changes_sender.send(maps::Modification::BombPlaced(pos, player_id)).unwrap();
+
+                    // The client that placed the bomb obviously does not need to be informed by the server that a bomb
+                    // has been placed so immediately discarded map modification message on this task:
+                    self.map_changes_receiver.recv().await.unwrap();
+
+                    // Remove the placed bomb from the player's inventory:
+                    if let Some(player) = self.game_map.lock().entity_by_id_mut(player_id) {
+                        player.item_inventory.take_quantity(items::QuantitativeItem::Bomb, 1);
+                    }
+                }
+
+                Ok(vec![])
+            }
+
             messages::ToServer::PurchaseSingleItem(item) => {
                 let (cost_gem, cost_quantity) = item.get_price();
 
@@ -406,7 +436,12 @@ impl Handler {
             maps::Modification::EntityRemoved(entity_id, chunk_coords) => self
                 .remote_loaded_chunk_coords
                 .contains(&chunk_coords)
-                .then(|| messages::FromServer::ShouldUnloadEntity(entity_id))
+                .then(|| messages::FromServer::ShouldUnloadEntity(entity_id)),
+
+            maps::Modification::BombPlaced(position, placed_by_entity_id) => self
+                .remote_loaded_chunk_coords
+                .contains(&position.as_chunk_coords())
+                .then(|| messages::FromServer::BombPlaced { placed_by_entity_id, position })
         }
     }
 

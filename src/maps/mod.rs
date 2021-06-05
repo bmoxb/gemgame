@@ -36,6 +36,20 @@ pub trait Map {
     fn set_loaded_tile_at(&mut self, coords: TileCoords, tile: Tile) -> bool {
         if let Some(chunk) = self.loaded_chunk_at_mut(coords.as_chunk_coords()) {
             chunk.set_tile_at_offset(coords.as_chunk_offset_coords(), tile);
+
+            true
+        }
+        else {
+            false
+        }
+    }
+
+    /// Place a bomb at the specified tile coordinates assuming it is in a chunk that is already loaded.
+    fn set_bomb_at(&mut self, pos: TileCoords, placed_by_id: Id) -> bool {
+        if let Some(chunk) = self.loaded_chunk_at_mut(pos.as_chunk_coords()) {
+            let bomb = Bomb { pos, exploding: false };
+            chunk.bombs.entry(placed_by_id).or_default().push(bomb);
+
             true
         }
         else {
