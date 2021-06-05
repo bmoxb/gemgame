@@ -100,6 +100,10 @@ impl MapRenderer {
             }
         }
 
+        // Draw undetonated bombs:
+
+        // TODO
+
         // Draw (and remove completed) tile transition animations:
 
         let mut concluded_animations = HashSet::new();
@@ -157,6 +161,10 @@ impl MapRenderer {
         for (entity, renderer) in all_entities_iter {
             renderer.draw_upper(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
         }
+
+        // Draw detonating bombs:
+
+        // TODO
     }
 
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
@@ -201,6 +209,10 @@ impl MapRenderer {
     // turned into a smashed rock by the [`ClientMap::some_entity_moved_to`] method.
     pub fn rock_tile_smashed(&mut self, coords: TileCoords) {
         self.tile_change_animations.insert(coords, tiles::new_rock_smash_animation());
+    }
+
+    pub fn detonating_bombs(&mut self, positions: Vec<TileCoords>) {
+        //self.exploding_bombs.push((tiles::animations::Once { ... }, positions));
     }
 }
 

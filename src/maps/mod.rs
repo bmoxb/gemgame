@@ -36,7 +36,6 @@ pub trait Map {
     fn set_loaded_tile_at(&mut self, coords: TileCoords, tile: Tile) -> bool {
         if let Some(chunk) = self.loaded_chunk_at_mut(coords.as_chunk_coords()) {
             chunk.set_tile_at_offset(coords.as_chunk_offset_coords(), tile);
-
             true
         }
         else {
@@ -47,9 +46,7 @@ pub trait Map {
     /// Place a bomb at the specified tile coordinates assuming it is in a chunk that is already loaded.
     fn set_bomb_at(&mut self, pos: TileCoords, placed_by_id: Id) -> bool {
         if let Some(chunk) = self.loaded_chunk_at_mut(pos.as_chunk_coords()) {
-            let bomb = Bomb { pos, exploding: false };
-            chunk.bombs.entry(placed_by_id).or_default().push(bomb);
-
+            chunk.undetonated_bombs.entry(placed_by_id).or_default().push(pos);
             true
         }
         else {
@@ -109,8 +106,9 @@ pub struct Chunk {
     /// The tiles that this chunk is comprised of.
     #[serde(with = "BigArray")]
     tiles: [Tile; CHUNK_TILE_COUNT],
-    /// Bombs placed in this chunk - sets of bombs are mapped to by the ID of the entity that placed those bombs.
-    bombs: HashMap<Id, Vec<Bomb>>
+    /// Bombs placed in this chunk - sets of bomb positions are mapped to by the ID of the entity that placed those
+    /// bombs.
+    undetonated_bombs: HashMap<Id, Vec<TileCoords>>
 }
 
 impl Chunk {
@@ -125,7 +123,7 @@ impl Chunk {
 
 impl Default for Chunk {
     fn default() -> Self {
-        Chunk { tiles: [Tile::default(); CHUNK_TILE_COUNT], bombs: HashMap::new() }
+        Chunk { tiles: [Tile::default(); CHUNK_TILE_COUNT], undetonated_bombs: HashMap::new() }
     }
 }
 
@@ -218,11 +216,4 @@ impl Default for Tile {
     fn default() -> Self {
         Tile::Grass
     }
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Bomb {
-    pos: TileCoords,
-    /// Is `true` when the bomb is in the process of detonating and `false` otherwise.
-    exploding: bool
 }
