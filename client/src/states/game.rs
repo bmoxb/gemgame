@@ -83,6 +83,12 @@ impl GameState {
                 self.map.remove_entity(id);
             }
 
+            messages::FromServer::BombPlaced { placed_by_entity_id, position } => {
+                self.map.set_bomb_at(position, placed_by_entity_id);
+            }
+
+            messages::FromServer::BombsDetonated { placed_by_entity_id: _ } => unimplemented!(), // TODO
+
             messages::FromServer::YouCollectedGems { gem_type, quantity_increase } => {
                 self.my_entity.obtained_gems(gem_type, quantity_increase);
             }
@@ -97,7 +103,7 @@ impl State for GameState {
 
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
         // Update UI:
-        self.ui.update(&mut self.my_entity, &mut self.connection).unwrap(); // TODO: Unwrap
+        self.ui.update(&mut self.my_entity, &mut self.map, &mut self.connection).unwrap(); // TODO: Don't unwrap.
 
         // Rendering:
 

@@ -7,7 +7,10 @@ use shared::{
 };
 use widgets::Button;
 
-use crate::{maps::entities::MyEntity, networking, AssetManager};
+use crate::{
+    maps::{entities::MyEntity, ClientMap},
+    networking, AssetManager
+};
 
 pub struct Ui {
     large_button_size: f32,
@@ -46,7 +49,9 @@ impl Ui {
         }
     }
 
-    pub fn update(&mut self, player: &mut MyEntity, connection: &mut networking::Connection) -> networking::Result<()> {
+    pub fn update(
+        &mut self, player: &mut MyEntity, map: &mut ClientMap, connection: &mut networking::Connection
+    ) -> networking::Result<()> {
         // Set UI bomb button quantity meter based on how many bombs the player has in their inventory:
         self.place_bomb_button.quantity = player.get_inventory().has_how_many(items::QuantitativeItem::Bomb);
 
@@ -56,8 +61,7 @@ impl Ui {
         }
 
         if self.place_bomb_button.update(self.large_button_size) {
-            // Place bomb:
-            // TODO
+            player.place_bomb(map, connection)?;
         }
 
         if self.detonate_bombs_button.update(self.large_button_size) {

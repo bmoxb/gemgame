@@ -107,7 +107,7 @@ impl State for ConnectedState {
 
                                 log::debug!("Given player entity: {} - {}", entity, entity_id);
 
-                                let my_entity = MyEntity::new(entity);
+                                let my_entity = MyEntity::new(entity, entity_id);
                                 let taken_connection = self.connection.take().unwrap();
                                 let game_state = super::game::GameState::new(taken_connection, my_entity);
 

@@ -7,7 +7,7 @@ use shared::{
         entities::{Direction, Entity},
         Map, TileCoords
     },
-    messages
+    messages, Id
 };
 
 use super::{ClientMap, MapRenderer};
@@ -15,6 +15,7 @@ use crate::networking::{self, ConnectionTrait};
 
 /// The entity controlled by this client program.
 pub struct MyEntity {
+    id: Id,
     contained: Entity,
     /// Request number value to be used for the next [`shared::messages::ToServer::MoveMyEntity`] message. Incremented
     /// after the sending of each message.
@@ -31,8 +32,9 @@ pub struct MyEntity {
 }
 
 impl MyEntity {
-    pub fn new(contained: Entity) -> Self {
+    pub fn new(contained: Entity, id: Id) -> Self {
         MyEntity {
+            id,
             contained,
             next_request_number: 0,
             unverified_movements: HashMap::new(),
@@ -170,6 +172,24 @@ impl MyEntity {
         }
 
         Ok(will_buy)
+    }
+
+    pub fn place_bomb(
+        &mut self, map: &mut ClientMap, connection: &mut networking::Connection
+    ) -> networking::Result<()> {
+        // Ensure player has a bomb in inventory to place:
+        if self.contained.item_inventory.has_how_many(items::QuantitativeItem::Bomb) >= 1 {
+            // Place the bomb on the map locally:
+            map.set_bomb_at(self.contained.pos, self.id);
+
+            // Inform the server:
+            connection.send(&messages::ToServer::PlaceBomb)?;
+
+            // Remove placed bomb from inventory:
+            self.contained.item_inventory.take_quantity(items::QuantitativeItem::Bomb, 1);
+        }
+
+        Ok(())
     }
 
     pub fn get_contained_entity(&self) -> &Entity {
