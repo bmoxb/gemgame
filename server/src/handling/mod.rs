@@ -48,8 +48,8 @@ struct Handler {
     db_pool: sqlx::PgPool,
     map_changes_sender: broadcast::Sender<maps::Modification>,
     map_changes_receiver: broadcast::Receiver<maps::Modification>,
-    /// Set used to track of the coordinates of chunks that this handler's remote client has loaded.
-    // TODO: Hash set?
+    /// Set used to track of the coordinates of chunks that this handler's remote client has loaded. Stored as a vector
+    /// so that chunk coordinate pairs can stored in from least to most recently loaded.
     remote_loaded_chunk_coords: Vec<ChunkCoords>
 }
 
