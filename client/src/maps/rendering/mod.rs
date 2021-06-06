@@ -129,28 +129,24 @@ impl MapRenderer {
 
         // Draw entities:
 
-        let remote_entities_to_draw: Vec<(&Entity, &entities::Renderer)> = self
-            .remote_entity_renderers
-            .iter()
-            .filter_map(|(id, renderer)| {
-                if let Some(entity) = map.entity_by_id(*id) {
-                    // Is the entity actually on screen?
-                    if on_screen_tiles_left_boundary <= entity.pos.x
-                        && entity.pos.x <= on_screen_tiles_right_boundary
-                        && on_screen_tiles_bottom_boundary <= entity.pos.y
-                        && entity.pos.y <= on_screen_tiles_top_boundary
-                    {
-                        return Some((entity, renderer));
-                    }
+        let remote_entities_to_draw = self.remote_entity_renderers.iter().filter_map(|(id, renderer)| {
+            if let Some(entity) = map.entity_by_id(*id) {
+                // Is the entity actually on screen?
+                if on_screen_tiles_left_boundary <= entity.pos.x
+                    && entity.pos.x <= on_screen_tiles_right_boundary
+                    && on_screen_tiles_bottom_boundary <= entity.pos.y
+                    && entity.pos.y <= on_screen_tiles_top_boundary
+                {
+                    return Some((entity, renderer));
                 }
-                None
-            })
-            .collect();
+            }
+            None
+        });
 
         // Draw lower portion of each on-screen entity:
 
         let my_entity_iter = std::iter::once((my_entity_contained, &self.my_entity_renderer));
-        let all_entities_iter = remote_entities_to_draw.into_iter().chain(my_entity_iter);
+        let all_entities_iter = remote_entities_to_draw.chain(my_entity_iter);
 
         for (entity, renderer) in all_entities_iter.clone() {
             renderer.draw_lower(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
