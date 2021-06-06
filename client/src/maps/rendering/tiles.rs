@@ -1,12 +1,11 @@
-pub mod animations;
-
 use std::collections::HashMap;
 
-use animations::{boxed_continuous, boxed_static};
 use array_macro::array;
 use lazy_static::lazy_static;
 use macroquad::prelude as quad;
 use shared::maps::Tile;
+
+use super::animations::{self, boxed_continuous, boxed_static};
 
 const ROCK_SMASH_FRAMES: [animations::Frame; 7] =
     array![index => animations::Frame { at: (index as u16, 3), time: 0.025 }; 7];

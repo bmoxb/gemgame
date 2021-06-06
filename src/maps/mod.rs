@@ -119,6 +119,10 @@ impl Chunk {
     pub fn set_tile_at_offset(&mut self, offset: OffsetCoords, tile: Tile) {
         self.tiles[offset.calculate_index()] = tile;
     }
+
+    pub fn get_undetonated_bomb_positions(&self) -> impl Iterator<Item = &TileCoords> {
+        self.undetonated_bombs.values().flatten()
+    }
 }
 
 impl Default for Chunk {

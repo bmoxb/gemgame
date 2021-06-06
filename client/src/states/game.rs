@@ -98,7 +98,7 @@ impl GameState {
 
 impl State for GameState {
     fn required_textures(&self) -> &[TextureKey] {
-        &[TextureKey::Tiles, TextureKey::Entities, TextureKey::Ui]
+        &[TextureKey::Tiles, TextureKey::Entities, TextureKey::Bombs, TextureKey::Ui]
     }
 
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {

@@ -2,12 +2,12 @@ use macroquad::prelude as quad;
 
 use crate::maps::rendering::SINGLE_TILE_TEXTURE_SIZE;
 
-/// Trait that describes an animation for a map tile.
+/// Trait that describes an animation that occurs within the game world.
 pub trait Animation {
     fn draw(&self, draw_pos: quad::Vec2, draw_size: f32, texture: quad::Texture2D) {
         let rect = crate::make_texture_source_rect(
             SINGLE_TILE_TEXTURE_SIZE,
-            self.get_relative_texture_coords(quad::get_time())
+            self.get_relative_texture_coords(quad::get_time()),
         );
 
         let params = quad::DrawTextureParams {
@@ -24,8 +24,8 @@ pub trait Animation {
     fn get_relative_texture_coords(&self, time: f64) -> (u16, u16);
 }
 
-/// An animation that is just a single frame (i.e. not animated but implements [`Animation`]). Can be shared between
-/// different tiles (see [`super::draw_with_stateless_animation`]).
+/// An animation that is just a single frame (i.e. not animated but implements [`Animation`]). Can be shared (see
+/// [`super::tiles::draw_with_stateless_animation`]).
 pub struct Static(pub u16, pub u16);
 
 impl Animation for Static {
@@ -38,8 +38,8 @@ pub fn boxed_static(x: u16, y: u16) -> Box<dyn Animation + Sync> {
     Box::new(Static(x, y))
 }
 
-/// An animation that continuously loops the same set of frames. Can be shared between different tiles (see
-/// [`super::draw_with_stateless_animation`]).
+/// An animation that continuously loops the same set of frames. Can be shared (see
+/// [`super::tiles::draw_with_stateless_animation`]).
 pub struct Continuous {
     frames: &'static [Frame],
     duration: f64
@@ -61,12 +61,12 @@ pub fn boxed_continuous(frames: &'static [Frame]) -> Box<dyn Animation + Sync> {
     Box::new(Continuous::new(frames))
 }
 
-/// An animation that plays only once. This animation type is used for a tile transitions and should not be shared in
-/// the same way that continuous and static animations can be.
+/// An animation that plays only once. This animation type has state and so cannot be shared in the same way that
+/// continuous and static animations can be.
 pub struct Once {
     frames: &'static [Frame],
     start_time: f64,
-    duration: f64
+    duration: f64,
 }
 
 impl Once {
@@ -103,7 +103,7 @@ fn frame_at_time(frames: &[Frame], frame_time: f64) -> Option<(u16, u16)> {
 #[derive(Clone, Copy)]
 pub struct Frame {
     pub at: (u16, u16),
-    pub time: f64
+    pub time: f64,
 }
 
 /// Calculates the total duration of a set of animation frames.

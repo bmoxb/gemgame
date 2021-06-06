@@ -52,6 +52,7 @@ pub type AssetManager = asset_management::AssetManager<TextureKey>;
 pub enum TextureKey {
     Tiles,
     Entities,
+    Bombs,
     Ui
 }
 
@@ -60,6 +61,7 @@ impl asset_management::AssetKey for TextureKey {
         match self {
             TextureKey::Tiles => "tileset.png",
             TextureKey::Entities => "entities.png",
+            TextureKey::Bombs => "bombs.png",
             TextureKey::Ui => "ui.png"
         }
     }

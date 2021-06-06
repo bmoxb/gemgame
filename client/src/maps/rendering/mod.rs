@@ -1,15 +1,17 @@
+mod animations;
+mod bombs;
 mod entities;
 mod tiles;
 
 use std::collections::{HashMap, HashSet};
 
+use animations::Animation;
 use macroquad::prelude as quad;
 use shared::{
-    maps::{entities::Entity, Map, OffsetCoords, TileCoords},
+    maps::{entities::Entity, ChunkCoords, Map, OffsetCoords, TileCoords},
     Id
 };
 
-use self::tiles::animations::Animation;
 use crate::{maps::ClientMap, AssetManager, TextureKey};
 
 /// The width and height (in pixels) that each individual tile on the tiles texture is.
@@ -29,7 +31,7 @@ pub struct MapRenderer {
     my_entity_renderer: entities::Renderer,
     /// Entity renderers for remote player entities (mapped to by entity IDs).
     remote_entity_renderers: HashMap<Id, entities::Renderer>,
-    tile_change_animations: HashMap<TileCoords, tiles::animations::Once>
+    tile_change_animations: HashMap<TileCoords, animations::Once>
 }
 
 impl MapRenderer {
@@ -86,6 +88,7 @@ impl MapRenderer {
 
                 if let Some(tile) = map.loaded_tile_at(tile_coords) {
                     let chunk_corner = tile_coords.as_chunk_offset_coords() == OffsetCoords { x: 0, y: 0 };
+
                     tiles::draw_with_stateless_animation(
                         tile,
                         draw_pos,
@@ -100,9 +103,30 @@ impl MapRenderer {
             }
         }
 
+        // Identify the coordinates of chunks that are on-screen:
+
+        let mut on_screen_chunk_coords = Vec::new();
+
+        let bottom_left_on_screen_chunk_coords =
+            TileCoords { x: on_screen_tiles_left_boundary, y: on_screen_tiles_bottom_boundary }.as_chunk_coords();
+        let top_right_on_screen_chunk_coords =
+            TileCoords { x: on_screen_tiles_right_boundary, y: on_screen_tiles_top_boundary }.as_chunk_coords();
+
+        for x in bottom_left_on_screen_chunk_coords.x..top_right_on_screen_chunk_coords.x + 1 {
+            for y in bottom_left_on_screen_chunk_coords.y..top_right_on_screen_chunk_coords.y + 1 {
+                on_screen_chunk_coords.push(ChunkCoords { x, y });
+            }
+        }
+
         // Draw undetonated bombs:
 
-        // TODO
+        for chunk in on_screen_chunk_coords.into_iter().filter_map(|coords| map.loaded_chunk_at(coords)) {
+            // Iterate all bomb positions within the chunk irrespective of who placed them:
+            for bomb_coords in chunk.get_undetonated_bomb_positions() {
+                let draw_pos = tile_coords_to_vec2(*bomb_coords, self.tile_draw_size);
+                bombs::draw_undetonated_bomb(draw_pos, self.tile_draw_size, assets.texture(TextureKey::Bombs));
+            }
+        }
 
         // Draw (and remove completed) tile transition animations:
 
