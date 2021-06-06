@@ -31,7 +31,10 @@ pub struct MapRenderer {
     my_entity_renderer: entities::Renderer,
     /// Entity renderers for remote player entities (mapped to by entity IDs).
     remote_entity_renderers: HashMap<Id, entities::Renderer>,
-    tile_change_animations: HashMap<TileCoords, animations::Once>
+    /// Stores animations for transitions between tile types.
+    tile_change_animations: HashMap<TileCoords, animations::Once>,
+    /// Stores pairs of bomb explosion animations and lists of positions where animations should play.
+    exploding_bomb_animations: Vec<(animations::Once, Vec<TileCoords>)>
 }
 
 impl MapRenderer {
@@ -182,9 +185,17 @@ impl MapRenderer {
             renderer.draw_upper(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
         }
 
-        // Draw detonating bombs:
+        // Draw exploding bombs:
 
-        // TODO
+        for (animation, positions) in &self.exploding_bomb_animations {
+            for pos in positions {
+                animation.draw(
+                    tile_coords_to_vec2(*pos, self.tile_draw_size),
+                    self.tile_draw_size * bombs::DETONATING_BOMB_FRAME_SIZE_MULTIPLIER,
+                    assets.texture(TextureKey::Bombs)
+                );
+            }
+        }
     }
 
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
@@ -231,8 +242,8 @@ impl MapRenderer {
         self.tile_change_animations.insert(coords, tiles::new_rock_smash_animation());
     }
 
-    pub fn detonating_bombs(&mut self, positions: Vec<TileCoords>) {
-        //self.exploding_bombs.push((tiles::animations::Once { ... }, positions));
+    pub fn bombs_detonated(&mut self, positions: Vec<TileCoords>) {
+        self.exploding_bomb_animations.push((bombs::make_detonating_bomb_animation(), positions));
     }
 }
 

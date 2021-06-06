@@ -123,6 +123,10 @@ impl Chunk {
     pub fn get_undetonated_bomb_positions(&self) -> impl Iterator<Item = &TileCoords> {
         self.undetonated_bombs.values().flatten()
     }
+
+    pub fn take_bombs_placed_by(&mut self, placed_by: Id) -> Option<Vec<TileCoords>> {
+        self.undetonated_bombs.remove(&placed_by)
+    }
 }
 
 impl Default for Chunk {

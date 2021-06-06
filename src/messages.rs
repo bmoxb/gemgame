@@ -38,6 +38,10 @@ pub enum ToServer {
     /// actually has a bomb to place before sending this message.
     PlaceBomb,
 
+    /// Have the server detonate all bombs placed by the player that are within their client's currently-loaded chunks.
+    /// Bombs placed by the player that are not in the client's loaded chunks will not be detonated.
+    DetonateBombs,
+
     /// Indicate that the player wishes to purchase the given item (of type [`items::BoolItem`]). The client should
     /// only send this message if it believes the player has enough gems to do so (if they do not then the server
     /// will silently ignore the message).

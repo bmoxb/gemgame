@@ -64,6 +64,18 @@ impl ClientMap {
     pub fn get_loaded_chunk_coords(&self) -> impl Iterator<Item = ChunkCoords> + '_ {
         self.loaded_chunks.keys().copied()
     }
+
+    fn take_loaded_bombs_placed_by(&mut self, placed_by_id: Id) -> Vec<TileCoords> {
+        let mut positions = Vec::new();
+
+        for chunk in self.loaded_chunks.values_mut() {
+            if let Some(positions_in_chunk) = chunk.take_bombs_placed_by(placed_by_id) {
+                positions.extend(positions_in_chunk.into_iter());
+            }
+        }
+
+        positions
+    }
 }
 
 impl Map for ClientMap {

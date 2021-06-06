@@ -174,6 +174,8 @@ impl ServerMap {
             None
         }
     }
+
+    pub fn remove_bombs_placed_by_within_chunks(&mut self, within_chunk_coords: &Vec<ChunkCoords>, placed_by: Id) { ... }
 }
 
 impl Map for ServerMap {

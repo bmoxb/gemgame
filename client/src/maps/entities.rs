@@ -28,7 +28,9 @@ pub struct MyEntity {
     unverified_movements: HashMap<u32, TileCoords>,
     /// When this value reaches 0 then the required amount of time has passed since the player's last movement before
     /// it can move again.
-    movement_time_countdown: f32
+    movement_time_countdown: f32,
+    /// Number of bombs the entity has placed (excluding detonated bombs).
+    bombs_placed_count: u32
 }
 
 impl MyEntity {
@@ -38,7 +40,8 @@ impl MyEntity {
             contained,
             next_request_number: 0,
             unverified_movements: HashMap::new(),
-            movement_time_countdown: 0.0
+            movement_time_countdown: 0.0,
+            bombs_placed_count: 0
         }
     }
 
@@ -179,6 +182,8 @@ impl MyEntity {
     ) -> networking::Result<()> {
         // Ensure player has a bomb in inventory to place:
         if self.contained.item_inventory.has_how_many(items::QuantitativeItem::Bomb) >= 1 {
+            self.bombs_placed_count += 1;
+
             // Place the bomb on the map locally:
             map.set_bomb_at(self.contained.pos, self.id);
 
@@ -190,6 +195,32 @@ impl MyEntity {
         }
 
         Ok(())
+    }
+
+    /// Detonate all the bombs placed by the player *within currently loaded chunks.*
+    pub fn detonate_bombs(
+        &mut self, map: &mut ClientMap, renderer: &mut MapRenderer, connection: &mut networking::Connection
+    ) -> networking::Result<()> {
+        // Remove bombs from map:
+        let detonated_bomb_positions = map.take_loaded_bombs_placed_by(self.id);
+        let length = detonated_bomb_positions.len() as u32;
+
+        if length > 0 {
+            // Inform server:
+            connection.send(&messages::ToServer::DetonateBombs);
+
+            // Update count of how many bombs have been placed by the player:
+            self.bombs_placed_count -= length;
+
+            // Have renderer animate the exploding bombs:
+            renderer.bombs_detonated(detonated_bomb_positions);
+        }
+
+        Ok(())
+    }
+
+    pub fn how_many_bombs_placed(&self) -> u32 {
+        self.bombs_placed_count
     }
 
     pub fn get_contained_entity(&self) -> &Entity {
