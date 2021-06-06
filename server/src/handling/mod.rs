@@ -357,6 +357,15 @@ impl Handler {
                 Ok(vec![])
             }
 
+            messages::ToServer::DetonateBombs => {
+                self.game_map.lock().take_bombs_placed_by_within_chunks(player_id, &self.remote_loaded_chunk_coords);
+
+                self.map_changes_sender.send(maps::Modification::BombsDetonated(player_id)).unwrap();
+                self.map_changes_receiver.recv().await.unwrap();
+
+                Ok(vec![])
+            }
+
             messages::ToServer::PurchaseSingleItem(item) => {
                 let (cost_gem, cost_quantity) = item.get_price();
 
@@ -441,7 +450,11 @@ impl Handler {
             maps::Modification::BombPlaced(position, placed_by_entity_id) => self
                 .remote_loaded_chunk_coords
                 .contains(&position.as_chunk_coords())
-                .then(|| messages::FromServer::BombPlaced { placed_by_entity_id, position })
+                .then(|| messages::FromServer::BombPlaced { placed_by_entity_id, position }),
+
+            maps::Modification::BombsDetonated(placed_by_entity_id) => {
+                Some(messages::FromServer::BombsDetonated { placed_by_entity_id })
+            }
         }
     }
 

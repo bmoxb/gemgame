@@ -38,8 +38,7 @@ pub enum ToServer {
     /// actually has a bomb to place before sending this message.
     PlaceBomb,
 
-    /// Have the server detonate all bombs placed by the player that are within their client's currently-loaded chunks.
-    /// Bombs placed by the player that are not in the client's loaded chunks will not be detonated.
+    /// Have the server detonate all bombs placed by the player.
     DetonateBombs,
 
     /// Indicate that the player wishes to purchase the given item (of type [`items::BoolItem`]). The client should
@@ -64,6 +63,7 @@ impl fmt::Display for ToServer {
                 write!(f, "move my player entity {} (request #{})", direction, request_number)
             }
             ToServer::PlaceBomb => write!(f, "place bomb"),
+            ToServer::DetonateBombs => write!(f, "detonate bombs"),
             ToServer::PurchaseSingleItem(item) => write!(f, "purchase {:?}", item),
             ToServer::PurchaseItemQuantity { item, quantity } => write!(f, "purchase {} of {:?}", quantity, item)
         }

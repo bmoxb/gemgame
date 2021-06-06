@@ -124,8 +124,8 @@ impl Chunk {
         self.undetonated_bombs.values().flatten()
     }
 
-    pub fn take_bombs_placed_by(&mut self, placed_by: Id) -> Option<Vec<TileCoords>> {
-        self.undetonated_bombs.remove(&placed_by)
+    pub fn take_bombs_placed_by(&mut self, placed_by: Id) -> Vec<TileCoords> {
+        self.undetonated_bombs.remove(&placed_by).unwrap_or_default()
     }
 }
 

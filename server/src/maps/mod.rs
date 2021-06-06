@@ -175,7 +175,19 @@ impl ServerMap {
         }
     }
 
-    pub fn remove_bombs_placed_by_within_chunks(&mut self, within_chunk_coords: &Vec<ChunkCoords>, placed_by: Id) { ... }
+    pub fn take_bombs_placed_by_within_chunks(
+        &mut self, placed_by: Id, within_chunk_coords: &[ChunkCoords]
+    ) -> Vec<TileCoords> {
+        let mut positions = Vec::new();
+
+        for chunk_coords in within_chunk_coords {
+            if let Some(chunk) = self.loaded_chunk_at_mut(*chunk_coords) {
+                positions.extend(chunk.take_bombs_placed_by(placed_by).into_iter());
+            }
+        }
+
+        positions
+    }
 }
 
 impl Map for ServerMap {
@@ -285,7 +297,10 @@ pub enum Modification {
     EntityRemoved(Id, ChunkCoords),
 
     /// Indicates that a bomb has been placed at the given coordinates by the entity with the specified ID.
-    BombPlaced(TileCoords, Id)
+    BombPlaced(TileCoords, Id),
+
+    /// The player with the specified ID detonated their placed bombs.
+    BombsDetonated(Id)
 }
 
 impl fmt::Display for Modification {
@@ -307,6 +322,9 @@ impl fmt::Display for Modification {
             }
             Modification::BombPlaced(pos, placed_by) => {
                 write!(f, "bomb placed at {} by entity with ID {}", pos, placed_by)
+            }
+            Modification::BombsDetonated(placed_by) => {
+                write!(f, "bombs placed by {} detonated", placed_by)
             }
         }
     }

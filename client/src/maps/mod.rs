@@ -69,9 +69,7 @@ impl ClientMap {
         let mut positions = Vec::new();
 
         for chunk in self.loaded_chunks.values_mut() {
-            if let Some(positions_in_chunk) = chunk.take_bombs_placed_by(placed_by_id) {
-                positions.extend(positions_in_chunk.into_iter());
-            }
+            positions.extend(chunk.take_bombs_placed_by(placed_by_id).into_iter());
         }
 
         positions
