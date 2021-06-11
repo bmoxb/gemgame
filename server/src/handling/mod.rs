@@ -358,7 +358,12 @@ impl Handler {
             }
 
             messages::ToServer::DetonateBombs => {
-                self.game_map.lock().take_bombs_placed_by_within_chunks(player_id, &self.remote_loaded_chunk_coords);
+                {
+                    let mut map = self.game_map.lock();
+
+                    let coords = map.entity_by_id(player_id).map(|e| e.pos.as_chunk_coords()).unwrap_or_default();
+                    map.take_bombs_placed_by_in_and_around_chunk(player_id, coords);
+                }
 
                 self.map_changes_sender.send(maps::Modification::BombsDetonated(player_id)).unwrap();
                 self.map_changes_receiver.recv().await.unwrap();
@@ -453,7 +458,12 @@ impl Handler {
                 .then(|| messages::FromServer::BombPlaced { placed_by_entity_id, position }),
 
             maps::Modification::BombsDetonated(placed_by_entity_id) => {
-                Some(messages::FromServer::BombsDetonated { placed_by_entity_id })
+                self.game_map.lock().entity_by_id(placed_by_entity_id).map(|entity| {
+                    messages::FromServer::BombsDetonated {
+                        placed_by_entity_id,
+                        in_and_around_chunk_coords: entity.pos.as_chunk_coords()
+                    }
+                })
             }
         }
     }

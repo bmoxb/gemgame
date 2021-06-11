@@ -95,6 +95,26 @@ pub trait Map {
     fn add_entity(&mut self, id: Id, entity: Entity);
 
     fn remove_entity(&mut self, id: Id) -> Option<Entity>;
+
+    /// Takes (i.e. removes and returns) the positions of bombs placed by the entity with given ID at and adjacent to
+    /// the specified chunk coordinates (9 chunks in total).
+    fn take_bombs_placed_by_in_and_around_chunk(
+        &mut self, placed_by: Id, centre_chunk_coords: ChunkCoords
+    ) -> Vec<TileCoords> {
+        let mut positions = Vec::new();
+
+        for x_offset in -1..2 {
+            for y_offset in -1..2 {
+                let coords = ChunkCoords { x: centre_chunk_coords.x + x_offset, y: centre_chunk_coords.y + y_offset };
+
+                if let Some(chunk) = self.loaded_chunk_at_mut(coords) {
+                    positions.extend(chunk.take_bombs_placed_by(placed_by).into_iter());
+                }
+            }
+        }
+
+        positions
+    }
 }
 
 /// Type alias for a hash map that maps chunk coordinates to chunks.

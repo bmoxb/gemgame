@@ -202,12 +202,14 @@ impl MyEntity {
         &mut self, map: &mut ClientMap, renderer: &mut MapRenderer, connection: &mut networking::Connection
     ) -> networking::Result<()> {
         // Remove bombs from map:
-        let detonated_bomb_positions = map.take_loaded_bombs_placed_by(self.id);
+        let detonated_bomb_positions =
+            map.take_bombs_placed_by_in_and_around_chunk(self.id, self.contained.pos.as_chunk_coords());
+
         let length = detonated_bomb_positions.len() as u32;
 
         if length > 0 {
             // Inform server:
-            connection.send(&messages::ToServer::DetonateBombs);
+            connection.send(&messages::ToServer::DetonateBombs)?;
 
             // Update count of how many bombs have been placed by the player:
             self.bombs_placed_count -= length;

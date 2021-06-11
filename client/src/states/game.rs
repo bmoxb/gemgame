@@ -87,7 +87,9 @@ impl GameState {
                 self.map.set_bomb_at(position, placed_by_entity_id);
             }
 
-            messages::FromServer::BombsDetonated { placed_by_entity_id: _ } => unimplemented!(), // TODO
+            messages::FromServer::BombsDetonated { placed_by_entity_id: _, in_and_around_chunk_coords: _ } => {
+                unimplemented!()
+            } // TODO
 
             messages::FromServer::YouCollectedGems { gem_type, quantity_increase } => {
                 self.my_entity.obtained_gems(gem_type, quantity_increase);

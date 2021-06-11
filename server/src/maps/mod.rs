@@ -174,20 +174,6 @@ impl ServerMap {
             None
         }
     }
-
-    pub fn take_bombs_placed_by_within_chunks(
-        &mut self, placed_by: Id, within_chunk_coords: &[ChunkCoords]
-    ) -> Vec<TileCoords> {
-        let mut positions = Vec::new();
-
-        for chunk_coords in within_chunk_coords {
-            if let Some(chunk) = self.loaded_chunk_at_mut(*chunk_coords) {
-                positions.extend(chunk.take_bombs_placed_by(placed_by).into_iter());
-            }
-        }
-
-        positions
-    }
 }
 
 impl Map for ServerMap {

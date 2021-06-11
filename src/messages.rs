@@ -38,7 +38,8 @@ pub enum ToServer {
     /// actually has a bomb to place before sending this message.
     PlaceBomb,
 
-    /// Have the server detonate all bombs placed by the player.
+    /// Have the server detonate all of the player's placed bombs that are within the 9 chunks they are in and
+    /// surrounded by.
     DetonateBombs,
 
     /// Indicate that the player wishes to purchase the given item (of type [`items::BoolItem`]). The client should
@@ -121,8 +122,9 @@ pub enum FromServer {
     /// Inform the client that some entity (not their own) placed a bomb down within the client's loaded chunks.
     BombPlaced { placed_by_entity_id: Id, position: maps::TileCoords },
 
-    /// Inform the client that all the bombs placed by the entity with the given ID have now detonated.
-    BombsDetonated { placed_by_entity_id: Id },
+    /// Inform the client that all the bombs placed by the entity with the given ID in and surrounded the specified
+    /// chunk have now detonated.
+    BombsDetonated { placed_by_entity_id: Id, in_and_around_chunk_coords: maps::ChunkCoords },
 
     /// Informs the client of the type and quantity of gems they received after their entity smashed a rock.
     YouCollectedGems { gem_type: gems::Gem, quantity_increase: u32 }
@@ -152,8 +154,12 @@ impl fmt::Display for FromServer {
             FromServer::BombPlaced { placed_by_entity_id, position } => {
                 write!(f, "bomb placed at {} by entity {}", position, placed_by_entity_id)
             }
-            FromServer::BombsDetonated { placed_by_entity_id } => {
-                write!(f, "bombs placed entity {} detonated", placed_by_entity_id)
+            FromServer::BombsDetonated { placed_by_entity_id, in_and_around_chunk_coords } => {
+                write!(
+                    f,
+                    "bombs placed entity {} in and around chunk at {} detonated",
+                    placed_by_entity_id, in_and_around_chunk_coords
+                )
             }
             FromServer::YouCollectedGems { gem_type, quantity_increase } => {
                 write!(f, "you collected {} gems of type {:?}", quantity_increase, gem_type)
