@@ -163,10 +163,10 @@ impl State for GameState {
 
             Err(e) => {
                 match e {
-                    networking::Error::BincodeError(bincode_error) => {
+                    networking::Error::Bincode(bincode_error) => {
                         log::warn!("Failed to decode message from server due to error: {}", bincode_error);
                     }
-                    networking::Error::ConnectionError(connection_error) => {
+                    networking::Error::Connection(connection_error) => {
                         log::warn!("Failed to receive from server due to connection error: {}", connection_error);
                     }
 

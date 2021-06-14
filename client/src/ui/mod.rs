@@ -139,6 +139,6 @@ pub fn draw_debug_text(
     ];
 
     for (i, msg) in msgs.iter().rev().enumerate() {
-        quad::draw_text(&msg, 0.0, quad::screen_height() - ((i as f32 + 1.5) * font_size), font_size, font_colour);
+        quad::draw_text(msg, 0.0, quad::screen_height() - ((i as f32 + 1.5) * font_size), font_size, font_colour);
     }
 }

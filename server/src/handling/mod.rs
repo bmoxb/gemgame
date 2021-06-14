@@ -69,7 +69,7 @@ impl Handler {
                     // any other error messages at full error log level:
                     if matches!(
                         err,
-                        Error::Network(networking::Error::TungsteniteError(tungstenite::Error::Protocol(
+                        Error::Network(networking::Error::Tungstenite(tungstenite::Error::Protocol(
                             tungstenite::error::ProtocolError::ResetWithoutClosingHandshake
                         )))
                     ) {

@@ -48,7 +48,7 @@ pub enum Error {
     #[error("Message is not binary - {0}")]
     MessageNotBinary(tungstenite::Message),
     #[error("Tungstenite error - {0}")]
-    TungsteniteError(#[from] tungstenite::Error)
+    Tungstenite(#[from] tungstenite::Error)
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

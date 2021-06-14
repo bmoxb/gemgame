@@ -58,10 +58,10 @@ pub trait ConnectionTrait {
 pub enum Error {
     /// Indicates that the underlying socket has experienced some sort of issue with its connection to the server or
     /// failed to establish a connection in the first place.
-    ConnectionError(Box<dyn std::error::Error + Send>),
+    Connection(Box<dyn std::error::Error + Send>),
 
     /// Occurs when bincode data sent/received over the connection could not be properly (de)serialised.
-    BincodeError(bincode::Error),
+    Bincode(bincode::Error),
 
     /// This error type is returned when the message received from the remote peer is a closing message and the closing
     /// handshake is performed.
@@ -71,8 +71,8 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::ConnectionError(e) => write!(f, "Connection error - {}", e),
-            Error::BincodeError(e) => write!(f, "(De)serialisation error - {}", e),
+            Error::Connection(e) => write!(f, "Connection error - {}", e),
+            Error::Bincode(e) => write!(f, "(De)serialisation error - {}", e),
             Error::ConnectionClosed => write!(f, "Connection closed (closing handshake performed)")
         }
     }
@@ -80,13 +80,13 @@ impl fmt::Display for Error {
 
 impl convert::From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-        Error::ConnectionError(Box::new(e))
+        Error::Connection(Box::new(e))
     }
 }
 
 impl convert::From<bincode::Error> for Error {
     fn from(e: bincode::Error) -> Self {
-        Error::BincodeError(e)
+        Error::Bincode(e)
     }
 }
 
