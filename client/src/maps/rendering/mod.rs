@@ -3,7 +3,7 @@ mod bombs;
 mod entities;
 mod tiles;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use animations::Animation;
 use macroquad::prelude as quad;
@@ -13,6 +13,9 @@ use shared::{
 };
 
 use crate::{maps::ClientMap, AssetManager, TextureKey};
+
+/// The width and height (in camera space) that each tile will be draw as.
+const TILE_DRAW_SIZE: f32 = 0.1;
 
 /// The width and height (in pixels) that each individual tile on the tiles texture is.
 const SINGLE_TILE_TEXTURE_SIZE: u16 = 16;
@@ -25,8 +28,6 @@ const ENTITY_POSITION_CORRECTED_MOVEMENT_TIME: f32 = 0.025;
 pub struct MapRenderer {
     /// The camera context in which the map will be rendered.
     camera: quad::Camera2D,
-    /// The width and height (in camera space) that each tile will be draw as.
-    tile_draw_size: f32,
     /// The entity renderer for this client's player entity.
     my_entity_renderer: entities::Renderer,
     /// Entity renderers for remote player entities (mapped to by entity IDs).
@@ -38,12 +39,8 @@ pub struct MapRenderer {
 }
 
 impl MapRenderer {
-    pub fn new(tile_draw_size: f32, my_entity_pos: TileCoords) -> Self {
-        MapRenderer {
-            tile_draw_size,
-            my_entity_renderer: entities::Renderer::new(my_entity_pos, tile_draw_size),
-            ..Default::default()
-        }
+    pub fn new(my_entity_pos: TileCoords) -> Self {
+        MapRenderer { my_entity_renderer: entities::Renderer::new(my_entity_pos), ..Default::default() }
     }
 
     /// Draws the tiles & entities than are within the bounds of the camera's viewport.
@@ -63,17 +60,17 @@ impl MapRenderer {
 
         self.my_entity_renderer.update(delta);
         self.camera.target =
-            self.my_entity_renderer.current_pos + quad::vec2(self.tile_draw_size / 2.0, self.tile_draw_size / 2.0);
+            self.my_entity_renderer.current_pos + quad::vec2(TILE_DRAW_SIZE / 2.0, TILE_DRAW_SIZE / 2.0);
 
         // Begin drawing in camera space:
         quad::set_camera(self.camera);
 
         // Establish the area of the map that is actually on-screen:
 
-        let on_screen_tiles_left_boundary = ((self.camera.target.x - 1.0) / self.tile_draw_size).floor() as i32;
-        let on_screen_tiles_right_boundary = ((self.camera.target.x + 1.0) / self.tile_draw_size).ceil() as i32;
-        let on_screen_tiles_bottom_boundary = ((self.camera.target.y - 1.0) / self.tile_draw_size).floor() as i32;
-        let on_screen_tiles_top_boundary = ((self.camera.target.y + 1.0) / self.tile_draw_size).ceil() as i32;
+        let on_screen_tiles_left_boundary = ((self.camera.target.x - 1.0) / TILE_DRAW_SIZE).floor() as i32;
+        let on_screen_tiles_right_boundary = ((self.camera.target.x + 1.0) / TILE_DRAW_SIZE).ceil() as i32;
+        let on_screen_tiles_bottom_boundary = ((self.camera.target.y - 1.0) / TILE_DRAW_SIZE).floor() as i32;
+        let on_screen_tiles_top_boundary = ((self.camera.target.y + 1.0) / TILE_DRAW_SIZE).ceil() as i32;
 
         // Draw tiles:
 
@@ -83,7 +80,7 @@ impl MapRenderer {
         for tile_x in on_screen_tiles_left_boundary..on_screen_tiles_right_boundary {
             for tile_y in on_screen_tiles_bottom_boundary..on_screen_tiles_top_boundary {
                 tile_coords = TileCoords { x: tile_x, y: tile_y };
-                draw_pos = tile_coords_to_vec2(tile_coords, self.tile_draw_size);
+                draw_pos = tile_coords_to_vec2(tile_coords, TILE_DRAW_SIZE);
 
                 // If the tile at the specified coordinates is in a chunk that is already loaded then it will be drawn.
                 // Otherwise, a grey placeholder rectangle will be drawn in its place until the required chunk is
@@ -95,13 +92,13 @@ impl MapRenderer {
                     tiles::draw_with_stateless_animation(
                         tile,
                         draw_pos,
-                        self.tile_draw_size,
+                        TILE_DRAW_SIZE,
                         assets.texture(TextureKey::Tiles),
                         chunk_corner
                     );
                 }
                 else {
-                    tiles::draw_pending(draw_pos, self.tile_draw_size);
+                    tiles::draw_pending(draw_pos, TILE_DRAW_SIZE);
                 }
             }
         }
@@ -126,27 +123,20 @@ impl MapRenderer {
         for chunk in on_screen_chunk_coords.into_iter().filter_map(|coords| map.loaded_chunk_at(coords)) {
             // Iterate all bomb positions within the chunk irrespective of who placed them:
             for bomb_coords in chunk.get_undetonated_bomb_positions() {
-                let draw_pos = tile_coords_to_vec2(*bomb_coords, self.tile_draw_size);
-                bombs::draw_undetonated_bomb(draw_pos, self.tile_draw_size, assets.texture(TextureKey::Bombs));
+                let draw_pos = tile_coords_to_vec2(*bomb_coords, TILE_DRAW_SIZE);
+                bombs::draw_undetonated_bomb(draw_pos, TILE_DRAW_SIZE, assets.texture(TextureKey::Bombs));
             }
         }
 
         // Draw (and remove completed) tile transition animations:
 
-        let mut concluded_animations = HashSet::new();
-
-        for (coords, animation) in &self.tile_change_animations {
-            let draw_pos = tile_coords_to_vec2(*coords, self.tile_draw_size);
-
+        self.tile_change_animations.retain(|coords, animation| {
             // TODO: Draw only if on-screen, like entities below.
-            animation.draw(draw_pos, self.tile_draw_size, assets.texture(TextureKey::Tiles));
+            let draw_pos = tile_coords_to_vec2(*coords, TILE_DRAW_SIZE);
+            animation.draw(draw_pos, SINGLE_TILE_TEXTURE_SIZE, TILE_DRAW_SIZE, assets.texture(TextureKey::Tiles));
 
-            if animation.has_concluded() {
-                concluded_animations.insert(*coords);
-            }
-        }
-
-        self.tile_change_animations.retain(|key, _| !concluded_animations.contains(key));
+            !animation.has_concluded()
+        });
 
         // Update remote entities:
 
@@ -176,43 +166,49 @@ impl MapRenderer {
         let all_entities_iter = remote_entities_to_draw.chain(my_entity_iter);
 
         for (entity, renderer) in all_entities_iter.clone() {
-            renderer.draw_lower(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
+            renderer.draw_lower(entity, assets.texture(TextureKey::Entities), TILE_DRAW_SIZE);
         }
 
         // Draw upper portion of each on-screen entity:
 
         for (entity, renderer) in all_entities_iter {
-            renderer.draw_upper(entity, assets.texture(TextureKey::Entities), self.tile_draw_size);
+            renderer.draw_upper(entity, assets.texture(TextureKey::Entities), TILE_DRAW_SIZE);
         }
 
         // Draw exploding bombs:
 
-        for (animation, positions) in &self.exploding_bomb_animations {
+        self.exploding_bomb_animations.retain(|(animation, positions)| {
             for pos in positions {
+                let mut coords = tile_coords_to_vec2(*pos, TILE_DRAW_SIZE);
+
+                // Offset the drawing position of the exploding bomb based on how much larger an exploding bomb is
+                // versus a regular tile:
+                let offset = TILE_DRAW_SIZE * (bombs::DETONATING_BOMB_FRAME_SIZE_MULTIPLIER / 2) as f32;
+                coords.x -= offset;
+                coords.y -= offset;
+
                 animation.draw(
-                    tile_coords_to_vec2(*pos, self.tile_draw_size),
-                    self.tile_draw_size * bombs::DETONATING_BOMB_FRAME_SIZE_MULTIPLIER,
+                    coords,
+                    SINGLE_TILE_TEXTURE_SIZE * bombs::DETONATING_BOMB_FRAME_SIZE_MULTIPLIER,
+                    TILE_DRAW_SIZE * bombs::DETONATING_BOMB_FRAME_SIZE_MULTIPLIER as f32,
                     assets.texture(TextureKey::Bombs)
                 );
             }
-        }
+
+            !animation.has_concluded()
+        });
     }
 
     /// Begin the animated movement of this client's player entity to the specified position. This method is to be
     /// called by the [`crate::maps::entities::MyEntity::move_towards_checked`] method.
     pub fn my_entity_moved(&mut self, to_coords: TileCoords, movement_time: f32, frame_changes: usize) {
-        self.my_entity_renderer.do_movement(to_coords, movement_time, frame_changes, self.tile_draw_size);
+        self.my_entity_renderer.do_movement(to_coords, movement_time, frame_changes, TILE_DRAW_SIZE);
     }
 
     /// Begin a shorter animation of this client's entity to the specified position. This method is to be called by the
     /// [`crate::maps::entities::MyEntity::received_movement_reconciliation'] method.
     pub fn my_entity_position_corrected(&mut self, correct_coords: TileCoords) {
-        self.my_entity_renderer.do_movement(
-            correct_coords,
-            ENTITY_POSITION_CORRECTED_MOVEMENT_TIME,
-            1,
-            self.tile_draw_size
-        );
+        self.my_entity_renderer.do_movement(correct_coords, ENTITY_POSITION_CORRECTED_MOVEMENT_TIME, 1, TILE_DRAW_SIZE);
     }
 
     /// Begin the animated movement of the specified remote entity to the given position. This method is to be called by
@@ -224,12 +220,12 @@ impl MapRenderer {
             to_coords,
             movement_time,
             frame_changes,
-            self.tile_draw_size
+            TILE_DRAW_SIZE
         );
     }
 
     pub fn add_remote_entity(&mut self, entity_id: Id, coords: TileCoords) {
-        self.remote_entity_renderers.insert(entity_id, entities::Renderer::new(coords, self.tile_draw_size));
+        self.remote_entity_renderers.insert(entity_id, entities::Renderer::new(coords));
     }
 
     pub fn remove_remote_entity(&mut self, entity_id: Id) {

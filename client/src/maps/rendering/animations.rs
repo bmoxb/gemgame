@@ -1,14 +1,10 @@
 use macroquad::prelude as quad;
 
-use crate::maps::rendering::SINGLE_TILE_TEXTURE_SIZE;
-
 /// Trait that describes an animation that occurs within the game world.
 pub trait Animation {
-    fn draw(&self, draw_pos: quad::Vec2, draw_size: f32, texture: quad::Texture2D) {
-        let rect = crate::make_texture_source_rect(
-            SINGLE_TILE_TEXTURE_SIZE,
-            self.get_relative_texture_coords(quad::get_time()),
-        );
+    fn draw(&self, draw_pos: quad::Vec2, single_texture_size: u16, draw_size: f32, texture: quad::Texture2D) {
+        let rect =
+            crate::make_texture_source_rect(single_texture_size, self.get_relative_texture_coords(quad::get_time()));
 
         let params = quad::DrawTextureParams {
             dest_size: Some(quad::vec2(draw_size, draw_size)),
@@ -66,7 +62,7 @@ pub fn boxed_continuous(frames: &'static [Frame]) -> Box<dyn Animation + Sync> {
 pub struct Once {
     frames: &'static [Frame],
     start_time: f64,
-    duration: f64,
+    duration: f64
 }
 
 impl Once {
@@ -103,7 +99,7 @@ fn frame_at_time(frames: &[Frame], frame_time: f64) -> Option<(u16, u16)> {
 #[derive(Clone, Copy)]
 pub struct Frame {
     pub at: (u16, u16),
-    pub time: f64,
+    pub time: f64
 }
 
 /// Calculates the total duration of a set of animation frames.

@@ -83,7 +83,7 @@ pub fn draw_with_stateless_animation(
     tile: Tile, draw_pos: quad::Vec2, draw_size: f32, texture: quad::Texture2D, chunk_corner: bool
 ) {
     let animation = STATELESS_TILE_ANIMATIONS.get(&tile).unwrap();
-    animation.draw(draw_pos, draw_size, texture);
+    animation.draw(draw_pos, super::SINGLE_TILE_TEXTURE_SIZE, draw_size, texture);
 
     #[cfg(debug_assertions)]
     {

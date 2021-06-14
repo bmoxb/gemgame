@@ -32,7 +32,7 @@ impl GameState {
             connection,
             my_entity,
             map: maps::ClientMap::new(),
-            map_renderer: MapRenderer::new(0.1, my_entity_pos),
+            map_renderer: MapRenderer::new(my_entity_pos),
             ui: Ui::new(0.12)
         }
     }
@@ -87,9 +87,11 @@ impl GameState {
                 self.map.set_bomb_at(position, placed_by_entity_id);
             }
 
-            messages::FromServer::BombsDetonated { placed_by_entity_id: _, in_and_around_chunk_coords: _ } => {
-                unimplemented!()
-            } // TODO
+            messages::FromServer::BombsDetonated { placed_by_entity_id, in_and_around_chunk_coords } => {
+                let positions =
+                    self.map.take_bombs_placed_by_in_and_around_chunk(placed_by_entity_id, in_and_around_chunk_coords);
+                self.map_renderer.bombs_detonated(positions);
+            }
 
             messages::FromServer::YouCollectedGems { gem_type, quantity_increase } => {
                 self.my_entity.obtained_gems(gem_type, quantity_increase);

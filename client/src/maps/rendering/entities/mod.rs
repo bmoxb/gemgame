@@ -37,8 +37,8 @@ struct Movement {
 }
 
 impl Renderer {
-    pub fn new(coords: TileCoords, tile_draw_size: f32) -> Self {
-        Renderer { current_pos: tile_coords_to_vec2(coords, tile_draw_size), ..Default::default() }
+    pub fn new(coords: TileCoords) -> Self {
+        Renderer { current_pos: tile_coords_to_vec2(coords, super::TILE_DRAW_SIZE), ..Default::default() }
     }
 
     /// Begin animated movement of the entity from the given coordinates to the specified destination coordinates.
