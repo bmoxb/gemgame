@@ -1,5 +1,5 @@
 use macroquad::prelude as quad;
-use shared::gems;
+use shared::gems::{self, Gem};
 
 use crate::{AssetManager, TextureKey};
 
@@ -22,6 +22,14 @@ pub fn draw_gem_collection_menu(x: f32, y: f32, width: f32, gem_collection: &gem
             source: Some(GEM_COLLECTION_TEXTURE_SOURCE),
             ..Default::default()
         }
+    );
+
+    quad::draw_text(
+        &format!("{}", gem_collection.get_quantity(Gem::Emerald)),
+        draw_x,
+        draw_y,
+        draw_width * 0.2,
+        quad::BLACK
     );
 }
 
