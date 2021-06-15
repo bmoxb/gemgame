@@ -67,13 +67,16 @@ impl asset_management::AssetKey for TextureKey {
     }
 }
 
-fn make_texture_source_rect(single_tile_texture_size: u16, relative_texture_coords: (u16, u16)) -> quad::Rect {
+const fn make_texture_source_rect(
+    single_tile_texture_size: u16, relative_texture_coords: (u16, u16), relative_texture_size: (u16, u16)
+) -> quad::Rect {
     let (relative_x, relative_y) = relative_texture_coords;
+    let (relative_width, relative_height) = relative_texture_size;
 
     quad::Rect {
         x: (relative_x * single_tile_texture_size) as f32,
         y: (relative_y * single_tile_texture_size) as f32,
-        w: single_tile_texture_size as f32,
-        h: single_tile_texture_size as f32
+        w: (relative_width * single_tile_texture_size) as f32,
+        h: (relative_height * single_tile_texture_size) as f32
     }
 }

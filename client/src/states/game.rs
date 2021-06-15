@@ -106,13 +106,11 @@ impl State for GameState {
     }
 
     fn update_and_draw(&mut self, assets: &AssetManager, delta: f32) -> Option<Box<dyn State>> {
-        // Update UI:
-        self.ui.update(&mut self.my_entity, &mut self.map, &mut self.map_renderer, &mut self.connection).unwrap(); // TODO: Don't unwrap.
-
-        // Rendering:
-
         self.map_renderer.draw(&self.map, self.my_entity.get_contained_entity(), assets, delta);
-        self.ui.draw(assets);
+
+        self.ui
+            .update_and_draw(&mut self.my_entity, &mut self.map, &mut self.map_renderer, &mut self.connection, assets)
+            .unwrap(); // TODO: Don't unwrap.
 
         #[cfg(debug_assertions)]
         ui::draw_debug_text(

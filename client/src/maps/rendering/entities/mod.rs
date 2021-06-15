@@ -236,7 +236,7 @@ fn body_draw_params(entity: &Entity, walk_frame: WalkCycle, tile_draw_size: f32)
 
     quad::DrawTextureParams {
         dest_size: Some(quad::vec2(tile_draw_size, tile_draw_size)),
-        source: Some(crate::make_texture_source_rect(SINGLE_TILE_TEXTURE_SIZE, (x_relative, y_relative))),
+        source: Some(crate::make_texture_source_rect(SINGLE_TILE_TEXTURE_SIZE, (x_relative, y_relative), (1, 1))),
         flip_x: flip,
         flip_y: true,
         ..Default::default()

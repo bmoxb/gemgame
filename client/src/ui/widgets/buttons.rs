@@ -1,15 +1,16 @@
 use macroquad::prelude as quad;
 use shared::items::Item;
 
+use super::UI_TEXTURE_TILE_SIZE;
 use crate::{AssetManager, TextureKey};
 
-const BUTTON_TEXTURE_TILE_SIZE: u16 = 32;
+const BUTTON_TEXTURE_SIZE: (u16, u16) = (2, 2);
 
-const BUTTON_UP_RELATIVE_TEXTURE_COORDS: (u16, u16) = (2, 0);
-const BUTTON_HOVER_RELATIVE_TEXTURE_COORDS: (u16, u16) = (2, 1);
-const BUTTON_DOWN_RELATIVE_TEXTURE_COORDS: (u16, u16) = (1, 1);
+const BUTTON_UP_TEXTURE_COORDS: (u16, u16) = (4, 0);
+const BUTTON_HOVER_TEXTURE_COORDS: (u16, u16) = (4, 2);
+const BUTTON_DOWN_TEXTURE_COORDS: (u16, u16) = (2, 2);
 
-const QUANTITY_BARS_TEXTURE_COORDS: (u16, u16) = (0, 3);
+const QUANTITY_BARS_TEXTURE_COORDS: (u16, u16) = (0, 6);
 
 const INTERACT_SIZE_MULTIPLIER: f32 = 0.6;
 
@@ -74,12 +75,13 @@ impl Button for SimpleButton {
             quad::DrawTextureParams {
                 dest_size,
                 source: Some(crate::make_texture_source_rect(
-                    BUTTON_TEXTURE_TILE_SIZE,
+                    UI_TEXTURE_TILE_SIZE,
                     match (self.is_hover, self.is_down) {
-                        (true, false) => BUTTON_HOVER_RELATIVE_TEXTURE_COORDS,
-                        (_, true) => BUTTON_DOWN_RELATIVE_TEXTURE_COORDS,
-                        _ => BUTTON_UP_RELATIVE_TEXTURE_COORDS
-                    }
+                        (true, false) => BUTTON_HOVER_TEXTURE_COORDS,
+                        (_, true) => BUTTON_DOWN_TEXTURE_COORDS,
+                        _ => BUTTON_UP_TEXTURE_COORDS
+                    },
+                    BUTTON_TEXTURE_SIZE
                 )),
                 ..Default::default()
             }
@@ -93,8 +95,9 @@ impl Button for SimpleButton {
             quad::DrawTextureParams {
                 dest_size,
                 source: Some(crate::make_texture_source_rect(
-                    BUTTON_TEXTURE_TILE_SIZE,
-                    (self.icon_texture_x, self.icon_texture_y)
+                    UI_TEXTURE_TILE_SIZE,
+                    (self.icon_texture_x, self.icon_texture_y),
+                    BUTTON_TEXTURE_SIZE
                 )),
                 ..Default::default()
             }
@@ -126,7 +129,7 @@ impl Button for QuantityButton {
         if self.quantity > 0 {
             let bar_texture_offset = std::cmp::min(self.quantity as u16 - 1, 3);
             let (bars_texture_x, bars_texture_y) = QUANTITY_BARS_TEXTURE_COORDS;
-            let quarter_texture_tile_size = BUTTON_TEXTURE_TILE_SIZE / 4;
+            let quarter_texture_tile_size = UI_TEXTURE_TILE_SIZE / 4;
 
             quad::draw_texture_ex(
                 assets.texture(TextureKey::Ui),
@@ -136,11 +139,11 @@ impl Button for QuantityButton {
                 quad::DrawTextureParams {
                     dest_size: Some(quad::vec2(draw_size / 4.0, draw_size)),
                     source: Some(quad::Rect {
-                        x: ((bars_texture_x * BUTTON_TEXTURE_TILE_SIZE)
-                            + (bar_texture_offset * quarter_texture_tile_size)) as f32,
-                        y: (bars_texture_y * BUTTON_TEXTURE_TILE_SIZE) as f32,
+                        x: ((bars_texture_x * UI_TEXTURE_TILE_SIZE) + (bar_texture_offset * quarter_texture_tile_size))
+                            as f32,
+                        y: (bars_texture_y * UI_TEXTURE_TILE_SIZE) as f32,
                         w: quarter_texture_tile_size as f32,
-                        h: BUTTON_TEXTURE_TILE_SIZE as f32
+                        h: UI_TEXTURE_TILE_SIZE as f32
                     }),
                     ..Default::default()
                 }

@@ -28,30 +28,30 @@ impl Ui {
         Ui {
             large_button_size: button_size,
             small_button_size: button_size * 0.75,
-            show_purchase_buttons_button: widgets::SimpleButton::new(-0.4, 0.4, 1, 2),
-            place_bomb_button: widgets::QuantityButton::new(0.4, 0.4, 1, 3),
-            detonate_bombs_button: widgets::QuantityButton::new(0.3, 0.4, 2, 3),
+            show_purchase_buttons_button: widgets::SimpleButton::new(-0.425, 0.4, 2, 4),
+            place_bomb_button: widgets::QuantityButton::new(0.425, 0.4, 2, 6),
+            detonate_bombs_button: widgets::QuantityButton::new(0.325, 0.4, 4, 6),
             showing_purchase_buttons: false,
             bool_item_purchase_buttons: vec![widgets::PurchaseButton::new(
-                -0.3,
+                -0.32,
                 0.4,
-                3,
+                6,
                 0,
                 items::BoolItem::RunningShoes
             )],
             quantitative_item_purchase_buttons: vec![widgets::PurchaseButton::new(
-                -0.22,
+                -0.24,
                 0.4,
-                3,
-                1,
+                6,
+                2,
                 items::QuantitativeItem::Bomb
             )]
         }
     }
 
-    pub fn update(
+    pub fn update_and_draw(
         &mut self, player: &mut MyEntity, map: &mut ClientMap, map_renderer: &mut MapRenderer,
-        connection: &mut networking::Connection
+        connection: &mut networking::Connection, assets: &AssetManager
     ) -> networking::Result<()> {
         // Set bomb button quantity meter based on how many bombs the player has in their inventory:
         self.place_bomb_button.quantity = player.get_inventory().has_how_many(items::QuantitativeItem::Bomb);
@@ -60,9 +60,11 @@ impl Ui {
         self.detonate_bombs_button.quantity = player.how_many_bombs_placed();
 
         if self.show_purchase_buttons_button.update(self.large_button_size) {
-            // Show item purchase buttons:
+            // Toggle visibility of item purchase buttons:
             self.showing_purchase_buttons = !self.showing_purchase_buttons;
         }
+
+        // Perform actions (e.g. placement of bombs, purchase, of items, etc.) based on button presses:
 
         if self.place_bomb_button.update(self.large_button_size) {
             player.place_bomb(map, connection)?;
@@ -86,11 +88,9 @@ impl Ui {
             }
         }
 
-        Ok(())
-    }
-
-    pub fn draw(&self, assets: &AssetManager) {
         quad::set_default_camera();
+
+        widgets::menus::draw_gem_collection_menu(-0.425, -0.38, 0.1, player.get_gem_collection(), assets);
 
         let large_buttons: &[&dyn Button] =
             &[&self.show_purchase_buttons_button, &self.place_bomb_button, &self.detonate_bombs_button];
@@ -107,6 +107,8 @@ impl Ui {
                 small_btn.draw(assets, self.small_button_size);
             }
         }
+
+        Ok(())
     }
 }
 

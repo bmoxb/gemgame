@@ -1,7 +1,10 @@
 pub mod buttons;
+pub mod menus;
 
 pub use buttons::{Button, PurchaseButton, QuantityButton, SimpleButton};
 use macroquad::prelude as quad;
+
+const UI_TEXTURE_TILE_SIZE: u16 = 16;
 
 fn calculate_draw_position(x: f32, y: f32, draw_width: f32, draw_height: f32) -> (f32, f32) {
     (

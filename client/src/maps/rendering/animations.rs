@@ -3,8 +3,11 @@ use macroquad::prelude as quad;
 /// Trait that describes an animation that occurs within the game world.
 pub trait Animation {
     fn draw(&self, draw_pos: quad::Vec2, single_texture_size: u16, draw_size: f32, texture: quad::Texture2D) {
-        let rect =
-            crate::make_texture_source_rect(single_texture_size, self.get_relative_texture_coords(quad::get_time()));
+        let rect = crate::make_texture_source_rect(
+            single_texture_size,
+            self.get_relative_texture_coords(quad::get_time()),
+            (1, 1)
+        );
 
         let params = quad::DrawTextureParams {
             dest_size: Some(quad::vec2(draw_size, draw_size)),
