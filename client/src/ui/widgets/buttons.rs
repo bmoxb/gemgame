@@ -129,7 +129,6 @@ impl Button for QuantityButton {
         if self.quantity > 0 {
             let bar_texture_offset = std::cmp::min(self.quantity as u16 - 1, 3);
             let (bars_texture_x, bars_texture_y) = QUANTITY_BARS_TEXTURE_COORDS;
-            let quarter_texture_tile_size = UI_TEXTURE_TILE_SIZE / 4;
 
             quad::draw_texture_ex(
                 assets.texture(TextureKey::Ui),
@@ -139,11 +138,11 @@ impl Button for QuantityButton {
                 quad::DrawTextureParams {
                     dest_size: Some(quad::vec2(draw_size / 4.0, draw_size)),
                     source: Some(quad::Rect {
-                        x: ((bars_texture_x * UI_TEXTURE_TILE_SIZE) + (bar_texture_offset * quarter_texture_tile_size))
+                        x: ((bars_texture_x * UI_TEXTURE_TILE_SIZE) + (bar_texture_offset * UI_TEXTURE_TILE_SIZE / 2))
                             as f32,
                         y: (bars_texture_y * UI_TEXTURE_TILE_SIZE) as f32,
-                        w: quarter_texture_tile_size as f32,
-                        h: UI_TEXTURE_TILE_SIZE as f32
+                        w: (UI_TEXTURE_TILE_SIZE / 2) as f32,
+                        h: (UI_TEXTURE_TILE_SIZE * 2) as f32
                     }),
                     ..Default::default()
                 }
