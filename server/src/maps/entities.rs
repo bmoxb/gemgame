@@ -27,7 +27,8 @@ pub async fn new_player_in_database(client_id: Id, db: &mut sqlx::PgConnection) 
         skin_colour: random_variant(),
         hair_colour: random_variant(),
         gem_collection: gems::Collection::default(),
-        item_inventory: items::Inventory::default()
+        item_inventory: items::Inventory::default(),
+        bombs_placed_count: 0
     };
 
     bind_entity_data(db_query_from_file!("client_entities/create row"), &entity)
@@ -55,7 +56,8 @@ pub async fn player_from_database(client_id: Id, db: &mut sqlx::PgConnection) ->
                     skin_colour: decode_variant(row.get("skin_colour")),
                     hair_colour: decode_variant(row.get("hair_colour")),
                     gem_collection: bincode::deserialize(row.get("gem_collection")).unwrap_or_default(),
-                    item_inventory: bincode::deserialize(row.get("item_inventory")).unwrap_or_default()
+                    item_inventory: bincode::deserialize(row.get("item_inventory")).unwrap_or_default(),
+                    bombs_placed_count: row.get("bombs_placed_count")
                 }
             )
         })
@@ -98,6 +100,7 @@ fn bind_entity_data<'a>(
         .bind(encode_variant(entity.hair_colour))
         .bind(bincode::serialize(&entity.gem_collection).unwrap_or_default())
         .bind(bincode::serialize(&entity.item_inventory).unwrap_or_default())
+        .bind(entity.bombs_placed_count)
 }
 
 /// Encode an enum variant as a 16-bit integer.

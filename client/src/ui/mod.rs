@@ -57,7 +57,7 @@ impl Ui {
         self.place_bomb_button.quantity = player.get_inventory().has_how_many(items::QuantitativeItem::Bomb);
 
         // Set detonate bomb button quantity meter based on how many bombs the player has placed in the world:
-        self.detonate_bombs_button.quantity = player.how_many_bombs_placed();
+        self.detonate_bombs_button.quantity = player.how_many_bombs_placed() as u32;
 
         if self.show_purchase_buttons_button.update(self.large_button_size) {
             // Toggle visibility of item purchase buttons:

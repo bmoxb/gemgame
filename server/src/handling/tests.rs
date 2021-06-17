@@ -42,7 +42,8 @@ impl Handler {
             skin_colour: SkinColour::Black,
             hair_colour: HairColour::Black,
             gem_collection: gems::Collection::default(),
-            item_inventory: items::Inventory::default()
+            item_inventory: items::Inventory::default(),
+            bombs_placed_count: 0
         };
         self.game_map.lock().add_entity(entity_id, entity);
 

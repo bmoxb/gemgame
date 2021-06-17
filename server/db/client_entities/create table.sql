@@ -8,5 +8,6 @@ CREATE TABLE IF NOT EXISTS client_entities (
     skin_colour SMALLINT NOT NULL,
     hair_colour SMALLINT NOT NULL,
     gem_collection BYTEA,
-    item_inventory BYTEA
+    item_inventory BYTEA,
+    bombs_placed_count INTEGER NOT NULL
 )

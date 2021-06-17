@@ -41,7 +41,9 @@ pub struct Entity {
     /// The collection of gems that this entity has.
     pub gem_collection: gems::Collection,
     /// Stores items that this entity has.
-    pub item_inventory: items::Inventory
+    pub item_inventory: items::Inventory,
+    /// Number of bombs the entity has placed (excluding detonated bombs).
+    pub bombs_placed_count: i32
 }
 
 impl Entity {

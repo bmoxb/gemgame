@@ -348,9 +348,10 @@ impl Handler {
                     // has been placed so immediately discarded map modification message on this task:
                     self.map_changes_receiver.recv().await.unwrap();
 
-                    // Remove the placed bomb from the player's inventory:
+                    // Remove the placed bomb from the player's inventory and update bombs placed count:
                     if let Some(player) = self.game_map.lock().entity_by_id_mut(player_id) {
                         player.item_inventory.take_quantity(items::QuantitativeItem::Bomb, 1);
+                        player.bombs_placed_count += 1;
                     }
                 }
 
@@ -358,12 +359,19 @@ impl Handler {
             }
 
             messages::ToServer::DetonateBombs => {
+                // Remove bombs from map server-side and update player's bombs placed count:
                 {
                     let mut map = self.game_map.lock();
 
                     let coords = map.entity_by_id(player_id).map(|e| e.pos.as_chunk_coords()).unwrap_or_default();
-                    map.take_bombs_placed_by_in_and_around_chunk(player_id, coords);
+                    let detonated_count = map.take_bombs_placed_by_in_and_around_chunk(player_id, coords).len();
+
+                    if let Some(entity) = map.entity_by_id_mut(player_id) {
+                        entity.bombs_placed_count -= detonated_count as i32;
+                    }
                 }
+
+                // Inform other tasks of detonated bombs:
 
                 self.map_changes_sender.send(maps::Modification::BombsDetonated(player_id)).unwrap();
                 self.map_changes_receiver.recv().await.unwrap();
